@@ -1,14 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { navGroups } from "./nav-items";
 import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react";
 
-export function Sidebar() {
-  const pathname = usePathname();
+interface SidebarProps {
+  activePath: string;
+  onNavigate: (href: string) => void;
+}
+
+export function Sidebar({ activePath, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -36,7 +38,6 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
-            {/* Section heading */}
             {group.title && !collapsed && (
               <p className="mb-1 px-4 pt-3 text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
                 {group.title}
@@ -44,25 +45,21 @@ export function Sidebar() {
             )}
 
             {group.items.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname.startsWith(item.href);
+              const isActive = activePath === item.href;
               const Icon = item.icon;
 
               return (
-                <Link
+                <button
                   key={item.href}
-                  href={item.href}
+                  onClick={() => onNavigate(item.href)}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "group relative mx-2 my-0.5 flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
+                    "group relative mx-2 my-0.5 flex w-[calc(100%-16px)] items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
                     isActive
                       ? "bg-neutral-100 font-medium text-neutral-900"
                       : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
                   )}
                 >
-                  {/* Active indicator bar */}
                   {isActive && (
                     <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-neutral-900" />
                   )}
@@ -70,26 +67,26 @@ export function Sidebar() {
                   <Icon
                     className={cn(
                       "h-4 w-4 shrink-0",
-                      isActive ? "text-neutral-900" : "text-neutral-400 group-hover:text-neutral-700"
+                      isActive
+                        ? "text-neutral-900"
+                        : "text-neutral-400 group-hover:text-neutral-700"
                     )}
                   />
 
                   {!collapsed && (
-                    <span className="flex-1 truncate">{item.label}</span>
+                    <span className="flex-1 truncate text-left">{item.label}</span>
                   )}
 
-                  {/* Badge */}
                   {!collapsed && item.badge && item.badge > 0 && (
                     <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-neutral-900 px-1 text-[10px] font-semibold text-white">
                       {item.badge}
                     </span>
                   )}
 
-                  {/* Collapsed badge dot */}
                   {collapsed && item.badge && item.badge > 0 && (
                     <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-neutral-900" />
                   )}
-                </Link>
+                </button>
               );
             })}
           </div>
