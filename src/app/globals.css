@@ -1,7 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 @custom-variant dark (&:is(.dark *));
 
 /* LIGHT MODE (Default) */
@@ -154,4 +156,13 @@
   html {
     @apply font-sans;
   }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure sections have padding so the sticky navbar doesn't cover them */
+section {
+  scroll-margin-top: 5rem; /* Matches your Navbar height (h-16) plus some breathing room */
 }
