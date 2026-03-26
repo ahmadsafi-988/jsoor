@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="min-h-full flex flex-col font-sans" suppressHydrationWarning>
         {/* We removed the hardcoded header/footer to use components instead */}
         {children}
       </body>
