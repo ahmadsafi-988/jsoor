@@ -57,7 +57,7 @@ export function Hero() {
                   </h2>
                 </div>
 
-                <p className="text-lg sm:text-xl text-muted-foreground max-w-xl">
+                <p className="text-lg sm:text-xl text-muted-foreground max-w-xl" style={{ color: '#312E81', lineHeight: '1.1' }}>
                   The professional platform connecting fresh graduates with leading companies. 
                   Build your career, find your perfect match, and step into your professional future with confidence.
                 </p>

@@ -20,8 +20,8 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+      <div className="w-full px-3 sm:px-4 lg:px-6">
+        <div className="flex items-center justify-between py-4">
           
           {/* Logo - Links to home page and scrolls to top */}
           <Link
@@ -62,10 +62,10 @@ export function Navbar() {
           </div>
 
           {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-6">
             <Link href="/login">
               <button
-                className="px-4 py-2 rounded-lg transition-colors"
+                className="px-6 py-2.5 rounded-lg transition-colors"
                 style={{ color: "#312E81" }}
               >
                 Sign In
@@ -73,7 +73,7 @@ export function Navbar() {
             </Link>
             <Link href="/register">
               <button
-                className="px-6 py-2 rounded-lg text-white transition-all hover:shadow-lg"
+                className="px-7 py-2.5 rounded-lg text-white transition-all hover:shadow-lg"
                 style={{ backgroundColor: "#06B6D4" }}
                 onMouseEnter={(e) =>
                   (e.currentTarget.style.backgroundColor = "#0891B2")
@@ -102,8 +102,8 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
-            <div className="flex flex-col gap-4">
+          <div className="md:hidden py-6 px-0 border-t border-border">
+            <div className="flex flex-col gap-6">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
@@ -114,10 +114,10 @@ export function Navbar() {
                   {link.name}
                 </a>
               ))}
-              <div className="flex flex-col gap-2 pt-4">
+              <div className="flex flex-col gap-3 pt-6 border-t border-border/30 mt-2">
                 <Link href="/login" onClick={closeMenu}>
                   <button
-                    className="w-full px-4 py-2 rounded-lg transition-colors text-left"
+                    className="w-full px-4 py-3 rounded-lg transition-colors text-left"
                     style={{ color: "#312E81" }}
                   >
                     Sign In
@@ -125,7 +125,7 @@ export function Navbar() {
                 </Link>
                 <Link href="/register" onClick={closeMenu}>
                   <button
-                    className="w-full px-6 py-2 rounded-lg text-white transition-all"
+                    className="w-full px-6 py-3 rounded-lg text-white transition-all"
                     style={{ backgroundColor: "#06B6D4" }}
                   >
                     Get Started
