@@ -9,20 +9,6 @@ export function Navbar() {
   // Helper to close menu on mobile after clicking a link
   const closeMenu = () => setMobileMenuOpen(false);
 
-  // Clean scroll to top without adding '#' to the URL
-  const scrollToTop = (e: React.MouseEvent) => {
-    e.preventDefault();
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-    // Ensure URL is clean if a hash was already there
-    if (window.location.hash) {
-      window.history.pushState({}, document.title, window.location.pathname);
-    }
-    closeMenu();
-  };
-
   const navLinks = [
     { name: "Features", href: "#features" },
     { name: "How It Works", href: "#how-it-works" },
@@ -37,10 +23,16 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          {/* Logo - Now a button to prevent URL hash issues */}
-          <button
-            onClick={scrollToTop}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity focus:outline-none"
+          {/* Logo - Links to home page and scrolls to top */}
+          <Link
+            href="/"
+            onClick={(e) => {
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <div
               className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -54,7 +46,7 @@ export function Navbar() {
             >
               JSOOR
             </span>
-          </button>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
