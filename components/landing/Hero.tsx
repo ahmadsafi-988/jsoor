@@ -85,7 +85,7 @@ export function Hero() {
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-12 h-12 rounded-full" style={{ backgroundColor: '#8B5CF6' }}></div>
                 <div>
-                  <div className="text-sm" style={{ color: '#312E81' }}>Sarah Johnson</div>
+                  <div className="text-sm" style={{ color: '#312E81' }}>Sarah Johssssnson</div>
                   <div className="text-xs text-muted-foreground">Software Engineer</div>
                 </div>
               </div>
