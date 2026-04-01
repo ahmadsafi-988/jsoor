@@ -1,40 +1,73 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { navGroups } from "./nav-items";
-import { ChevronLeft, ChevronRight, PanelLeft } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  PanelLeft,
+  House,
+  User,
+  FileText,
+  Briefcase,
+  LogOut,
+} from "lucide-react";
+import type { NavGroup, IconName } from "@/components/nav-items";
 
 interface SidebarProps {
-  activePath: string;
-  onNavigate: (href: string) => void;
+  title: string;
+  navGroups: NavGroup[];
+  rootHref?: string;
 }
 
-export function Sidebar({ activePath, onNavigate }: SidebarProps) {
+const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
+  house: House,
+  user: User,
+  fileText: FileText,
+  briefcase: Briefcase,
+};
+
+export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = () => {
+    router.push("/auth/login");
+  };
 
   return (
     <aside
-      className={cn(
-        "relative flex h-screen flex-col border-r border-border bg-white transition-all duration-300 ease-in-out",
-        collapsed ? "w-16" : "w-60"
-      )}
+      style={{ width: collapsed ? "3.5rem" : "16rem" }}
+      className="relative z-10 flex h-screen shrink-0 flex-col border-r border-border bg-white transition-[width] duration-300 ease-in-out"
     >
-      {/* ── Logo ── */}
-      <div className="flex h-14 items-center border-b border-border px-4">
-        <div className="flex items-center gap-2 overflow-hidden">
+      <div
+        className={cn(
+          "flex h-14 items-center border-b border-border",
+          collapsed ? "justify-center px-2" : "px-4",
+        )}
+      >
+        <div
+          className={cn(
+            "flex min-w-0 items-center",
+            collapsed ? "justify-center" : "gap-2",
+          )}
+        >
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-neutral-900">
             <PanelLeft className="h-4 w-4 text-white" />
           </div>
+
           {!collapsed && (
             <span className="truncate text-sm font-semibold tracking-tight text-neutral-900">
-              AdminPanel
+              {title}
             </span>
           )}
         </div>
       </div>
 
-      {/* ── Nav groups ── */}
+      {/* ✅ overflow-x-hidden only on the nav scroll area, not the whole aside */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3">
         {navGroups.map((group, gi) => (
           <div key={gi} className="mb-1">
@@ -45,19 +78,26 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
             )}
 
             {group.items.map((item) => {
-              const isActive = activePath === item.href;
-              const Icon = item.icon;
+              const Icon = iconMap[item.icon];
+              const isRootItem = rootHref && item.href === rootHref;
+              const isActive = isRootItem
+                ? pathname === item.href
+                : pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
 
               return (
-                <button
+                <Link
                   key={item.href}
-                  onClick={() => onNavigate(item.href)}
+                  href={item.href}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "group relative mx-2 my-0.5 flex w-[calc(100%-16px)] items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
+                    "group relative mx-2 my-0.5 flex items-center rounded-md py-2 text-sm transition-colors",
+                    collapsed
+                      ? "w-10 justify-center px-0"
+                      : "w-[calc(100%-16px)] gap-3 px-2.5",
                     isActive
                       ? "bg-neutral-100 font-medium text-neutral-900"
-                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
+                      : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900",
                   )}
                 >
                   {isActive && (
@@ -69,12 +109,14 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
                       "h-4 w-4 shrink-0",
                       isActive
                         ? "text-neutral-900"
-                        : "text-neutral-400 group-hover:text-neutral-700"
+                        : "text-neutral-400 group-hover:text-neutral-700",
                     )}
                   />
 
                   {!collapsed && (
-                    <span className="flex-1 truncate text-left">{item.label}</span>
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      {item.label}
+                    </span>
                   )}
 
                   {!collapsed && item.badge && item.badge > 0 && (
@@ -86,20 +128,32 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
                   {collapsed && item.badge && item.badge > 0 && (
                     <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-neutral-900" />
                   )}
-                </button>
+                </Link>
               );
             })}
           </div>
         ))}
       </nav>
 
-      {/* ── Collapse toggle ── */}
-      <div className="border-t border-border p-3">
+      <div className="space-y-2 border-t border-border p-3">
         <button
-          onClick={() => setCollapsed((c) => !c)}
+          onClick={handleSignOut}
           className={cn(
-            "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900",
-            collapsed && "justify-center"
+            "flex w-full items-center rounded-md py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:text-red-600",
+            collapsed ? "justify-center px-2" : "gap-3 px-2.5",
+          )}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
+
+        {/* TODO : FIX COLLAPSE BUTTON */}
+        {/* <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className={cn(
+            "flex w-full items-center rounded-md py-2 text-sm text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-900",
+            collapsed ? "justify-center px-2" : "gap-3 px-2.5",
           )}
         >
           {collapsed ? (
@@ -110,7 +164,7 @@ export function Sidebar({ activePath, onNavigate }: SidebarProps) {
               <span className="text-xs">Collapse</span>
             </>
           )}
-        </button>
+        </button> */}
       </div>
     </aside>
   );

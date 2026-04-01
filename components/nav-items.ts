@@ -1,50 +1,83 @@
-import {
-  LayoutDashboard,
-  BarChart2,
-  Users,
-  FileText,
-  Settings,
-  CreditCard,
-  Bell,
-  HelpCircle,
-  type LucideIcon,
-} from "lucide-react";
+// import { Briefcase, FileText, House, User } from "lucide-react";
 
-export interface NavItem {
+// export type NavItem = {
+//   label: string;
+//   href: string;
+//   icon: React.ComponentType<{ className?: string }>;
+//   badge?: number;
+// };
+
+// export type NavGroup = {
+//   title?: string;
+//   items: NavItem[];
+// };
+
+// export const jobSeekerNavGroups: NavGroup[] = [
+//   {
+//     title: "Main",
+//     items: [
+//       {
+//         label: "Home",
+//         href: "/job-seeker/home",
+//         icon: House,
+//       },
+//       {
+//         label: "Profile",
+//         href: "/job-seeker/profile",
+//         icon: User,
+//       },
+//       {
+//         label: "Job Applications",
+//         href: "/job-seeker/job-applications",
+//         icon: FileText,
+//       },
+//       {
+//         label: "Interview Simulator",
+//         href: "/job-seeker/interview-simulator",
+//         icon: Briefcase,
+//       },
+//     ],
+//   },
+// ];
+
+export type IconName = "house" | "user" | "fileText" | "briefcase";
+
+export type NavItem = {
   label: string;
   href: string;
-  icon: LucideIcon;
-  badge?: number; // optional notification count
-}
+  icon: IconName;
+  badge?: number;
+};
 
-export interface NavGroup {
-  title?: string; // undefined = no section heading
+export type NavGroup = {
+  title?: string;
   items: NavItem[];
-}
+};
 
-// ─── EDIT THIS TO CUSTOMISE YOUR SIDEBAR ────────────────────────────────────
-export const navGroups: NavGroup[] = [
+export const jobSeekerNavGroups: NavGroup[] = [
   {
+    title: "Main",
     items: [
-      { label: "Dashboard",  href: "/dashboard",          icon: LayoutDashboard },
-      { label: "Analytics",  href: "/dashboard/analytics", icon: BarChart2 },
-    ],
-  },
-  {
-    title: "Manage",
-    items: [
-      { label: "Users",     href: "/dashboard/users",    icon: Users },
-      { label: "Reports",   href: "/dashboard/reports",  icon: FileText },
-      { label: "Billing",   href: "/dashboard/billing",  icon: CreditCard },
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { label: "Notifications", href: "/dashboard/notifications", icon: Bell,     badge: 4 },
-      { label: "Settings",      href: "/dashboard/settings",      icon: Settings },
-      { label: "Help",          href: "/dashboard/help",          icon: HelpCircle },
+      {
+        label: "Home",
+        href: "/job-seeker/home",
+        icon: "house",
+      },
+      {
+        label: "Profile",
+        href: "/job-seeker/profile",
+        icon: "user",
+      },
+      {
+        label: "Job Applications",
+        href: "/job-seeker/job-applications",
+        icon: "fileText",
+      },
+      {
+        label: "Interview Simulator",
+        href: "/job-seeker/interview-simulator",
+        icon: "briefcase",
+      },
     ],
   },
 ];
-// ─────────────────────────────────────────────────────────────────────────────
