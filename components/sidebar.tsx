@@ -31,6 +31,7 @@ const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
 
 export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  console.log(collapsed);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -148,7 +149,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
         </button>
 
         {/* TODO : FIX COLLAPSE BUTTON */}
-        {/* <button
+        <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
           className={cn(
@@ -164,7 +165,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
               <span className="text-xs">Collapse</span>
             </>
           )}
-        </button> */}
+        </button>
       </div>
     </aside>
   );
