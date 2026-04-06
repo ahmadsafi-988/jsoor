@@ -47,11 +47,19 @@ export async function getProfileByUsername(
     console.error("[getProfileByUsername] badges error:", badgesError);
   }
 
+  const { data: profileSkills } = await supabase
+  .from("profile_to_skills")
+  .select("skills(name)")
+  .eq("user_id", profile_base.id)
+
+  const skills = (profileSkills ?? []).map((s: any) => s.skills.name)
   return {
     profile_base,
     projects: projects ?? [],
     badges: badges ?? [],
+    skills
   };
+
 }
 
 /**

@@ -43,6 +43,7 @@ export function ProfileHero({
   user: user;
   isOwnProfile: boolean;
 }) {
+  const pathname = usePathname();
   return (
     <>
       {/* Cover */}
@@ -72,10 +73,10 @@ export function ProfileHero({
           <div className="mb-2 flex gap-2">
             {/* Edit button — only visible to the profile owner */}
             {isOwnProfile && (
-
+              
               <Button variant="outline" size="sm" >
                 <Pencil className="mr-1.5 h-4 w-4" />
-                <Link href={`${usePathname()}/edit`}>
+                <Link href={`${pathname}/edit`}>
                     Edit Profile
                 </Link>
               </Button>

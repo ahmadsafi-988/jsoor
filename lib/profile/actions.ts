@@ -229,3 +229,33 @@ export async function deleteBadge(badgeId: number) {
   revalidatePath("/job-seeker/profile");
   return { success: true };
 }
+
+export async function addProfileSkill(skillId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated." }
+
+  const { error } = await supabase
+    .from("profile_to_skills")
+    .insert({ user_id: user.id, skill_id: skillId })  // ← user_id not profile_id
+  if (error) return { error: error.message }
+
+  revalidatePath("/job-seeker/profile")
+  return { success: true }
+}
+
+export async function removeProfileSkill(skillId: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated." }
+
+  const { error } = await supabase
+    .from("profile_to_skills")
+    .delete()
+    .eq("user_id", user.id)    // ← user_id not profile_id
+    .eq("skill_id", skillId)
+  if (error) return { error: error.message }
+
+  revalidatePath("/job-seeker/profile")
+  return { success: true }
+}

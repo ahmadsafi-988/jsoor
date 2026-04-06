@@ -4,5 +4,6 @@ export type project  = Tables<"projects">;
 export type badge  = Tables<"badges">;
 export type profile = { profile_base: user,
                         projects: project[],
-                        badges: badge[]
+                        badges: badge[],
+                        skills: string[],
                         };

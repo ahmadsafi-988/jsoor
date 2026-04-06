@@ -72,6 +72,32 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_to_skills: {
+        Row: {
+          id: number
+          skill_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: number
+          skill_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: number
+          skill_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_to_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -104,7 +130,7 @@ export type Database = {
           gpa?: string | null
           id: string
           institution?: string | null
-          joined_date: string
+          joined_date?: string
           last_name?: string
           location?: string | null
           logo_url?: string | null

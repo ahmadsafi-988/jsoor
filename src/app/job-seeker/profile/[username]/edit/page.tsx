@@ -34,10 +34,10 @@ import {
   updatePassword,
   updateAvatarUrl,
   updateCvUrl,
+  addProfileSkill,
+  removeProfileSkill,
 } from "@/lib/profile/actions";
 import { uploadAvatar, uploadCV } from "@/lib/storage/upload";
-
-
 import type { user, project, badge } from "@/lib/global_types";
 
 
@@ -55,16 +55,18 @@ import {
   AlertTriangle,
   Check,
   Search,
+  Wrench
 } from "lucide-react";
 
 // ─── Tab shell ────────────────────────────────────────────────────────────────
-type Tab = "profile" | "projects" | "badges" | "account";
+type Tab = "profile" | "projects" | "badges" | "account" | "skills"
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "Profile", icon: User },
   { id: "projects", label: "Projects", icon: FolderGit2 },
   { id: "badges", label: "Badges", icon: Award },
   { id: "account", label: "Account", icon: Lock },
+  { id: "skills", label: "Skills", icon: Wrench },
 ];
 
 // ─── Feedback helper ─────────────────────────────────────────────────────────
@@ -589,6 +591,8 @@ function TabBadges({ badges, onBadgesChange }: {
   );
 }
 
+
+
 // ─── Tab: Account ─────────────────────────────────────────────────────────────
 function TabAccount({ currentEmail }: { currentEmail: string }) {
   const [emailFeedback, setEmailFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
@@ -684,6 +688,107 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
   );
 }
 
+
+
+
+// ─── Tab: skills ─────────────────────────────────────────────────────────────
+type SkillEntry = { skill_id: number; skills: { id: number; name: string } }
+
+function TabSkills({
+  profileSkills: initial,
+}: {
+  profileSkills: SkillEntry[]
+}) {
+  const supabase = createClient()
+  const [profileSkills, setProfileSkills] = React.useState(initial)
+  const [query, setQuery] = React.useState("")
+  const [results, setResults] = React.useState<{ id: number; name: string }[]>([])
+  const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null)
+
+  React.useEffect(() => {
+    if (!query.trim()) { setResults([]); return }
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("skills")
+        .select("id, name")
+        .ilike("name", `%${query}%`)
+        .limit(8)
+      const addedIds = new Set(profileSkills.map((s) => s.skill_id))
+      setResults((data ?? []).filter((s) => !addedIds.has(s.id)))
+    }, 300)
+    return () => clearTimeout(t)
+  }, [query, profileSkills])
+
+  async function handleAdd(skill: { id: number; name: string }) {
+    const result = await addProfileSkill(skill.id)
+    if (result?.error) { setFeedback({ error: result.error }); return }
+    setProfileSkills((prev) => [...prev, { skill_id: skill.id, skills: skill }])
+    setQuery("")
+    setResults([])
+    setFeedback({ message: `"${skill.name}" added.` })
+  }
+
+  async function handleRemove(skillId: number) {
+    const result = await removeProfileSkill(skillId)
+    if (result?.error) { setFeedback({ error: result.error }); return }
+    setProfileSkills((prev) => prev.filter((s) => s.skill_id !== skillId))
+    setFeedback(null)
+  }
+
+  return (
+    <div className="space-y-4">
+      <Feedback state={feedback} />
+
+      <div className="flex flex-wrap gap-2 min-h-[2rem]">
+        {profileSkills.length === 0 && (
+          <p className="text-sm text-muted-foreground">No skills added yet.</p>
+        )}
+        {profileSkills.map((s) => (
+          <span
+            key={s.skill_id}
+            className="flex items-center gap-1.5 rounded-full border bg-secondary px-3 py-1 text-sm"
+          >
+            {s.skills.name}
+            <button
+              type="button"
+              onClick={() => handleRemove(s.skill_id)}
+              className="text-muted-foreground hover:text-destructive leading-none"
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-9"
+          placeholder="Search skills to add…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </div>
+
+      {results.length > 0 && (
+        <div className="rounded-md border bg-popover shadow-md">
+          {results.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => handleAdd(s)}
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
+            >
+              <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function EditProfilePage() {
   const router = useRouter();
@@ -696,7 +801,8 @@ export default function EditProfilePage() {
   const [projects, setProjects] = React.useState<project[]>([]);
   const [badges, setBadges] = React.useState<badge[]>([]);
   const [email, setEmail] = React.useState("");
-
+  const [profileSkills, setProfileSkills] = React.useState<SkillEntry[]>([])
+  
   React.useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
@@ -711,15 +817,22 @@ export default function EditProfilePage() {
 
       if (!prof || prof.id !== user.id) { router.replace("/"); return; }
 
-      const [{ data: projs }, { data: bdgs }] = await Promise.all([
+      const [{ data: projs }, { data: bdgs }, { data: profSkills }] = await Promise.all([
         supabase.from("projects").select("*").eq("user_id", user.id),
         supabase.from("badges").select("*").eq("user_id", user.id),
+        supabase.from("profile_to_skills").select("skill_id, skills(id, name)").eq("user_id", user.id),
       ]);
 
       setProfile(prof);
       setProjects(projs ?? []);
       setBadges(bdgs ?? []);
       setEmail(user.email ?? "");
+      setProfileSkills(
+        (profSkills ?? [])
+        .filter((s) => s.skill_id !== null && s.skills !== null)
+        .map((s) => ({ skill_id: s.skill_id!, skills: s.skills! }))
+      )
+
       setLoading(false);
     }
     load();
@@ -779,6 +892,7 @@ export default function EditProfilePage() {
         {activeTab === "projects" && <TabProjects projects={projects} onProjectsChange={setProjects} />}
         {activeTab === "badges" && <TabBadges badges={badges} onBadgesChange={setBadges} />}
         {activeTab === "account" && <TabAccount currentEmail={email} />}
+        {activeTab === "skills" && <TabSkills profileSkills={profileSkills} />}
       </div>
     </div>
   );

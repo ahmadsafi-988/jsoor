@@ -234,7 +234,7 @@ export default async function ProfilePage({
   // 404 if username doesn't exist
   if (!profileData) notFound();
 
-  const { profile_base, projects, badges } = profileData;
+  const { profile_base, projects, badges, skills } = profileData
 
   // The Edit Profile button is shown only when the viewer owns this profile
   const isOwnProfile = currentUserId === profile_base.id;
@@ -245,14 +245,10 @@ export default async function ProfilePage({
 
       <div className="mx-auto max-w-5xl px-4 pb-16">
         <Separator className="my-5" />
-
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           {/* Left column */}
           <div className="flex-1 space-y-6">
-            {/* Skills section — skipped if profile has none */}
-            {/* Skills are not stored in profiles table directly;
-                wire up a skills query here when the junction table is ready */}
-
+            <SkillsSection skills={skills} />
             {/* Education — rendered only when institution data is present */}
             {profile_base.institution && profile_base.degree && (
               <EducationSection
