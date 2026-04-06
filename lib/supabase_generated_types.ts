@@ -115,7 +115,7 @@ export type Database = {
           last_name: string
           location: string | null
           logo_url: string | null
-          username: string | null
+          username: string
           website: string | null
         }
         Insert: {
@@ -134,7 +134,7 @@ export type Database = {
           last_name?: string
           location?: string | null
           logo_url?: string | null
-          username?: string | null
+          username?: string
           website?: string | null
         }
         Update: {
@@ -153,7 +153,7 @@ export type Database = {
           last_name?: string
           location?: string | null
           logo_url?: string | null
-          username?: string | null
+          username?: string
           website?: string | null
         }
         Relationships: []
