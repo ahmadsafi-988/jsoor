@@ -70,3 +70,25 @@ export async function getCurrentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getClaims()
   return data?.claims?.sub ?? null
 }
+
+
+export async function getCurrentUsername(): Promise<string | null> {
+  const supabase = await createClient()
+  
+  const id = await getCurrentUserId();
+
+  if (!id) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", id)
+    .single()
+
+  if (error || !data) {
+    console.error("Error fetching username:", error?.message)
+    return null
+  }
+
+  return data.username
+}

@@ -36,8 +36,21 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       })
       if (error) throw error
+
       // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/job-seeker/profile')
+      
+      //directly to correct profile url withhout blank page in middle
+      // const { data: { user } } = await supabase.auth.getUser();
+      // if (!user) { router.replace("/auth/login"); return; }
+      // const { data: profile } = await supabase
+      //   .from("profiles")
+      //   .select("username")
+      //   .eq("id", user.id)
+      //   .single();
+      //router.push(`/job-seeker/profile/${profile?.username}`)
+      
+      router.push("/job-seeker/profile")
+
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

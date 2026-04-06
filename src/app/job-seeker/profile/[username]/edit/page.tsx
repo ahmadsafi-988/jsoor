@@ -55,7 +55,11 @@ import {
   AlertTriangle,
   Check,
   Search,
-  Wrench
+  Wrench,
+  XCircle, 
+  CheckCircle2, 
+  PlusCircle, 
+  Loader2, 
 } from "lucide-react";
 
 // ─── Tab shell ────────────────────────────────────────────────────────────────
@@ -689,104 +693,158 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
 }
 
 
-
-
 // ─── Tab: skills ─────────────────────────────────────────────────────────────
 type SkillEntry = { skill_id: number; skills: { id: number; name: string } }
 
-function TabSkills({
-  profileSkills: initial,
-}: {
-  profileSkills: SkillEntry[]
-}) {
-  const supabase = createClient()
-  const [profileSkills, setProfileSkills] = React.useState(initial)
-  const [query, setQuery] = React.useState("")
-  const [results, setResults] = React.useState<{ id: number; name: string }[]>([])
-  const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null)
+
+function TabSkills({ profileSkills: initial = [] }: { profileSkills: SkillEntry[] }) {
+  const supabase = createClient();
+  const [profileSkills, setProfileSkills] = React.useState<SkillEntry[]>(initial);
+  const [query, setQuery] = React.useState("");
+  const [results, setResults] = React.useState<{ id: number; name: string }[]>([]);
+  const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
+  const [isPending, setIsPending] = React.useState<number | null>(null);
+
+
 
   React.useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
+    if (feedback) {
+      const t = setTimeout(() => setFeedback(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [feedback]);
+
+  // Fetch results - Limit removed to show "all", scroll handles the UI
+  React.useEffect(() => {
     const t = setTimeout(async () => {
-      const { data } = await supabase
-        .from("skills")
-        .select("id, name")
-        .ilike("name", `%${query}%`)
-        .limit(8)
-      const addedIds = new Set(profileSkills.map((s) => s.skill_id))
-      setResults((data ?? []).filter((s) => !addedIds.has(s.id)))
-    }, 300)
-    return () => clearTimeout(t)
-  }, [query, profileSkills])
+      // Removed .limit(10) to show all skills
+      let queryBuilder = supabase.from("skills").select("id, name").order('name', { ascending: true });
+      
+      if (query.trim()) {
+        queryBuilder = queryBuilder.ilike("name", `%${query}%`);
+      }
+      const { data } = await queryBuilder;
+      setResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, supabase]);
 
   async function handleAdd(skill: { id: number; name: string }) {
-    const result = await addProfileSkill(skill.id)
-    if (result?.error) { setFeedback({ error: result.error }); return }
-    setProfileSkills((prev) => [...prev, { skill_id: skill.id, skills: skill }])
-    setQuery("")
-    setResults([])
-    setFeedback({ message: `"${skill.name}" added.` })
+    if (profileSkills.some(s => s.skill_id === skill.id)) return;
+
+    const optimisticEntry = { skill_id: skill.id, skills: skill };
+    setProfileSkills(prev => [...prev, optimisticEntry]);
+    setIsPending(skill.id);
+
+    const result = await addProfileSkill(skill.id);
+    if (result?.error) {
+      setProfileSkills(prev => prev.filter(s => s.skill_id !== skill.id));
+      setFeedback({ error: result.error });
+    } else {
+      setFeedback({ message: `Added ${skill.name}` });
+    }
+    setIsPending(null);
   }
 
   async function handleRemove(skillId: number) {
-    const result = await removeProfileSkill(skillId)
-    if (result?.error) { setFeedback({ error: result.error }); return }
-    setProfileSkills((prev) => prev.filter((s) => s.skill_id !== skillId))
-    setFeedback(null)
+    const previousSkills = [...profileSkills];
+    setProfileSkills(prev => prev.filter(s => s.skill_id !== skillId));
+    const result = await removeProfileSkill(skillId);
+    if (result?.error) {
+      setProfileSkills(previousSkills);
+      setFeedback({ error: result.error });
+    }
   }
 
   return (
-    <div className="space-y-4">
-      <Feedback state={feedback} />
+    <div className="space-y-6 relative pb-20 min-h-[500px]">
+      {/* 1. Selected Skills Area */}
+<div className="flex flex-wrap items-center gap-3 min-h-[2.25rem] mb-2">
+  {profileSkills.length === 0 && (
+    <p className="text-sm text-muted-foreground italic py-1">No skills selected yet.</p>
+  )}
+  {profileSkills.map((s) => (
+    <Badge 
+      key={s.skill_id} 
+      variant="secondary" 
+      className="text-sm py-1.5 px-4 gap-2 rounded-lg border-2 border-primary/10 bg-secondary/50 hover:bg-secondary transition-all animate-in fade-in zoom-in duration-200"
+    >
+      <span className="font-semibold text-foreground">{s.skills?.name}</span>
+      <button
+        type="button"
+        onClick={() => handleRemove(s.skill_id)}
+        className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+      >
+        <XCircle className="h-4 w-4" /> 
+      </button>
+    </Badge>
+  ))}
+</div>
 
-      <div className="flex flex-wrap gap-2 min-h-[2rem]">
-        {profileSkills.length === 0 && (
-          <p className="text-sm text-muted-foreground">No skills added yet.</p>
-        )}
-        {profileSkills.map((s) => (
-          <span
-            key={s.skill_id}
-            className="flex items-center gap-1.5 rounded-full border bg-secondary px-3 py-1 text-sm"
-          >
-            {s.skills.name}
-            <button
-              type="button"
-              onClick={() => handleRemove(s.skill_id)}
-              className="text-muted-foreground hover:text-destructive leading-none"
-            >
-              ✕
-            </button>
-          </span>
-        ))}
-      </div>
+      <Separator className="opacity-50" />
 
-      <div className="relative">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          className="pl-9"
-          placeholder="Search skills to add…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
-      {results.length > 0 && (
-        <div className="rounded-md border bg-popover shadow-md">
-          {results.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => handleAdd(s)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
-            >
-              <Plus className="h-3.5 w-3.5 text-muted-foreground" />
-              {s.name}
-            </button>
-          ))}
+      {/* 2. Search & Scrollable List Area */}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-1">
+          <Label className="text-lg font-bold tracking-tight">Skills & Expertise</Label>
+          <p className="text-xs text-muted-foreground">Select from the list or search for specific skills.</p>
         </div>
-      )}
+        
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            className="pl-11 h-12 text-base shadow-sm focus-visible:ring-primary"
+            placeholder="Search skills..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+
+        {/* 3. SCROLLABLE Result List */}
+        <div className="rounded-xl border bg-muted/5 shadow-inner overflow-hidden">
+          <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
+            {results.length === 0 && query && (
+               <p className="text-center py-10 text-sm text-muted-foreground">No matching skills found.</p>
+            )}
+            <div className="grid grid-cols-1 gap-1">
+              {results.map((s) => {
+                const isAdded = profileSkills.some(p => p.skill_id === s.id);
+                return (
+                  <button
+                    key={s.id}
+                    disabled={isAdded || isPending === s.id}
+                    onClick={() => handleAdd(s)}
+                    className="group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-default"
+                  >
+                    <span className="flex items-center gap-3">
+                      {isAdded ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      )}
+                      {s.name}
+                    </span>
+                    {isPending === s.id && (
+                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Feedback Dock */}
+      <div className="absolute bottom-0 left-0 w-full h-16 flex items-center justify-center pointer-events-none">
+        {feedback && (
+          <div className="animate-in slide-in-from-bottom-4 fade-in duration-300 w-full px-4">
+             <Feedback state={feedback} />
+          </div>
+        )}
+      </div>
     </div>
-  )
+  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -815,7 +873,7 @@ export default function EditProfilePage() {
         .eq("username", params.username as string)
         .single();
 
-      if (!prof || prof.id !== user.id) { router.replace("/"); return; }
+      if (!prof || prof.id !== user.id) { router.replace(`/job-seeker/profile/${params.username}`); return; }
 
       const [{ data: projs }, { data: bdgs }, { data: profSkills }] = await Promise.all([
         supabase.from("projects").select("*").eq("user_id", user.id),

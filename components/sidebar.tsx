@@ -151,6 +151,8 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
           {!collapsed && <span>Sign Out</span>}
         </button> */}
 
+        
+
         {/* TODO : FIX COLLAPSE BUTTON */}
         {/* <button
           type="button"
