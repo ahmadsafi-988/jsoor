@@ -9,7 +9,7 @@
 
 export type User = {
   id: string;
-  name: string;
+  name: string|null;
   username: string;
   avatar: string;
   bio: string;
@@ -54,12 +54,12 @@ export type CredlyBadge = {
 };
 
 export type ProfileData = {
-  user: User;
+  //user: User;
   education: EducationEntry[];
   skills: string[];
   projects: Project[];
   credlyBadges: CredlyBadge[];
-  isOwnProfile: boolean; // true = show Edit Profile button
+  //isOwnProfile: boolean; // true = show Edit Profile button
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -174,16 +174,18 @@ export const mockCredlyBadges: CredlyBadge[] = [
 // STEP 4 — Handle not found:
 //   if (!user) notFound(); // from "next/navigation"
 
+
 export async function getProfileData(userId: string): Promise<ProfileData> {
   // ── Replace everything below with real DB calls ──
-  void userId; // remove this line when you use userId
-
+  //void userId; // remove this line when you use userId
+ 
+    
   return {
-    user: mockUser,
+    //user: mockUser,
     education: mockEducation,
     skills: mockSkills,
     projects: mockProjects,
     credlyBadges: mockCredlyBadges,
-    isOwnProfile: false, // hardcoded for now — replace with auth check
+    //isOwnProfile: false, // hardcoded for now — replace with auth check
   };
 }

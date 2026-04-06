@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import type { NavGroup, IconName } from "@/components/nav-items";
 
+import { LogoutButton } from '@/components/supabase/logout-button'
+
 interface SidebarProps {
   title: string;
   navGroups: NavGroup[];
@@ -136,6 +138,8 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
       </nav>
 
       <div className="space-y-2 border-t border-border p-3">
+        <LogoutButton />
+        {/* old sign-out button
         <button
           onClick={handleSignOut}
           className={cn(
@@ -145,7 +149,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
         >
           <LogOut className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Sign Out</span>}
-        </button>
+        </button> */}
 
         {/* TODO : FIX COLLAPSE BUTTON */}
         {/* <button
