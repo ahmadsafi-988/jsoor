@@ -1,38 +1,43 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;700;800&display=swap");
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-headline: "Manrope", sans-serif;
 
-  /* Reference Colors - Updated to Black */
+  --color-background: #f7f9fb;
+  --color-foreground: #191c1e;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #191c1e;
+
+  --color-popover: #ffffff;
+  --color-popover-foreground: #191c1e;
+
   --color-primary: #000000;
-  --color-primary-container: #1a1a1a;
-  --color-on-primary-container: #ffffff;
-  --color-primary-fixed: #e5e5e5;
-  --color-on-primary-fixed-variant: #000000;
+  --color-primary-foreground: #ffffff;
 
-  --color-secondary: #545f72;
-  --color-secondary-container: #d5e0f7;
-  --color-on-secondary-container: #586377;
+  --color-secondary: #d5e0f7;
+  --color-secondary-foreground: #586377;
 
-  --color-surface: #f7f9fb;
-  --color-surface-bright: #f7f9fb;
-  --color-surface-container-low: #f2f4f6;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-high: #e6e8ea;
+  --color-muted: #f2f4f6;
+  --color-muted-foreground: #42474f;
 
-  --color-outline: #727780;
-  --color-outline-variant: #c2c7d1;
-  --color-on-surface: #191c1e;
-  --color-on-surface-variant: #42474f;
+  --color-accent: #e6e8ea;
+  --color-accent-foreground: #191c1e;
 
-  --color-error: #ba1a1a;
+  --color-destructive: #ba1a1a;
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: #c2c7d1;
+  --color-input: #c2c7d1;
+  --color-ring: #727780;
 }
 
 @layer base {
   body {
-    @apply bg-surface text-on-surface font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
   h1,
