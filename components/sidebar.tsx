@@ -33,6 +33,7 @@ const iconMap: Record<IconName, React.ComponentType<{ className?: string }>> = {
 
 export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  console.log(collapsed);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -43,7 +44,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
   return (
     <aside
       style={{ width: collapsed ? "3.5rem" : "16rem" }}
-      className="relative z-10 flex h-screen shrink-0 flex-col border-r border-border bg-white transition-[width] duration-300 ease-in-out"
+      className="relative z-10 flex h-screen shrink-0 flex-col  bg-white transition-[width] duration-300 ease-in-out"
     >
       <div
         className={cn(
@@ -137,9 +138,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
         ))}
       </nav>
 
-      <div className="space-y-2 border-t border-border p-3">
-        <LogoutButton />
-        {/* old sign-out button
+      <div className="space-y-2 p-3">
         <button
           onClick={handleSignOut}
           className={cn(
@@ -154,7 +153,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
         
 
         {/* TODO : FIX COLLAPSE BUTTON */}
-        {/* <button
+        <button
           type="button"
           onClick={() => setCollapsed((prev) => !prev)}
           className={cn(
@@ -170,7 +169,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
               <span className="text-xs">Collapse</span>
             </>
           )}
-        </button> */}
+        </button>
       </div>
     </aside>
   );

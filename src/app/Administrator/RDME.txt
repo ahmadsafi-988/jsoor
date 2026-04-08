@@ -1,0 +1,1 @@
+this is the admin folder (adding users and compaines and blocking exc)
