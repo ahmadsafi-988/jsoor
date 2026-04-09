@@ -11,6 +11,7 @@ const TopBar = () => (
         <Mail size={20} />
       </button>
       <div className="flex items-center gap-3 pl-2">
+        {/* hiding profile picture for now
         <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-slate-100 shadow-sm">
           <img
             src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&q=80"
@@ -18,7 +19,7 @@ const TopBar = () => (
             className="w-full h-full object-cover"
             referrerPolicy="no-referrer"
           />
-        </div>
+        </div> */}
       </div>
     </div>
   </header>

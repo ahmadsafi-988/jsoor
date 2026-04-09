@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { NavGroup, IconName } from "@/components/nav-items";
 
-import { LogoutButton } from '@/components/supabase/logout-button'
+import { createClient } from '@/lib/supabase/client'
 
 interface SidebarProps {
   title: string;
@@ -37,10 +37,11 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleSignOut = () => {
-    router.push("/auth/login");
-  };
-
+  const handleSignOut = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
   return (
     <aside
       style={{ width: collapsed ? "3.5rem" : "16rem" }}
@@ -148,7 +149,7 @@ export function Sidebar({ title, navGroups, rootHref = "" }: SidebarProps) {
         >
           <LogOut className="h-4 w-4 shrink-0" />
           {!collapsed && <span>Sign Out</span>}
-        </button> */}
+        </button> 
 
         
 
