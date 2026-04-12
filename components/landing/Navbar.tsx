@@ -63,7 +63,7 @@ export function Navbar() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="/login">
+            <Link href="/auth/login">
               <button
                 className="px-6 py-2.5 rounded-lg transition-colors"
                 style={{ color: "#312E81" }}
@@ -71,7 +71,7 @@ export function Navbar() {
                 Sign In
               </button>
             </Link>
-            <Link href="/register">
+            <Link href="/auth/sign-up">
               <button
                 className="px-7 py-2.5 rounded-lg text-white transition-all hover:shadow-lg"
                 style={{ backgroundColor: "#06B6D4" }}
@@ -115,7 +115,7 @@ export function Navbar() {
                 </a>
               ))}
               <div className="flex flex-col gap-3 pt-6 border-t border-border/30 mt-2">
-                <Link href="/login" onClick={closeMenu}>
+                <Link href="/auth/login" onClick={closeMenu}>
                   <button
                     className="w-full px-4 py-3 rounded-lg transition-colors text-left"
                     style={{ color: "#312E81" }}
@@ -123,7 +123,7 @@ export function Navbar() {
                     Sign In
                   </button>
                 </Link>
-                <Link href="/register" onClick={closeMenu}>
+                <Link href="/auth/sign-up" onClick={closeMenu}>
                   <button
                     className="w-full px-6 py-3 rounded-lg text-white transition-all"
                     style={{ backgroundColor: "#06B6D4" }}

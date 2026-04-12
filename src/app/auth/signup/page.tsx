@@ -1,1 +1,0 @@
-//this is a signup page for job seekers and companies

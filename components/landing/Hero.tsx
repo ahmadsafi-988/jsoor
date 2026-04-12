@@ -63,7 +63,7 @@ export function Hero() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/dashboard">
+                  <Link href="/auth/sign-up">
                     <button 
                       className="group px-8 py-4 rounded-lg text-white transition-all hover:shadow-xl flex items-center justify-center gap-2"
                       style={{ backgroundColor: '#06B6D4' }}
