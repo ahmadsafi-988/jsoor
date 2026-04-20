@@ -1,219 +1,262 @@
 // app/job-seeker/profile/[username]/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Server Component — fetches profile data from Supabase by username,
-// determines ownership via the current auth session, then renders the page.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { notFound } from "next/navigation";
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
-  FileText,
-  Download,
-  GitBranch,
-  Award,
-  ExternalLink,
-  GraduationCap,
-  FolderGit2,
-  Wrench,
-  BookOpen,
-  Calendar,
-} from "lucide-react";
+import { MapPin, Plus, Edit2, Trash2, Download, ExternalLink, Award, GitBranch } from "lucide-react";
+import Link from "next/link";
 
-import { ProfileHero } from "@/components/profile/profile-hero";
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
 import type { project, badge } from "@/lib/global_types";
+import type { user } from "@/lib/global_types";
 
-// ─── Section header ───────────────────────────────────────────────────────────
-function SectionHeader({
-  icon: Icon,
-  title,
+// ─── Profile Header Card ──────────────────────────────────────────────────────
+function ProfileHeaderCard({
+  user,
+  isOwnProfile,
+  username,
 }: {
-  icon: React.ElementType;
-  title: string;
+  user: user;
+  isOwnProfile: boolean;
+  username: string;
 }) {
   return (
-    <div className="flex items-center gap-2 pb-1">
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      <h2 className="font-semibold text-foreground">{title}</h2>
-    </div>
-  );
-}
-
-// ─── Skills ───────────────────────────────────────────────────────────────────
-function SkillsSection({ skills }: { skills: string[] }) {
-  return (
-    <div className="space-y-2">
-      <SectionHeader icon={Wrench} title="Skills" />
-      <div className="flex flex-wrap gap-2">
-        {skills.map((skill) => (
-          <Badge key={skill} variant="secondary">
-            {skill}
-          </Badge>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ─── Education ────────────────────────────────────────────────────────────────
-// Built from the profile_base fields (single institution per profile for now).
-function EducationSection({
-  institution,
-  degree,
-  gpa,
-  eduStart,
-  eduEnd,
-  logoUrl,
-}: {
-  institution: string;
-  degree: string;
-  gpa: string | null;
-  eduStart: string | null;
-  eduEnd: string | null;
-  logoUrl: string | null;
-}) {
-  return (
-    <div className="space-y-3">
-      <SectionHeader icon={GraduationCap} title="Education" />
-      <div className="flex gap-4 rounded-lg border bg-card px-4 py-3.5">
-        {logoUrl && (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-            <img
-              src={logoUrl}
-              alt={institution}
-              className="h-16 w-16 object-contain p-1.5"
-            />
-          </div>
-        )}
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="font-semibold leading-snug">{institution}</p>
-          <p className="text-sm text-muted-foreground">{degree}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 pt-0.5 text-xs text-muted-foreground">
-            {gpa && (
-              <span className="flex items-center gap-1">
-                <BookOpen className="h-3 w-3" />
-                GPA: {gpa}
-              </span>
-            )}
-            {(eduStart || eduEnd) && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {eduStart ?? "?"} — {eduEnd ?? "Present"}
-              </span>
-            )}
-          </div>
+    <section className="bg-[#f6f3f2] rounded-xl p-8 relative overflow-hidden">
+      <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#78fbb6] rounded-full blur-[100px] opacity-20 pointer-events-none" />
+      <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center relative z-10">
+        <div className="w-32 h-32 rounded-xl bg-[#e5e2e1] overflow-hidden shrink-0 shadow-[0_20px_40px_rgba(0,109,67,0.08)] flex items-center justify-center">
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
+          ) : (
+            <span className="font-headline font-bold text-4xl text-[#3d4a41]">
+              {user.first_name.slice(0, 2).toUpperCase()}
+            </span>
+          )}
         </div>
+
+        <div className="flex-1">
+          <h1 className="font-headline text-[2.5rem] font-bold text-[#1c1b1b] leading-tight tracking-tight">
+            {user.first_name} {user.last_name}
+          </h1>
+          <p className="text-[#3d4a41] font-medium mt-1 text-lg">
+            {user.degree ?? "Graduate"} · {user.bio ? "Available for Work" : "Open to Opportunities"}
+          </p>
+          {user.location && (
+            <div className="flex items-center gap-2 mt-4 text-[#5f5e5e]">
+              <MapPin className="w-4 h-4" />
+              <span className="text-sm">{user.location}</span>
+            </div>
+          )}
+        </div>
+
+        {isOwnProfile && (
+          <Link
+            href={`/job-seeker/profile/${username}/edit`}
+            className="bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white px-6 py-3 rounded-lg font-semibold hover:brightness-110 hover:shadow-[0_0_20px_rgba(0,168,107,0.4)] transition-all shrink-0 text-sm"
+          >
+            Edit Profile
+          </Link>
+        )}
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── Projects ─────────────────────────────────────────────────────────────────
-function ProjectsSection({ projects }: { projects: project[] }) {
+// ─── Experience / Bio Section ──────────────────────────────────────────────────
+function ExperienceSection({ bio }: { bio: string | null }) {
   return (
-    <div className="space-y-3">
-      <SectionHeader icon={FolderGit2} title="Projects" />
-      <div className="space-y-3">
-        {projects.map((project, i) => (
-          <React.Fragment key={project.id}>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold">{project.name}</p>
-                <Badge
-                  variant={project.status === "Live" ? "default" : "secondary"}
-                  className="text-xs"
-                >
+    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
+          About
+        </h2>
+        <button className="text-[#006d43] hover:bg-[#f6f3f2] p-2 rounded-full transition-colors">
+          <Plus className="w-5 h-5" />
+        </button>
+      </div>
+      {bio ? (
+        <p className="text-[#3d4a41] leading-relaxed">{bio}</p>
+      ) : (
+        <p className="text-[#5f5e5e] text-sm italic">No bio added yet.</p>
+      )}
+    </section>
+  );
+}
+
+// ─── Projects Section ─────────────────────────────────────────────────────────
+function ProjectsSection({ projects }: { projects: project[] }) {
+  if (projects.length === 0) return null;
+  return (
+    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
+          Projects
+        </h2>
+      </div>
+      <div className="space-y-8 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-[#e5e2e1]">
+        {projects.map((project) => (
+          <div key={project.id} className="relative pl-10">
+            <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#f6f3f2] border-2 border-[#006d43] flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-[#78fbb6] shadow-[0_0_10px_rgba(120,251,182,0.8)]" />
+            </div>
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold text-[#1c1b1b]">{project.name}</h3>
+                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+                  project.status === "Live"
+                    ? "bg-[#78fbb6]/30 text-[#005232]"
+                    : "bg-[#e5e2e1] text-[#5f5e5e]"
+                }`}>
                   {project.status}
-                </Badge>
+                </span>
               </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {project.description}
-              </p>
+              <div className="flex gap-2">
+                <button className="text-[#5f5e5e] hover:text-[#006d43] transition-colors">
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button className="text-[#5f5e5e] hover:text-red-500 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <p className="text-sm text-[#3d4a41] mt-3 leading-relaxed">{project.description}</p>
+            {project.url && (
               <a
                 href={project.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-[#006d43] hover:text-[#00a86b] transition-colors"
               >
-                <GitBranch className="h-3.5 w-3.5" />
+                <GitBranch className="w-3.5 h-3.5" />
                 View on GitHub
               </a>
-            </div>
-            {i < projects.length - 1 && <Separator />}
-          </React.Fragment>
+            )}
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── CV Download ──────────────────────────────────────────────────────────────
-function CVDownloadCard({ cvUrl }: { cvUrl: string }) {
+// ─── Details Card ─────────────────────────────────────────────────────────────
+function DetailsCard({ user }: { user: user }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          Curriculum Vitae
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          Download the latest CV for a full overview of experience, education,
-          and projects.
-        </p>
-        <Button asChild size="sm" className="w-full">
-          <a href={cvUrl} download>
-            <Download className="mr-2 h-4 w-4" />
+    <section className="bg-[#f6f3f2] rounded-xl p-8">
+      <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b] mb-6">
+        Details
+      </h2>
+      <div className="space-y-5">
+        {user.institution && (
+          <div>
+            <p className="text-sm text-[#5f5e5e] mb-1">Institution</p>
+            <p className="font-medium text-[#1c1b1b] text-sm">{user.institution}</p>
+          </div>
+        )}
+        {user.degree && (
+          <div>
+            <p className="text-sm text-[#5f5e5e] mb-1">Degree</p>
+            <p className="font-medium text-[#1c1b1b] text-sm">{user.degree}</p>
+          </div>
+        )}
+        {user.gpa && (
+          <div>
+            <p className="text-sm text-[#5f5e5e] mb-1">GPA</p>
+            <p className="font-medium text-[#1c1b1b] text-sm">{user.gpa}</p>
+          </div>
+        )}
+        {(user.edu_start || user.edu_end) && (
+          <div>
+            <p className="text-sm text-[#5f5e5e] mb-1">Period</p>
+            <p className="font-medium text-[#1c1b1b] text-sm">
+              {user.edu_start ?? "?"} — {user.edu_end ?? "Present"}
+            </p>
+          </div>
+        )}
+        {user.website && (
+          <div>
+            <p className="text-sm text-[#5f5e5e] mb-1">Website</p>
+            <a
+              href={`https://${user.website}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#006d43] text-sm hover:text-[#00a86b] transition-colors"
+            >
+              {user.website}
+            </a>
+          </div>
+        )}
+        {user.cv_url && (
+          <a
+            href={user.cv_url}
+            download
+            className="flex items-center gap-2 mt-2 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:brightness-110 transition-all shadow-[0_8px_16px_rgba(0,109,67,0.15)]"
+          >
+            <Download className="w-4 h-4" />
             Download CV
           </a>
-        </Button>
-      </CardContent>
-    </Card>
+        )}
+      </div>
+    </section>
   );
 }
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
-function BadgesCard({ badges }: { badges: badge[] }) {
+// ─── Skills Card ──────────────────────────────────────────────────────────────
+function SkillsCard({ skills }: { skills: string[] }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Award className="h-4 w-4 text-muted-foreground" />
-          Certifications &amp; Badges
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
+    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
+          Skills
+        </h2>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {skills.map((skill) => (
+          <span
+            key={skill}
+            className="bg-[#ebe7e7] text-[#1c1b1b] px-4 py-2 rounded-full text-sm font-medium border border-[#bccabe]/20 hover:border-[#006d43]/50 transition-colors cursor-default"
+          >
+            {skill}
+          </span>
+        ))}
+        <button className="border border-[#6d7a70] text-[#006d43] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#006d43]/5 transition-colors flex items-center gap-1">
+          <Plus className="w-4 h-4" />
+          Add Skill
+        </button>
+      </div>
+    </section>
+  );
+}
+
+// ─── Badges Card ──────────────────────────────────────────────────────────────
+function BadgesCard({ badges }: { badges: badge[] }) {
+  if (badges.length === 0) return null;
+  return (
+    <section className="bg-[#f6f3f2] rounded-xl p-8">
+      <div className="flex items-center gap-2 mb-6">
+        <Award className="w-5 h-5 text-[#006d43]" />
+        <h2 className="font-headline text-[1.25rem] font-medium text-[#1c1b1b]">
+          Certifications
+        </h2>
+      </div>
+      <div className="space-y-3">
         {badges.map((b) => (
           <a
             key={b.id}
             href={b.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted"
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#e5e2e1] transition-colors"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
-              <img
-                src={b.image}
-                alt={b.name}
-                className="h-10 w-10 object-contain"
-              />
+            <div className="w-10 h-10 rounded-lg bg-[#e5e2e1] overflow-hidden shrink-0 flex items-center justify-center">
+              <img src={b.image} alt={b.name} className="w-10 h-10 object-contain" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium">{b.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {b.issuer} · {b.date}
-              </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-[#1c1b1b] truncate">{b.name}</p>
+              <p className="text-xs text-[#5f5e5e] truncate">{b.issuer} · {b.date}</p>
             </div>
-            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <ExternalLink className="w-3.5 h-3.5 text-[#5f5e5e] shrink-0" />
           </a>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -225,54 +268,33 @@ export default async function ProfilePage({
 }) {
   const { username } = await params;
 
-  // Fetch in parallel: profile data + current user id
   const [profileData, currentUserId] = await Promise.all([
     getProfileByUsername(username),
     getCurrentUserId(),
   ]);
 
-  // 404 if username doesn't exist
   if (!profileData) notFound();
 
-  const { profile_base, projects, badges, skills } = profileData
-
-  // The Edit Profile button is shown only when the viewer owns this profile
+  const { profile_base, projects, badges, skills } = profileData;
   const isOwnProfile = currentUserId === profile_base.id;
 
   return (
-    <main>
-      <ProfileHero user={profile_base} isOwnProfile={isOwnProfile} />
+    <div className="p-8 xl:p-12">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left column */}
+        <div className="lg:col-span-8 space-y-8">
+          <ProfileHeaderCard user={profile_base} isOwnProfile={isOwnProfile} username={username} />
+          <ExperienceSection bio={profile_base.bio} />
+          <ProjectsSection projects={projects} />
+        </div>
 
-      <div className="mx-auto max-w-5xl px-4 pb-16">
-        <Separator className="my-5" />
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Left column */}
-          <div className="flex-1 space-y-6">
-            <SkillsSection skills={skills} />
-            {/* Education — rendered only when institution data is present */}
-            {profile_base.institution && profile_base.degree && (
-              <EducationSection
-                institution={profile_base.institution}
-                degree={profile_base.degree}
-                gpa={profile_base.gpa}
-                eduStart={profile_base.edu_start}
-                eduEnd={profile_base.edu_end}
-                logoUrl={profile_base.logo_url}
-              />
-            )}
-
-            {projects.length > 0 && <ProjectsSection projects={projects} />}
-          </div>
-
-          {/* Right column */}
-          <div className="w-full space-y-4 lg:w-64 lg:shrink-0">
-            {profile_base.cv_url && (
-              <CVDownloadCard cvUrl={profile_base.cv_url} />
-            )}
-            {badges.length > 0 && <BadgesCard badges={badges} />}
-          </div>
+        {/* Right column */}
+        <div className="lg:col-span-4 space-y-8">
+          <DetailsCard user={profile_base} />
+          <SkillsCard skills={skills} />
+          <BadgesCard badges={badges} />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -39,6 +39,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessments: {
+        Row: {
+          id: string
+          company_id: string
+          application_id: string
+          title: string
+          description: string
+          deadline: string | null
+          status: "pending" | "submitted" | "reviewed"
+          questions: Json | null
+          submission: Json | null
+          score: number | null
+          feedback: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          application_id: string
+          title: string
+          description: string
+          deadline?: string | null
+          status?: "pending" | "submitted" | "reviewed"
+          questions?: Json | null
+          submission?: Json | null
+          score?: number | null
+          feedback?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          application_id?: string
+          title?: string
+          description?: string
+          deadline?: string | null
+          status?: "pending" | "submitted" | "reviewed"
+          questions?: Json | null
+          submission?: Json | null
+          score?: number | null
+          feedback?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           created_at: string
@@ -71,6 +134,133 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      companies: {
+        Row: {
+          id: string
+          name: string
+          description: string
+          industry: string | null
+          website: string | null
+          logo_url: string | null
+          location: string | null
+          size: string | null
+          founded_year: string | null
+          created_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string
+          industry?: string | null
+          website?: string | null
+          logo_url?: string | null
+          location?: string | null
+          size?: string | null
+          founded_year?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          industry?: string | null
+          website?: string | null
+          logo_url?: string | null
+          location?: string | null
+          size?: string | null
+          founded_year?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      job_applications: {
+        Row: {
+          id: string
+          job_id: string
+          applicant_id: string
+          status: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
+          cover_letter: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          job_id: string
+          applicant_id: string
+          status?: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
+          cover_letter?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          job_id?: string
+          applicant_id?: string
+          status?: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
+          cover_letter?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          id: string
+          company_id: string
+          title: string
+          description: string
+          location: string | null
+          type: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
+          salary_range: string | null
+          requirements: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          title: string
+          description: string
+          location?: string | null
+          type?: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
+          salary_range?: string | null
+          requirements?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          title?: string
+          description?: string
+          location?: string | null
+          type?: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
+          salary_range?: string | null
+          requirements?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profile_to_skills: {
         Row: {
@@ -115,6 +305,7 @@ export type Database = {
           last_name: string
           location: string | null
           logo_url: string | null
+          role: "job_seeker" | "company"
           username: string
           website: string | null
         }
@@ -134,6 +325,7 @@ export type Database = {
           last_name?: string
           location?: string | null
           logo_url?: string | null
+          role?: "job_seeker" | "company"
           username?: string
           website?: string | null
         }
@@ -153,6 +345,7 @@ export type Database = {
           last_name?: string
           location?: string | null
           logo_url?: string | null
+          role?: "job_seeker" | "company"
           username?: string
           website?: string | null
         }

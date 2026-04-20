@@ -42,9 +42,10 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl 
 
   const isPublicRoute =
-    //pathname.startsWith('/login') ||
+    pathname === '/' ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/job-seeker/profile/')
+    pathname.startsWith('/job-seeker/profile/') ||
+    pathname === '/company/onboarding'
  
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()

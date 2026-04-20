@@ -1,107 +1,82 @@
-"use client"
-import { ArrowRight, CheckCircle } from "lucide-react";
-import { ImageWithFallback } from "../figma/ImageWithFallback";
+"use client";
+import { ArrowRight, Briefcase, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 export function Hero() {
   return (
-    <section className="relative pt-0 pb-20 lg:pb-32 overflow-hidden min-h-screen">
-        <div className="relative w-full h-full">
-          {/* Right Image - Full page width */}
-          <div className="absolute inset-0 w-full h-screen lg:h-auto">
-            <div className="relative w-full h-full rounded-none overflow-hidden">
-              <ImageWithFallback
-                src="https://images.unsplash.com/photo-1767716134877-82b74809e431?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxBSSUyMHJvYm90JTIwYXNzaXN0YW50JTIwdGVjaG5vbG9neXxlbnwxfHx8fDE3NzQyODQwNDB8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="AI Robot Assistant"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
-              
-              {/* Soft Horizontal Gradient Fade - Left to Right */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent"></div>
+    <section className="relative overflow-hidden pt-24 pb-32">
+      {/* Green glow orb — top right */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-[800px] h-[800px] bg-[#78fbb6] blur-[100px] rounded-full opacity-20 -z-10 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-12 gap-16 items-center">
+
+        {/* Left column — content */}
+        <div className="lg:col-span-6 space-y-8">
+          <h1 className="font-headline font-bold text-[3.5rem] leading-[1.1] tracking-[-0.02em] text-neutral-900">
+            Your First Job <br />
+            <span className="gradient-text">Starts Here.</span>
+          </h1>
+
+          <p className="text-xl text-[#3d4a41] leading-relaxed max-w-lg">
+            The architectural bridge to your career in the Middle East. Connect
+            with leading employers, master your interviews, and launch your
+            future.
+          </p>
+
+          <div className="flex flex-wrap gap-4 pt-4">
+            {/* Primary CTA → sign-up */}
+            <Link href="/auth/sign-up">
+              <button className="hero-gradient-bg text-white px-8 py-4 rounded-xl font-semibold text-lg hover:brightness-110 transition-all shadow-[0_20px_40px_rgba(0,109,67,0.15)] flex items-center gap-2">
+                Explore Opportunities
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </Link>
+
+            {/* Secondary CTA — placeholder until employer flow exists */}
+            <button className="border border-[#6d7a70] text-[#006d43] px-8 py-4 rounded-xl font-semibold text-lg hover:bg-neutral-100 transition-colors">
+              Post a Job
+            </button>
+          </div>
+        </div>
+
+        {/* Right column — image card */}
+        <div className="lg:col-span-6 relative">
+          <div className="relative w-full aspect-square bg-[#e5e2e1] rounded-[2rem] overflow-hidden flex items-center justify-center">
+            {/* Image with overlay blend */}
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuB18MU5DDY9tIEJmTjJ87aRjkLL8LSHuFup2_IWwPVnPzf79smjskheE-rOvtsOcwkG5abzLwjrW4f6ynNHykiUniPejLACWSMPetHrlB6OwSz7W754xCvelqr8e5HvxBlHtFL3O4F64qVBUcNx2hdN-ywC7IpuQ8hGa9-TrREY4Ywc49zNnUrDc3lCxjQbrdVkJWTASCWEr_QCRBAB_zxVjWasNPqObGZ1ZwZ9BkE1Jdg0gcXSYCzpzu3CeT4OI6_YRbnvU6lUZZ6l"
+              alt="Professional reviewing career opportunities"
+              className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-80"
+            />
+
+            {/* Floating card — top left */}
+            <div className="absolute top-12 left-8 bg-white/80 backdrop-blur-xl p-4 rounded-xl shadow-[0_20px_40px_rgba(0,109,67,0.08)] border border-white/20 animate-bounce [animation-duration:4s]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#00a86b] rounded-full flex items-center justify-center">
+                  <Briefcase className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-neutral-900">Junior Architect</p>
+                  <p className="text-xs text-[#006d43]">Dubai, UAE</p>
+                </div>
+              </div>
             </div>
 
-            {/* Floating Card */}
-            {/* <div className="absolute bottom-8 lg:bottom-1/4 right-4 lg:right-32 bg-white rounded-xl shadow-xl p-6 max-w-xs hidden lg:block z-20">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 rounded-full" style={{ backgroundColor: '#8B5CF6' }}></div>
+            {/* Floating card — bottom right */}
+            <div className="absolute bottom-24 right-8 bg-white/80 backdrop-blur-xl p-4 rounded-xl shadow-[0_20px_40px_rgba(0,109,67,0.08)] border border-white/20 animate-bounce [animation-duration:5s] [animation-direction:reverse]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-[#e5e2e1] rounded-full flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-[#006d43]" />
+                </div>
                 <div>
-                  <div className="text-sm" style={{ color: '#312E81' }}>Sarah Johnson</div>
-                  <div className="text-xs text-muted-foreground">Software Engineer</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="w-4 h-4" style={{ color: '#8B5CF6' }} />
-                <span className="text-sm text-muted-foreground">Hired in 2 weeks</span>
-              </div>
-            </div> */}
-          </div>
-
-          {/* Left Content - On top with z-index, aligned to left */}
-          <div className="relative z-10 min-h-screen flex items-center">
-            <div className="w-full lg:w-1/2 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="space-y-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent/10 border border-accent/20">
-                  <CheckCircle className="w-4 h-4" style={{ color: '#8B5CF6' }} />
-                  <span className="text-sm" style={{ color: '#8B5CF6' }}>
-                    Trusted by 10,000+ Graduates
-                  </span>
-                </div>
-                
-                <div className="space-y-4">
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl" style={{ color: '#312E81', lineHeight: '1.1' }}>
-                    Bridge Your Future
-                  </h1>
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl" style={{ color: '#1E1B4B', lineHeight: '1.1' }}>
-                    Connect Talent with Opportunity
-                  </h2>
-                </div>
-
-                <p className="text-lg sm:text-xl text-muted-foreground max-w-xl" style={{ color: '#312E81', lineHeight: '1.1' }}>
-                  The professional platform connecting fresh graduates with leading companies. 
-                  Build your career, find your perfect match, and step into your professional future with confidence.
-                </p>
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Link href="/auth/sign-up">
-                    <button 
-                      className="group px-8 py-4 rounded-lg text-white transition-all hover:shadow-xl flex items-center justify-center gap-2"
-                      style={{ backgroundColor: '#06B6D4' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0891B2'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#06B6D4'}
-                    >
-                      Start Your Journey
-                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </button>
-                  </Link>
-                  
-                  <button 
-                    className="px-8 py-4 rounded-lg border-2 transition-all hover:shadow-lg bg-white"
-                    style={{ borderColor: '#312E81', color: '#312E81' }}
-                  >
-                    For Employers
-                  </button>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-8 pt-8 border-t border-border">
-                  <div>
-                    <div className="text-3xl mb-1" style={{ color: '#312E81' }}>10K+</div>
-                    <div className="text-sm text-muted-foreground">Graduates</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl mb-1" style={{ color: '#312E81' }}>500+</div>
-                    <div className="text-sm text-muted-foreground">Companies</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl mb-1" style={{ color: '#8B5CF6' }}>95%</div>
-                    <div className="text-sm text-muted-foreground">Match Rate</div>
-                  </div>
+                  <p className="font-semibold text-sm text-neutral-900">Interview Passed</p>
+                  <p className="text-xs text-neutral-500">Top 5% Candidate</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
     </section>
   );
 }

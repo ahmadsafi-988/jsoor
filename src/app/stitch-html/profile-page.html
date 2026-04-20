@@ -1,0 +1,432 @@
+<!doctype html>
+
+<html class="light" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>JSOOR - Profile</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-container": "#5e0211",
+              "surface-container-high": "#ebe7e7",
+              "on-secondary-fixed-variant": "#474646",
+              "surface-container-lowest": "#ffffff",
+              "inverse-on-surface": "#f3f0ef",
+              "on-error-container": "#93000a",
+              "surface-container-low": "#f6f3f2",
+              "surface-container-highest": "#e5e2e1",
+              secondary: "#5f5e5e",
+              primary: "#006d43",
+              "primary-container": "#00a86b",
+              "on-primary": "#ffffff",
+              "outline-variant": "#bccabe",
+              "tertiary-container": "#e86c6e",
+              surface: "#fcf9f8",
+              "on-background": "#1c1b1b",
+              "surface-variant": "#e5e2e1",
+              "surface-container": "#f0edec",
+              "on-primary-container": "#00331d",
+              error: "#ba1a1a",
+              outline: "#6d7a70",
+              "on-primary-fixed-variant": "#005232",
+              "on-primary-fixed": "#002111",
+              "secondary-fixed": "#e5e2e1",
+              "on-secondary-fixed": "#1c1b1b",
+              "on-secondary": "#ffffff",
+              "inverse-surface": "#313030",
+              "tertiary-fixed-dim": "#ffb3b1",
+              "on-tertiary-fixed-variant": "#852229",
+              "on-tertiary": "#ffffff",
+              tertiary: "#a5393e",
+              "on-tertiary-fixed": "#410008",
+              "primary-fixed-dim": "#59de9b",
+              "secondary-container": "#e5e2e1",
+              "on-secondary-container": "#656464",
+              "error-container": "#ffdad6",
+              "on-surface-variant": "#3d4a41",
+              "surface-bright": "#fcf9f8",
+              "on-surface": "#1c1b1b",
+              "tertiary-fixed": "#ffdad8",
+              "surface-tint": "#006d43",
+              "inverse-primary": "#59de9b",
+              background: "#fcf9f8",
+              "surface-dim": "#dcd9d9",
+              "secondary-fixed-dim": "#c8c6c5",
+              "on-error": "#ffffff",
+              "primary-fixed": "#78fbb6",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            spacing: {},
+            fontFamily: {
+              headline: ["Space Grotesk"],
+              body: ["Inter"],
+              label: ["Inter"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-surface font-body text-on-surface antialiased min-h-screen">
+    <!-- SideNavBar -->
+    <nav
+      class="bg-[#121212] dark:bg-black font-['Space_Grotesk'] tracking-tight text-sm font-medium fixed left-0 top-0 h-screen w-72 z-50 flex flex-col h-full justify-between p-6"
+    >
+      <div>
+        <div
+          class="text-2xl font-black text-white tracking-widest uppercase mb-8"
+        >
+          JSOOR
+        </div>
+        <ul class="space-y-2">
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="dashboard"
+                >dashboard</span
+              >
+              Home
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-[#00A86B] bg-[#1c1b1b] rounded-lg px-4 py-3 shadow-[0_20px_40px_rgba(0,109,67,0.08)] scale-95 active:scale-90 duration-150 ease-in-out"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="person"
+                >person</span
+              >
+              Profile
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="description"
+                >description</span
+              >
+              My Applications
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="model_training"
+                >model_training</span
+              >
+              Interview Simulator
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="forum"
+                >forum</span
+              >
+              Messages
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="notifications"
+                >notifications</span
+              >
+              Notifications
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <ul class="space-y-2">
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="settings"
+                >settings</span
+              >
+              Settings
+            </a>
+          </li>
+          <li>
+            <a
+              class="flex items-center gap-4 text-neutral-400 px-4 py-3 hover:text-white hover:bg-[#1c1b1b] hover:translate-x-1 transition-all duration-300 scale-95 active:scale-90 duration-150 ease-in-out rounded-lg"
+              href="#"
+            >
+              <span class="material-symbols-outlined" data-icon="logout"
+                >logout</span
+              >
+              Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+    <!-- Main Layout wrapper considering Sidebar -->
+    <div class="ml-72 flex flex-col min-h-screen">
+      <!-- TopAppBar -->
+      <header
+        class="bg-white/80 dark:bg-[#121212]/80 backdrop-blur-2xl font-['Inter'] font-semibold sticky top-0 right-0 z-40 w-full flex justify-between items-center px-8 py-4"
+      >
+        <div class="flex items-center gap-4">
+          <span
+            class="material-symbols-outlined text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors focus-within:ring-2 focus-within:ring-[#00A86B] duration-200 p-2 cursor-pointer"
+            data-icon="search"
+            >search</span
+          >
+          <input
+            class="bg-transparent border-none focus:ring-0 outline-none text-neutral-900 dark:text-white placeholder-neutral-500"
+            placeholder="Search..."
+            type="text"
+          />
+        </div>
+        <div class="flex items-center gap-6">
+          <span
+            class="material-symbols-outlined text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors focus-within:ring-2 focus-within:ring-[#00A86B] duration-200 p-2 cursor-pointer"
+            data-icon="notifications"
+            >notifications</span
+          >
+          <span
+            class="material-symbols-outlined text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors focus-within:ring-2 focus-within:ring-[#00A86B] duration-200 p-2 cursor-pointer"
+            data-icon="mail"
+            >mail</span
+          >
+          <img
+            alt="User Avatar"
+            class="w-10 h-10 rounded-full object-cover"
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0kJPxx46i2qFbc5Lwogt57llAdHjvg2-w15T31FXA6HoNg6euVpSyJZBXbfIVBmMy9_EHVydFtp0Dp7udCq5UgUwFlgEzYR2rbRzWcqk4DLdx7sFW0hkO4vIwF3HqKzgTeQJ57XMlvsKijPijldgYt2oVxkCzMfbZUHDBBrzEpTtV45hgaDwOS0dQ5f7KrIefyqLQf7y3gVPSO07DJ8P2IbDoZLYivCbjR8wpqa9rDaDBINvV0TaHE5fuVmn4bzgKeHJsSxbH03Zc"
+          />
+        </div>
+      </header>
+      <!-- Main Canvas -->
+      <main class="flex-grow p-8 xl:p-12">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <!-- Left Column (Main Profile Info) -->
+          <div class="lg:col-span-8 space-y-8">
+            <!-- Profile Header Card -->
+            <section
+              class="bg-surface-container-low rounded-xl p-8 relative overflow-hidden group"
+            >
+              <!-- Decorative background glow -->
+              <div
+                class="absolute -right-20 -top-20 w-64 h-64 bg-primary-fixed rounded-full blur-[100px] opacity-20 pointer-events-none"
+              ></div>
+              <div
+                class="flex flex-col sm:flex-row gap-8 items-start sm:items-center relative z-10"
+              >
+                <img
+                  alt="Ahmad Mansour Avatar"
+                  class="w-32 h-32 rounded-xl object-cover shadow-[0_20px_40px_rgba(0,109,67,0.08)]"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCn9aEyNU1vQf8xQhxwuaoOYTl1XiPArvhcSc1lXJJZD2uPXFMyz5rWB6ZViLXqxZ_0HCO81Vc5ZyfAavr7o28Q67yNTGu-byGzM89-9eLkuDraLcbD3EsDqFAqGL6lq-j1uxtf9DAcIOtft34Ky_m39q6wqZR--KjmQna-7kWZAzx7yN0TqxajNytm3k9WD5J_56CeF0XerA67weLiqLy8cxgTs19BirC3praEvYv8jx0GgrfSFVImxhKq-U3B12kRkSwAQxofVibf"
+                />
+                <div class="flex-grow">
+                  <h1
+                    class="font-headline text-[2.5rem] font-bold text-on-surface leading-tight -tracking-[0.02em]"
+                  >
+                    Ahmad Mansour
+                  </h1>
+                  <p class="text-on-surface-variant font-medium mt-1 text-lg">
+                    Computer Science Graduate · Available for Work
+                  </p>
+                  <div class="flex items-center gap-2 mt-4 text-secondary">
+                    <span
+                      class="material-symbols-outlined text-sm"
+                      data-icon="location_on"
+                      >location_on</span
+                    >
+                    <span class="text-sm">Dubai, United Arab Emirates</span>
+                  </div>
+                </div>
+                <button
+                  class="bg-gradient-to-br from-primary to-primary-container text-on-primary px-6 py-3 rounded-md font-semibold hover:brightness-110 hover:shadow-[0_0_20px_rgba(0,168,107,0.4)] transition-all shrink-0"
+                >
+                  Edit Profile
+                </button>
+              </div>
+            </section>
+            <!-- Experience Card -->
+            <section
+              class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+            >
+              <div class="flex justify-between items-center mb-6">
+                <h2
+                  class="font-headline text-[1.75rem] font-medium text-on-surface"
+                >
+                  Experience
+                </h2>
+                <button
+                  class="text-primary hover:bg-surface-container p-2 rounded-full transition-colors"
+                >
+                  <span class="material-symbols-outlined" data-icon="add"
+                    >add</span
+                  >
+                </button>
+              </div>
+              <div
+                class="space-y-8 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-surface-container-highest"
+              >
+                <!-- Experience Item -->
+                <div class="relative pl-10">
+                  <div
+                    class="absolute left-0 top-1 w-6 h-6 rounded-full bg-surface-container-low border-2 border-primary flex items-center justify-center"
+                  >
+                    <div
+                      class="w-2 h-2 rounded-full bg-primary-fixed shadow-[0_0_10px_rgba(120,251,182,0.8)]"
+                    ></div>
+                  </div>
+                  <div class="flex justify-between items-start">
+                    <div>
+                      <h3
+                        class="font-body text-title-lg font-semibold text-on-surface"
+                      >
+                        Software Engineering Intern
+                      </h3>
+                      <p class="text-on-surface-variant mt-1">
+                        Tech Solutions Inc. · Dubai, UAE
+                      </p>
+                      <p class="text-sm text-secondary mt-2">
+                        Jun 2023 - Aug 2023
+                      </p>
+                    </div>
+                    <div class="flex gap-2">
+                      <button
+                        class="text-secondary hover:text-primary transition-colors"
+                      >
+                        <span class="material-symbols-outlined" data-icon="edit"
+                          >edit</span
+                        >
+                      </button>
+                      <button
+                        class="text-secondary hover:text-error transition-colors"
+                      >
+                        <span
+                          class="material-symbols-outlined"
+                          data-icon="delete"
+                          >delete</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    class="text-body-md text-on-surface-variant mt-4 leading-relaxed"
+                  >
+                    Assisted in the development of a React-based internal tool.
+                    Collaborated with senior engineers to optimize database
+                    queries, resulting in a 15% performance increase.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+          <!-- Right Column (Sidebar Cards) -->
+          <div class="lg:col-span-4 space-y-8">
+            <!-- Personal Details -->
+            <section class="bg-surface-container-low rounded-xl p-8">
+              <h2
+                class="font-headline text-[1.75rem] font-medium text-on-surface mb-6"
+              >
+                Details
+              </h2>
+              <div class="space-y-6">
+                <div>
+                  <p class="text-sm text-secondary mb-1">Email</p>
+                  <p class="font-medium text-on-surface">ahmad.m@example.com</p>
+                </div>
+                <div>
+                  <p class="text-sm text-secondary mb-1">Phone</p>
+                  <p class="font-medium text-on-surface">+971 50 123 4567</p>
+                </div>
+                <div>
+                  <p class="text-sm text-secondary mb-1">Bio</p>
+                  <p class="text-sm text-on-surface-variant leading-relaxed">
+                    Passionate computer science graduate with a focus on
+                    building scalable web applications. Eager to contribute to
+                    innovative projects and learn from experienced teams.
+                  </p>
+                </div>
+              </div>
+            </section>
+            <!-- Skills -->
+            <section
+              class="bg-surface-container-lowest rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
+            >
+              <div class="flex justify-between items-center mb-6">
+                <h2
+                  class="font-headline text-[1.75rem] font-medium text-on-surface"
+                >
+                  Skills
+                </h2>
+              </div>
+              <div class="flex flex-wrap gap-3">
+                <span
+                  class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full text-sm font-medium border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default"
+                  >Python</span
+                >
+                <span
+                  class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full text-sm font-medium border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default"
+                  >React</span
+                >
+                <span
+                  class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full text-sm font-medium border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default"
+                  >JavaScript</span
+                >
+                <span
+                  class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full text-sm font-medium border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default"
+                  >UI Design</span
+                >
+                <span
+                  class="bg-surface-container-high text-on-surface px-4 py-2 rounded-full text-sm font-medium border border-outline-variant/20 hover:border-primary/50 transition-colors cursor-default"
+                  >SQL</span
+                >
+                <button
+                  class="border border-outline text-primary px-4 py-2 rounded-full text-sm font-medium hover:bg-primary/5 transition-colors flex items-center gap-1"
+                >
+                  <span
+                    class="material-symbols-outlined text-sm"
+                    data-icon="add"
+                    >add</span
+                  >
+                  Add Skill
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

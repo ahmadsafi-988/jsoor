@@ -1,0 +1,520 @@
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Interview Simulator Setup - JSOOR</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700;900&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+      rel="stylesheet"
+    />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-fixed-variant": "#474646",
+              "on-error-container": "#93000a",
+              outline: "#6d7a70",
+              "surface-container": "#f0edec",
+              "on-primary-fixed": "#002111",
+              "surface-container-high": "#ebe7e7",
+              "surface-bright": "#fcf9f8",
+              "tertiary-fixed-dim": "#ffb3b1",
+              "on-surface": "#1c1b1b",
+              background: "#fcf9f8",
+              "on-tertiary-fixed-variant": "#852229",
+              "surface-variant": "#e5e2e1",
+              "on-tertiary": "#ffffff",
+              "primary-container": "#00a86b",
+              "on-primary-container": "#00331d",
+              "secondary-container": "#e5e2e1",
+              "on-secondary": "#ffffff",
+              surface: "#fcf9f8",
+              "primary-fixed-dim": "#59de9b",
+              error: "#ba1a1a",
+              "tertiary-container": "#e86c6e",
+              "on-secondary-container": "#656464",
+              "outline-variant": "#bccabe",
+              "primary-fixed": "#78fbb6",
+              "on-primary-fixed-variant": "#005232",
+              "secondary-fixed": "#e5e2e1",
+              "surface-container-lowest": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-tertiary-container": "#5e0211",
+              "on-tertiary-fixed": "#410008",
+              "surface-tint": "#006d43",
+              secondary: "#5f5e5e",
+              "on-secondary-fixed": "#1c1b1b",
+              "on-error": "#ffffff",
+              tertiary: "#a5393e",
+              "on-background": "#1c1b1b",
+              "surface-container-highest": "#e5e2e1",
+              "inverse-primary": "#59de9b",
+              "error-container": "#ffdad6",
+              "inverse-on-surface": "#f3f0ef",
+              primary: "#006d43",
+              "surface-container-low": "#f6f3f2",
+              "inverse-surface": "#313030",
+              "tertiary-fixed": "#ffdad8",
+              "secondary-fixed-dim": "#c8c6c5",
+              "surface-dim": "#dcd9d9",
+              "on-surface-variant": "#3d4a41",
+            },
+            borderRadius: {
+              DEFAULT: "0.25rem",
+              lg: "0.5rem",
+              xl: "0.75rem",
+              full: "9999px",
+            },
+            fontFamily: {
+              headline: ["Space Grotesk", "sans-serif"],
+              body: ["Inter", "sans-serif"],
+              label: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      .font-headline {
+        font-family: "Space Grotesk", sans-serif;
+      }
+
+      /* Form Pedestal Focus Styles */
+      .pedestal-input:focus-within {
+        border-bottom-width: 2px;
+        border-color: #006d43;
+        outline: none;
+        box-shadow: none;
+      }
+
+      /* Custom scrollbar for sidebar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #3d4a41;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="bg-surface text-on-surface min-h-screen flex antialiased">
+    <!-- SideNavBar -->
+    <aside
+      class="hidden md:flex flex-col h-screen py-8 px-6 overflow-y-auto bg-neutral-950 fixed left-0 w-72 z-50 shadow-2xl shadow-[#00A86B]/5 tonal-layering no-borders"
+    >
+      <!-- Header / Brand -->
+      <div class="mb-12 px-4 flex flex-col gap-1">
+        <h1 class="text-white text-3xl font-black font-headline tracking-tight">
+          JSOOR
+        </h1>
+      </div>
+      <!-- Navigation Links -->
+      <nav class="flex-1 flex flex-col gap-2 font-body">
+        <a
+          class="text-neutral-400 hover:text-white px-4 py-3 flex items-center gap-3 hover:bg-neutral-800 transition-all duration-300 rounded-lg group"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform"
+            >home</span
+          >
+          <span class="font-medium">Home</span>
+        </a>
+        <a
+          class="text-neutral-400 hover:text-white px-4 py-3 flex items-center gap-3 hover:bg-neutral-800 transition-all duration-300 rounded-lg group"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform"
+            >person</span
+          >
+          <span class="font-medium">Profile</span>
+        </a>
+        <a
+          class="text-neutral-400 hover:text-white px-4 py-3 flex items-center gap-3 hover:bg-neutral-800 transition-all duration-300 rounded-lg group"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform"
+            >description</span
+          >
+          <span class="font-medium">My Applications</span>
+        </a>
+        <!-- Active Tab -->
+        <a
+          class="text-white bg-gradient-to-br from-[#006d43] to-[#00A86B] rounded-lg px-4 py-3 font-medium flex items-center gap-3 shadow-lg shadow-[#00A86B]/20 scale-102 hover:translate-x-1 transition-transform"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl"
+            style="font-variation-settings: &quot;FILL&quot; 1"
+            >psychology</span
+          >
+          <span>Interview Simulator</span>
+        </a>
+        <a
+          class="text-neutral-400 hover:text-white px-4 py-3 flex items-center gap-3 hover:bg-neutral-800 transition-all duration-300 rounded-lg group"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform"
+            >mail</span
+          >
+          <span class="font-medium">Messages</span>
+        </a>
+        <a
+          class="text-neutral-400 hover:text-white px-4 py-3 flex items-center gap-3 hover:bg-neutral-800 transition-all duration-300 rounded-lg group"
+          href="#"
+        >
+          <span
+            class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform"
+            >notifications</span
+          >
+          <span class="font-medium">Notifications</span>
+        </a>
+      </nav>
+      <!-- Footer / Profile Profile Card -->
+      <div
+        class="mt-8 pt-6 border-t border-white/10 flex flex-col gap-4 font-body"
+      >
+        <!-- Settings & Logout -->
+        <div class="flex flex-col gap-1">
+          <a
+            class="text-neutral-400 hover:text-white px-4 py-2 flex items-center gap-3 hover:bg-neutral-800 transition-colors rounded-lg"
+            href="#"
+          >
+            <span class="material-symbols-outlined text-lg">settings</span>
+            <span class="text-sm font-medium">Settings</span>
+          </a>
+          <a
+            class="text-neutral-400 hover:text-white px-4 py-2 flex items-center gap-3 hover:bg-neutral-800 transition-colors rounded-lg"
+            href="#"
+          >
+            <span class="material-symbols-outlined text-lg">logout</span>
+            <span class="text-sm font-medium">Logout</span>
+          </a>
+        </div>
+        <!-- Profile Snippet -->
+        <div class="bg-white/5 rounded-xl p-4 flex items-center gap-3 mt-4">
+          <div
+            class="w-10 h-10 rounded-full bg-surface-variant overflow-hidden shrink-0 ring-2 ring-primary-container/30"
+          >
+            <img
+              alt="Profile"
+              class="w-full h-full object-cover"
+              data-alt="close up portrait of a young middle eastern man wearing a smart casual navy blazer, natural soft lighting"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7wonF9X1YA0ECELDs7UWSZlO6Mdq-c7F0pdZs_Pt6EMshwD1CpxYMGoQDKLcS1ndUl-pjAvXu7UEbPF5C1iWZT7vtywrtNWoMwgNiEhpwCA7FmtpkpcWQ0toZkOwjJhzi0iyjCTZzy_cixUrY5Jtjl0frILO0pra7pkNI_CVXzTD6eRLduyDn5L3opDhYev4JtdQ-ouUmBBUX0Lx87rWi28SJXq7OI-VX_oRVFPxa5E9AUpQyt0G7upSkws2E23Anvj0F9321aLbv"
+            />
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-white text-sm font-semibold truncate">Tariq F.</p>
+            <p class="text-neutral-400 text-xs truncate">Software Engineer</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <!-- Main Content Wrapper -->
+    <div class="flex-1 flex flex-col md:ml-72 min-h-screen relative w-full">
+      <!-- TopAppBar -->
+      <header
+        class="flex justify-between items-center w-full px-8 h-20 sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b-0 tonal-shift bg-[#f6f3f2]"
+      >
+        <!-- Mobile Menu Toggle (Visible only on small screens) -->
+        <button
+          class="md:hidden text-on-surface-variant p-2 rounded-lg hover:bg-surface-variant transition-colors"
+        >
+          <span class="material-symbols-outlined text-2xl">menu</span>
+        </button>
+        <!-- Brand Logo (TopBar - requested by user despite sidebar) -->
+        <div
+          class="font-headline text-2xl font-bold tracking-tight text-neutral-900 hidden md:block"
+        >
+          JSOOR
+        </div>
+        <!-- Centered Search Bar -->
+        <div class="flex-1 max-w-xl mx-8 hidden sm:block relative">
+          <div
+            class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"
+          >
+            <span
+              class="material-symbols-outlined text-on-surface-variant text-xl"
+              >search</span
+            >
+          </div>
+          <input
+            class="w-full bg-surface-container-high text-on-surface rounded-full py-3 pl-12 pr-4 border-0 focus:ring-2 focus:ring-primary/20 placeholder:text-on-surface-variant/60 font-body transition-all duration-200"
+            placeholder="Search resources, templates, or jobs..."
+            type="text"
+          />
+        </div>
+        <!-- Trailing Icons -->
+        <div class="flex items-center gap-2">
+          <button
+            class="p-2 rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-[#00A86B] transition-colors duration-200 relative group"
+          >
+            <span
+              class="material-symbols-outlined text-[22px] group-hover:scale-95 duration-150"
+              >notifications</span
+            >
+            <span
+              class="absolute top-2 right-2 w-2 h-2 bg-primary-container rounded-full border border-white"
+            ></span>
+          </button>
+          <button
+            class="p-2 rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-[#00A86B] transition-colors duration-200 group"
+          >
+            <span
+              class="material-symbols-outlined text-[22px] group-hover:scale-95 duration-150"
+              >mail</span
+            >
+          </button>
+        </div>
+      </header>
+      <!-- Main Canvas -->
+      <main
+        class="flex-1 px-4 py-8 md:p-12 w-full max-w-[1400px] mx-auto flex flex-col"
+      >
+        <!-- Page Header -->
+        <div class="mb-10 flex flex-col gap-2">
+          <h2
+            class="font-headline text-[2.5rem] font-bold text-on-surface tracking-tight leading-tight"
+          >
+            Set Up Your Mock Interview
+          </h2>
+          <p
+            class="text-on-surface-variant font-body text-base max-w-2xl leading-relaxed"
+          >
+            Configure your AI-driven simulator. Tailor the environment to your
+            target role to experience a realistic, high-pressure interview
+            scenario.
+          </p>
+        </div>
+        <!-- Setup Form Layout (Asymmetric / Bento-ish) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <!-- Main Form Area (7 columns) -->
+          <div
+            class="lg:col-span-8 bg-surface-container-lowest rounded-[1.5rem] p-8 md:p-10 flex flex-col gap-8 relative overflow-hidden"
+          >
+            <!-- Decorative Background Element (Emerald Glow) -->
+            <div
+              class="absolute -top-32 -right-32 w-96 h-96 bg-primary-fixed rounded-full mix-blend-multiply filter blur-[100px] opacity-20 pointer-events-none"
+            ></div>
+            <form class="flex flex-col gap-8 relative z-10">
+              <!-- Role Input -->
+              <div class="flex flex-col gap-2 relative">
+                <label
+                  class="font-body text-sm font-semibold text-on-surface-variant uppercase tracking-wider"
+                  >Target Role</label
+                >
+                <div
+                  class="relative bg-surface-container-low rounded-t-lg rounded-b-none border-b-2 border-surface-variant pedestal-input transition-colors"
+                >
+                  <span
+                    class="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant opacity-70"
+                    >work</span
+                  >
+                  <input
+                    class="w-full bg-transparent border-none py-4 pl-12 pr-4 text-on-surface font-body text-base placeholder:text-on-surface-variant/40 focus:ring-0"
+                    placeholder="e.g. Senior Frontend Engineer"
+                    type="text"
+                  />
+                </div>
+              </div>
+              <!-- Skills Input -->
+              <div class="flex flex-col gap-2 relative">
+                <label
+                  class="font-body text-sm font-semibold text-on-surface-variant uppercase tracking-wider"
+                  >Key Technologies &amp; Skills</label
+                >
+                <div
+                  class="relative bg-surface-container-low rounded-t-lg rounded-b-none border-b-2 border-surface-variant pedestal-input transition-colors"
+                >
+                  <span
+                    class="absolute left-4 top-4 material-symbols-outlined text-on-surface-variant opacity-70"
+                    >code</span
+                  >
+                  <textarea
+                    class="w-full bg-transparent border-none py-4 pl-12 pr-4 text-on-surface font-body text-base placeholder:text-on-surface-variant/40 focus:ring-0 resize-none"
+                    placeholder="React, TypeScript, System Architecture, Performance Tuning..."
+                    rows="3"
+                  ></textarea>
+                </div>
+                <p class="text-xs text-on-surface-variant/70 pl-2">
+                  Separate skills with commas.
+                </p>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Interview Type -->
+                <div class="flex flex-col gap-2">
+                  <label
+                    class="font-body text-sm font-semibold text-on-surface-variant uppercase tracking-wider"
+                    >Interview Type</label
+                  >
+                  <div
+                    class="relative bg-surface-container-low rounded-t-lg rounded-b-none border-b-2 border-surface-variant pedestal-input transition-colors"
+                  >
+                    <select
+                      class="w-full bg-transparent border-none py-4 pl-4 pr-10 text-on-surface font-body text-base appearance-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="technical">Technical / Coding</option>
+                      <option value="system_design">System Design</option>
+                      <option value="behavioral">
+                        Behavioral (STAR Method)
+                      </option>
+                      <option value="mixed">Mixed Panel</option>
+                    </select>
+                    <span
+                      class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant pointer-events-none"
+                      >expand_more</span
+                    >
+                  </div>
+                </div>
+                <!-- Difficulty -->
+                <div class="flex flex-col gap-2">
+                  <label
+                    class="font-body text-sm font-semibold text-on-surface-variant uppercase tracking-wider"
+                    >Difficulty Level</label
+                  >
+                  <div
+                    class="relative bg-surface-container-low rounded-t-lg rounded-b-none border-b-2 border-surface-variant pedestal-input transition-colors"
+                  >
+                    <select
+                      class="w-full bg-transparent border-none py-4 pl-4 pr-10 text-on-surface font-body text-base appearance-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="entry">Entry Level / Graduate</option>
+                      <option selected="" value="mid">Mid-Level</option>
+                      <option value="senior">Senior / Lead</option>
+                      <option value="principal">Principal / Staff</option>
+                    </select>
+                    <span
+                      class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant pointer-events-none"
+                      >expand_more</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <!-- Action Button -->
+              <div
+                class="mt-4 pt-6 border-t border-surface-variant flex justify-end"
+              >
+                <button
+                  class="bg-gradient-to-br from-primary to-primary-container text-white font-body font-semibold text-lg py-4 px-10 rounded-xl hover:brightness-110 shadow-[0_20px_40px_rgba(0,108,67,0.15)] transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-3"
+                  type="button"
+                >
+                  <span>Initialize Simulator</span>
+                  <span class="material-symbols-outlined">rocket_launch</span>
+                </button>
+              </div>
+            </form>
+          </div>
+          <!-- Info Panel (5 columns) -->
+          <div class="lg:col-span-4 flex flex-col gap-6">
+            <!-- Pro-Tip Card -->
+            <div
+              class="bg-surface-container-highest rounded-2xl p-6 relative overflow-hidden group"
+            >
+              <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+              <div class="flex items-start gap-4">
+                <div
+                  class="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center shrink-0 text-primary"
+                >
+                  <span class="material-symbols-outlined"
+                    >tips_and_updates</span
+                  >
+                </div>
+                <div>
+                  <h3
+                    class="font-headline text-lg font-bold text-on-surface mb-2"
+                  >
+                    Pro-Tip for System Design
+                  </h3>
+                  <p
+                    class="text-sm font-body text-on-surface-variant leading-relaxed"
+                  >
+                    When setting up a System Design mock, include specific
+                    constraints in the 'Skills' section (e.g., "High throughput,
+                    Low latency, Microservices") to force the AI to challenge
+                    your architecture choices.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <!-- History / Quick Start -->
+            <div class="bg-surface-container-low rounded-2xl p-6">
+              <h3
+                class="font-body text-sm font-semibold text-on-surface-variant uppercase tracking-wider mb-4"
+              >
+                Recent Setups
+              </h3>
+              <div class="flex flex-col gap-3">
+                <button
+                  class="w-full text-left bg-surface-container-lowest hover:bg-white rounded-xl p-4 transition-colors flex items-center justify-between border border-outline-variant/20 group"
+                >
+                  <div>
+                    <p
+                      class="font-semibold text-on-surface font-body text-sm group-hover:text-primary transition-colors"
+                    >
+                      Frontend Architecture
+                    </p>
+                    <p class="text-xs text-on-surface-variant mt-1">
+                      Senior • Tech/Design
+                    </p>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-outline group-hover:text-primary"
+                    >arrow_forward</span
+                  >
+                </button>
+                <button
+                  class="w-full text-left bg-surface-container-lowest hover:bg-white rounded-xl p-4 transition-colors flex items-center justify-between border border-outline-variant/20 group"
+                >
+                  <div>
+                    <p
+                      class="font-semibold text-on-surface font-body text-sm group-hover:text-primary transition-colors"
+                    >
+                      Behavioral Panel
+                    </p>
+                    <p class="text-xs text-on-surface-variant mt-1">
+                      Mid-Level • STAR Method
+                    </p>
+                  </div>
+                  <span
+                    class="material-symbols-outlined text-outline group-hover:text-primary"
+                    >arrow_forward</span
+                  >
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

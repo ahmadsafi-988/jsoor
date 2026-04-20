@@ -10,6 +10,14 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-sans);
+  --font-headline: var(--font-space-grotesk, "Space Grotesk", sans-serif);
+
+  /* Brand green palette (from Stitch design) */
+  --color-brand: #006d43;
+  --color-brand-light: #00a86b;
+  --color-brand-fixed: #78fbb6;
+  --color-brand-surface: #e5e2e1;
+  --color-on-surface-variant: #3d4a41;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -127,4 +135,39 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ── Stitch full color palette ──────────────────────────────── */
+@theme inline {
+  --color-surface-s: #fcf9f8;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0edec;
+  --color-surface-container-high: #ebe7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-surface-dim: #dcd9d9;
+  --color-on-surface-s: #1c1b1b;
+  --color-on-surface-variant-s: #3d4a41;
+  --color-secondary-s: #5f5e5e;
+  --color-outline-s: #6d7a70;
+  --color-outline-variant-s: #bccabe;
+  --color-primary-s: #006d43;
+  --color-primary-container-s: #00a86b;
+  --color-primary-fixed: #78fbb6;
+  --color-primary-fixed-dim: #59de9b;
+  --color-tertiary-s: #a5393e;
+  --color-tertiary-container-s: #e86c6e;
+  --color-error-s: #ba1a1a;
+}
+
+/* Stitch design utilities */
+.gradient-text {
+  background: linear-gradient(to bottom right, #006d43, #00a86b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-gradient-bg {
+  background: linear-gradient(to bottom right, #006d43, #00a86b);
 }

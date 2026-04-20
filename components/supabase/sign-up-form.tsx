@@ -1,19 +1,19 @@
 "use client";
 
-// components/sign-up-form.tsx
-// Replaces the default Supabase UI block sign-up-form.
-// Calls the signUp server action which redirects to /auth/sign-up-success.
-
-import React from "react";
-import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { signUp } from "@/lib/profile/actions";
+import { signUpAsCompany } from "@/lib/company/actions";
+import { User, Building2 } from "lucide-react";
+
+type Role = "job_seeker" | "company";
 
 export function SignUpForm() {
-  const [pending, setPending] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<Role>("job_seeker");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,16 +35,43 @@ export function SignUpForm() {
       return;
     }
 
-    const result = await signUp(formData);
+    const result = role === "company"
+      ? await signUpAsCompany(formData)
+      : await signUp(formData);
+
     if (result?.error) {
       setError(result.error);
       setPending(false);
     }
-    // On success, signUp() redirects — no further handling needed
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Role selector */}
+      <div className="space-y-2">
+        <Label>I am a</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { value: "job_seeker", label: "Job Seeker", icon: User },
+            { value: "company",    label: "Company",    icon: Building2 },
+          ] as { value: Role; label: string; icon: React.ElementType }[]).map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRole(value)}
+              className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                role === value
+                  ? "bg-indigo-900 text-white border-indigo-900 shadow-md"
+                  : "border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-900"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -82,9 +109,7 @@ export function SignUpForm() {
       </div>
 
       {error && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>
       )}
 
       <Button type="submit" className="w-full" disabled={pending}>
