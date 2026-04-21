@@ -12,7 +12,9 @@ export type AssessmentRow = Tables<"assessments">;
 export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url"> | null };
 
 export type ApplicationWithProfile = ApplicationRow & {
-  profile: Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "avatar_url" | "username" | "bio" | "degree" | "institution" | "location" | "github" | "website" | "cv_url"> | null;
+  profile: (Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "avatar_url" | "username"> & {
+    job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "github" | "website" | "cv_url"> | null;
+  }) | null;
   job: Pick<JobRow, "title" | "type" | "location"> | null;
 };
 
@@ -76,7 +78,8 @@ export async function getJobApplicants(jobId: string): Promise<ApplicationWithPr
     .select(`
       *,
       profile:profiles!job_applications_applicant_id_fkey(
-        id, first_name, last_name, avatar_url, username, bio, degree, institution, location, github, website, cv_url
+        id, first_name, last_name, avatar_url, username,
+        job_seeker_profiles(bio, degree, institution, location, github, website, cv_url)
       ),
       job:jobs!job_applications_job_id_fkey(title, type, location)
     `)
@@ -94,7 +97,8 @@ export async function getApplicationById(applicationId: string): Promise<Applica
     .select(`
       *,
       profile:profiles!job_applications_applicant_id_fkey(
-        id, first_name, last_name, avatar_url, username, bio, degree, institution, location, github, website, cv_url
+        id, first_name, last_name, avatar_url, username,
+        job_seeker_profiles(bio, degree, institution, location, github, website, cv_url)
       ),
       job:jobs!job_applications_job_id_fkey(title, type, location)
     `)

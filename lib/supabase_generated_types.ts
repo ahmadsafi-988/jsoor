@@ -12,92 +12,90 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
-      assessments: {
+      admins: {
         Row: {
+          added_at: string
           id: string
-          company_id: string
-          application_id: string
-          title: string
-          description: string
-          deadline: string | null
-          status: "pending" | "submitted" | "reviewed"
-          questions: Json | null
-          submission: Json | null
-          score: number | null
-          feedback: string | null
-          created_at: string
-          updated_at: string
         }
         Insert: {
-          id?: string
-          company_id: string
-          application_id: string
-          title: string
-          description: string
-          deadline?: string | null
-          status?: "pending" | "submitted" | "reviewed"
-          questions?: Json | null
-          submission?: Json | null
-          score?: number | null
-          feedback?: string | null
-          created_at?: string
-          updated_at?: string
+          added_at?: string
+          id: string
         }
         Update: {
+          added_at?: string
           id?: string
-          company_id?: string
-          application_id?: string
-          title?: string
-          description?: string
-          deadline?: string | null
-          status?: "pending" | "submitted" | "reviewed"
-          questions?: Json | null
-          submission?: Json | null
-          score?: number | null
-          feedback?: string | null
-          created_at?: string
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "assessments_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
+            foreignKeyName: "admins_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      assessments: {
+        Row: {
+          application_id: string
+          company_id: string
+          created_at: string
+          deadline: string | null
+          description: string
+          feedback: string | null
+          id: string
+          questions: Json | null
+          score: number | null
+          status: string
+          submission: Json | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          company_id: string
+          created_at?: string
+          deadline?: string | null
+          description: string
+          feedback?: string | null
+          id?: string
+          questions?: Json | null
+          score?: number | null
+          status?: string
+          submission?: Json | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          company_id?: string
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          feedback?: string | null
+          id?: string
+          questions?: Json | null
+          score?: number | null
+          status?: string
+          submission?: Json | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
             foreignKeyName: "assessments_application_id_fkey"
             columns: ["application_id"]
             isOneToOne: false
             referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -137,69 +135,69 @@ export type Database = {
       }
       companies: {
         Row: {
-          id: string
-          name: string
-          description: string
-          industry: string | null
-          website: string | null
-          logo_url: string | null
-          location: string | null
-          size: string | null
-          founded_year: string | null
           created_at: string
+          description: string
+          founded_year: string | null
+          id: string
+          industry: string | null
+          location: string | null
+          logo_url: string | null
+          name: string
+          size: string | null
+          website: string | null
         }
         Insert: {
-          id: string
-          name: string
-          description?: string
-          industry?: string | null
-          website?: string | null
-          logo_url?: string | null
-          location?: string | null
-          size?: string | null
-          founded_year?: string | null
           created_at?: string
+          description?: string
+          founded_year?: string | null
+          id: string
+          industry?: string | null
+          location?: string | null
+          logo_url?: string | null
+          name: string
+          size?: string | null
+          website?: string | null
         }
         Update: {
-          id?: string
-          name?: string
-          description?: string
-          industry?: string | null
-          website?: string | null
-          logo_url?: string | null
-          location?: string | null
-          size?: string | null
-          founded_year?: string | null
           created_at?: string
+          description?: string
+          founded_year?: string | null
+          id?: string
+          industry?: string | null
+          location?: string | null
+          logo_url?: string | null
+          name?: string
+          size?: string | null
+          website?: string | null
         }
         Relationships: []
       }
       job_applications: {
         Row: {
-          id: string
-          job_id: string
           applicant_id: string
-          status: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
           cover_letter: string | null
           created_at: string
+          id: string
+          job_id: string
+          status: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          job_id: string
           applicant_id: string
-          status?: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
           cover_letter?: string | null
           created_at?: string
+          id?: string
+          job_id: string
+          status?: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          job_id?: string
           applicant_id?: string
-          status?: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
           cover_letter?: string | null
           created_at?: string
+          id?: string
+          job_id?: string
+          status?: string
           updated_at?: string
         }
         Relationships: [
@@ -212,44 +210,94 @@ export type Database = {
           },
         ]
       }
+      job_seeker_profiles: {
+        Row: {
+          bio: string
+          cv_url: string | null
+          degree: string | null
+          edu_end: string | null
+          edu_start: string | null
+          github: string | null
+          gpa: string | null
+          id: string
+          institution: string | null
+          location: string | null
+          website: string | null
+        }
+        Insert: {
+          bio?: string
+          cv_url?: string | null
+          degree?: string | null
+          edu_end?: string | null
+          edu_start?: string | null
+          github?: string | null
+          gpa?: string | null
+          id: string
+          institution?: string | null
+          location?: string | null
+          website?: string | null
+        }
+        Update: {
+          bio?: string
+          cv_url?: string | null
+          degree?: string | null
+          edu_end?: string | null
+          edu_start?: string | null
+          github?: string | null
+          gpa?: string | null
+          id?: string
+          institution?: string | null
+          location?: string | null
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_seeker_profiles_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
-          id: string
           company_id: string
-          title: string
-          description: string
-          location: string | null
-          type: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
-          salary_range: string | null
-          requirements: string | null
-          is_active: boolean
           created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          location: string | null
+          requirements: string | null
+          salary_range: string | null
+          title: string
+          type: string
           updated_at: string
         }
         Insert: {
-          id?: string
           company_id: string
-          title: string
-          description: string
-          location?: string | null
-          type?: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
-          salary_range?: string | null
-          requirements?: string | null
-          is_active?: boolean
           created_at?: string
+          description: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          requirements?: string | null
+          salary_range?: string | null
+          title: string
+          type?: string
           updated_at?: string
         }
         Update: {
-          id?: string
           company_id?: string
-          title?: string
-          description?: string
-          location?: string | null
-          type?: "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship"
-          salary_range?: string | null
-          requirements?: string | null
-          is_active?: boolean
           created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          requirements?: string | null
+          salary_range?: string | null
+          title?: string
+          type?: string
           updated_at?: string
         }
         Relationships: [
@@ -291,63 +339,30 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
-          bio: string
-          cv_url: string | null
-          degree: string | null
-          edu_end: string | null
-          edu_start: string | null
           first_name: string
-          github: string | null
-          gpa: string | null
           id: string
-          institution: string | null
           joined_date: string
           last_name: string
-          location: string | null
-          logo_url: string | null
-          role: "job_seeker" | "company"
+          role: string
           username: string
-          website: string | null
         }
         Insert: {
           avatar_url?: string | null
-          bio?: string
-          cv_url?: string | null
-          degree?: string | null
-          edu_end?: string | null
-          edu_start?: string | null
           first_name?: string
-          github?: string | null
-          gpa?: string | null
           id: string
-          institution?: string | null
           joined_date?: string
           last_name?: string
-          location?: string | null
-          logo_url?: string | null
-          role?: "job_seeker" | "company"
+          role?: string
           username?: string
-          website?: string | null
         }
         Update: {
           avatar_url?: string | null
-          bio?: string
-          cv_url?: string | null
-          degree?: string | null
-          edu_end?: string | null
-          edu_start?: string | null
           first_name?: string
-          github?: string | null
-          gpa?: string | null
           id?: string
-          institution?: string | null
           joined_date?: string
           last_name?: string
-          location?: string | null
-          logo_url?: string | null
-          role?: "job_seeker" | "company"
+          role?: string
           username?: string
-          website?: string | null
         }
         Relationships: []
       }
@@ -581,9 +596,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

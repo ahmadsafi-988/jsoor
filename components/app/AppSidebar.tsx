@@ -34,15 +34,14 @@ export function AppSidebar() {
       const supabase = createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
-      const { data } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, avatar_url, degree")
-        .eq("id", authUser.id)
-        .single();
+      const [{ data }, { data: jsProfile }] = await Promise.all([
+        supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", authUser.id).single(),
+        supabase.from("job_seeker_profiles").select("degree").eq("id", authUser.id).single(),
+      ]);
       if (data) {
         setUser({
           name: `${data.first_name} ${data.last_name}`.trim(),
-          role: data.degree || "Job Seeker",
+          role: jsProfile?.degree || "Job Seeker",
           avatarUrl: data.avatar_url,
         });
       }

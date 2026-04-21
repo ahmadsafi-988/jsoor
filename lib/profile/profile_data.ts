@@ -2,20 +2,13 @@
 // Server-side Supabase queries for the profile page.
 
 import { createClient } from "@/lib/supabase/server";
-import type { profile } from "@/lib/global_types";
+import type { FullJobSeekerProfile } from "@/lib/global_types";
 
-/**
- * Fetches the full profile composite (base + projects + badges)
- * by matching the `username` column in the `profiles` table.
- *
- * Returns null when no user with that username exists.
- */
 export async function getProfileByUsername(
   username: string
-): Promise<profile | null> {
+): Promise<FullJobSeekerProfile | null> {
   const supabase = await createClient();
 
-  // ── 1. Base profile ────────────────────────────────────────────────────────
   const { data: profile_base, error: profileError } = await supabase
     .from("profiles")
     .select("*")
@@ -27,7 +20,17 @@ export async function getProfileByUsername(
     return null;
   }
 
-  // ── 2. Projects ────────────────────────────────────────────────────────────
+  const { data: job_seeker_profile, error: jsError } = await supabase
+    .from("job_seeker_profiles")
+    .select("*")
+    .eq("id", profile_base.id)
+    .single();
+
+  if (jsError || !job_seeker_profile) {
+    console.error("[getProfileByUsername] job_seeker_profiles error:", jsError);
+    return null;
+  }
+
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
     .select("*")
@@ -37,7 +40,6 @@ export async function getProfileByUsername(
     console.error("[getProfileByUsername] projects error:", projectsError);
   }
 
-  // ── 3. Badges ──────────────────────────────────────────────────────────────
   const { data: badges, error: badgesError } = await supabase
     .from("badges")
     .select("*")
@@ -48,47 +50,43 @@ export async function getProfileByUsername(
   }
 
   const { data: profileSkills } = await supabase
-  .from("profile_to_skills")
-  .select("skills(name)")
-  .eq("user_id", profile_base.id)
+    .from("profile_to_skills")
+    .select("skills(name)")
+    .eq("user_id", profile_base.id);
 
-  const skills = (profileSkills ?? []).map((s: any) => s.skills.name)
+  const skills = (profileSkills ?? []).map((s: any) => s.skills.name);
+
   return {
     profile_base,
+    job_seeker_profile,
     projects: projects ?? [],
     badges: badges ?? [],
-    skills
+    skills,
   };
-
 }
 
-/**
- * Returns the currently authenticated user's ID, or null if not signed in.
- */
 export async function getCurrentUserId(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getClaims()
-  return data?.claims?.sub ?? null
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  return data?.claims?.sub ?? null;
 }
-
 
 export async function getCurrentUsername(): Promise<string | null> {
-  const supabase = await createClient()
-  
-  const id = await getCurrentUserId();
+  const supabase = await createClient();
 
+  const id = await getCurrentUserId();
   if (!id) return null;
 
   const { data, error } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", id)
-    .single()
+    .single();
 
   if (error || !data) {
-    console.error("Error fetching username:", error?.message)
-    return null
+    console.error("Error fetching username:", error?.message);
+    return null;
   }
 
-  return data.username
+  return data.username;
 }

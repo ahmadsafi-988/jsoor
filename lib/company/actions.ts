@@ -33,7 +33,6 @@ export async function upsertCompany(formData: FormData) {
       username,
       first_name: payload.name,
       last_name: "",
-      bio: payload.description,
       role: "company",
       joined_date: new Date().toISOString().split("T")[0],
     });

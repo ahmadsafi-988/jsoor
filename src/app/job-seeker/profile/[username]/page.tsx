@@ -275,22 +275,23 @@ export default async function ProfilePage({
 
   if (!profileData) notFound();
 
-  const { profile_base, projects, badges, skills } = profileData;
+  const { profile_base, job_seeker_profile, projects, badges, skills } = profileData;
   const isOwnProfile = currentUserId === profile_base.id;
+  const flatUser = { ...profile_base, ...job_seeker_profile };
 
   return (
     <div className="p-8 xl:p-12">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left column */}
         <div className="lg:col-span-8 space-y-8">
-          <ProfileHeaderCard user={profile_base} isOwnProfile={isOwnProfile} username={username} />
-          <ExperienceSection bio={profile_base.bio} />
+          <ProfileHeaderCard user={flatUser} isOwnProfile={isOwnProfile} username={username} />
+          <ExperienceSection bio={job_seeker_profile.bio} />
           <ProjectsSection projects={projects} />
         </div>
 
         {/* Right column */}
         <div className="lg:col-span-4 space-y-8">
-          <DetailsCard user={profile_base} />
+          <DetailsCard user={flatUser} />
           <SkillsCard skills={skills} />
           <BadgesCard badges={badges} />
         </div>

@@ -657,22 +657,21 @@ export default function OnboardingPage() {
       if (!user) { router.replace("/auth/login"); return; }
       setUserId(user.id);
 
-      const { data: prof } = await supabase
-        .from("profiles")
-        .select("first_name, last_name, bio, location, website, github, avatar_url")
-        .eq("id", user.id)
-        .single();
+      const [{ data: prof }, { data: jsProf }] = await Promise.all([
+        supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", user.id).single(),
+        supabase.from("job_seeker_profiles").select("bio, location, website, github").eq("id", user.id).single(),
+      ]);
 
       if (prof) {
         setIdentity((prev) => ({
           ...prev,
-          firstName:     prof.first_name ?? "",
-          lastName:      prof.last_name  ?? "",
-          bio:           prof.bio        ?? "",
-          location:      prof.location   ?? "",
-          website:       prof.website    ?? "",
-          github:        prof.github     ?? "",
-          avatarPreview: prof.avatar_url ?? null,
+          firstName:     prof.first_name    ?? "",
+          lastName:      prof.last_name     ?? "",
+          bio:           jsProf?.bio        ?? "",
+          location:      jsProf?.location   ?? "",
+          website:       jsProf?.website    ?? "",
+          github:        jsProf?.github     ?? "",
+          avatarPreview: prof.avatar_url    ?? null,
         }));
       }
 

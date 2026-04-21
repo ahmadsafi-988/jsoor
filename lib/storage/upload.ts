@@ -59,15 +59,7 @@ export async function uploadCV(
 
   if (error) return { error: error.message };
 
-  // Signed URL valid for 1 year (31_536_000 seconds)
-  //   const { data, error: signError } = await supabase.storage
-  //     .from(CV_BUCKET)
-  //     .createSignedUrl(path, 31_536_000);
-  //   if (signError || !data) return { error: signError?.message ?? "Failed to sign URL" };
-  //   return { url: data.signedUrl };
-
-    const { data} = await supabase.storage
-        .from(CV_BUCKET)
-        .getPublicUrl(path);
-    return { url: data.publicUrl };
+  // Return the storage path only — never a public URL.
+  // Signed URLs are generated server-side at read time by authorized parties.
+  return { url: path };
 }

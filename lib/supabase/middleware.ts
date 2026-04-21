@@ -53,6 +53,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Guard dashboard routes against wrong roles.
+  // Only runs when an authenticated user hits /job-seeker/* or /company/*.
+  if (user && (pathname.startsWith('/job-seeker') || pathname.startsWith('/company'))) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.sub)
+      .single()
+
+    if (profile?.role === 'admin') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+  }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:

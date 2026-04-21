@@ -103,7 +103,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
   const [query, setQuery] = React.useState(profile.institution ?? "");
   const [uniResults, setUniResults] = React.useState<University[]>([]);
   const [selectedUni, setSelectedUni] = React.useState<University | null>(
-    profile.institution ? { id: 0, name: profile.institution, logo_url: profile.logo_url ?? "" } : null
+    profile.institution ? { id: 0, name: profile.institution, logo_url: "" } : null
   );
 
   React.useEffect(() => {
@@ -261,7 +261,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
             </div>
           )}
           <input type="hidden" name="institution" value={selectedUni?.name ?? query} />
-          <input type="hidden" name="logo_url" value={selectedUni?.logo_url ?? profile.logo_url ?? ""} />
+          <input type="hidden" name="logo_url" value={selectedUni?.logo_url ?? ""} />
         </div>
 
         <div className="space-y-1.5">
@@ -875,13 +875,26 @@ export default function EditProfilePage() {
 
       if (!prof || prof.id !== user.id) { router.replace(`/job-seeker/profile/${params.username}`); return; }
 
-      const [{ data: projs }, { data: bdgs }, { data: profSkills }] = await Promise.all([
+      const [{ data: jsProf }, { data: projs }, { data: bdgs }, { data: profSkills }] = await Promise.all([
+        supabase.from("job_seeker_profiles").select("*").eq("id", user.id).single(),
         supabase.from("projects").select("*").eq("user_id", user.id),
         supabase.from("badges").select("*").eq("user_id", user.id),
         supabase.from("profile_to_skills").select("skill_id, skills(id, name)").eq("user_id", user.id),
       ]);
 
-      setProfile(prof);
+      setProfile({
+        ...prof,
+        bio:         jsProf?.bio         ?? "",
+        cv_url:      jsProf?.cv_url       ?? null,
+        degree:      jsProf?.degree       ?? null,
+        edu_end:     jsProf?.edu_end      ?? null,
+        edu_start:   jsProf?.edu_start    ?? null,
+        github:      jsProf?.github       ?? null,
+        gpa:         jsProf?.gpa          ?? null,
+        institution: jsProf?.institution  ?? null,
+        location:    jsProf?.location     ?? null,
+        website:     jsProf?.website      ?? null,
+      });
       setProjects(projs ?? []);
       setBadges(bdgs ?? []);
       setEmail(user.email ?? "");

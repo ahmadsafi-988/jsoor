@@ -18,7 +18,6 @@ export async function signUp(formData: FormData) {
     email,
     password,
     options: {
-      // After confirming email, land on the onboarding wizard
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/job-seeker/onboarding`,
     },
   });
@@ -28,10 +27,6 @@ export async function signUp(formData: FormData) {
   redirect("/auth/sign-up-success");
 }
 
-/**
- * Update email — Supabase will send a confirmation link to the NEW address.
- * The change is not applied until the user clicks that link.
- */
 export async function updateEmail(formData: FormData) {
   const supabase = await createClient();
   const email = formData.get("email") as string;
@@ -45,16 +40,11 @@ export async function updateEmail(formData: FormData) {
   };
 }
 
-/**
- * Update password — no email confirmation needed, but we re-authenticate
- * with the current password first to prevent session hijacking.
- */
 export async function updatePassword(formData: FormData) {
   const supabase = await createClient();
   const currentPassword = formData.get("currentPassword") as string;
   const newPassword = formData.get("newPassword") as string;
 
-  // Re-authenticate with current credentials
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -81,29 +71,34 @@ export async function upsertProfile(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const payload = {
+  const username = formData.get("username") as string;
+
+  // Write 1: base profile (shared fields only)
+  const { error: profileError } = await supabase.from("profiles").upsert({
     id: user.id,
     first_name: formData.get("first_name") as string,
     last_name: formData.get("last_name") as string,
-    username: formData.get("username") as string,
+    username,
+    joined_date: new Date().toISOString().split("T")[0],
+  });
+  if (profileError) return { error: profileError.message };
+
+  // Write 2: job seeker extension
+  const { error: jsError } = await supabase.from("job_seeker_profiles").upsert({
+    id: user.id,
     bio: (formData.get("bio") as string) || "",
     location: (formData.get("location") as string) || null,
     website: (formData.get("website") as string) || null,
     github: (formData.get("github") as string) || null,
     institution: (formData.get("institution") as string) || null,
-    logo_url: (formData.get("logo_url") as string) || null,
     degree: (formData.get("degree") as string) || null,
     gpa: (formData.get("gpa") as string) || null,
     edu_start: (formData.get("edu_start") as string) || null,
     edu_end: (formData.get("edu_end") as string) || null,
-    // avatar_url and cv_url are set separately after file upload
-    joined_date: new Date().toISOString().split("T")[0],
-  };
+  });
+  if (jsError) return { error: jsError.message };
 
-  const { error } = await supabase.from("profiles").upsert(payload);
-  if (error) return { error: error.message };
-
-  revalidatePath(`/job-seeker/profile/${payload.username}`);
+  revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
@@ -124,7 +119,7 @@ export async function updateAvatarUrl(avatarUrl: string, username: string) {
   return { success: true };
 }
 
-export async function updateCvUrl(cvUrl: string, username: string) {
+export async function updateCvUrl(cvPath: string, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -132,8 +127,8 @@ export async function updateCvUrl(cvUrl: string, username: string) {
   if (!user) return { error: "Not authenticated." };
 
   const { error } = await supabase
-    .from("profiles")
-    .update({ cv_url: cvUrl })
+    .from("job_seeker_profiles")
+    .update({ cv_url: cvPath })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
@@ -178,7 +173,7 @@ export async function deleteProject(projectId: number) {
     .from("projects")
     .delete()
     .eq("id", projectId)
-    .eq("user_id", user.id); // RLS double-check
+    .eq("user_id", user.id);
 
   if (error) return { error: error.message };
   revalidatePath("/job-seeker/profile");
@@ -231,31 +226,35 @@ export async function deleteBadge(badgeId: number) {
 }
 
 export async function addProfileSkill(skillId: number) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated." }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
 
   const { error } = await supabase
     .from("profile_to_skills")
-    .insert({ user_id: user.id, skill_id: skillId })  // ← user_id not profile_id
-  if (error) return { error: error.message }
+    .insert({ user_id: user.id, skill_id: skillId });
+  if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile")
-  return { success: true }
+  revalidatePath("/job-seeker/profile");
+  return { success: true };
 }
 
 export async function removeProfileSkill(skillId: number) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: "Not authenticated." }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
 
   const { error } = await supabase
     .from("profile_to_skills")
     .delete()
-    .eq("user_id", user.id)    // ← user_id not profile_id
-    .eq("skill_id", skillId)
-  if (error) return { error: error.message }
+    .eq("user_id", user.id)
+    .eq("skill_id", skillId);
+  if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile")
-  return { success: true }
+  revalidatePath("/job-seeker/profile");
+  return { success: true };
 }
