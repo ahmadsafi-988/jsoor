@@ -20,16 +20,25 @@ export async function getProfileByUsername(
     return null;
   }
 
-  const { data: job_seeker_profile, error: jsError } = await supabase
+  const { data: job_seeker_profile_data } = await supabase
     .from("job_seeker_profiles")
     .select("*")
     .eq("id", profile_base.id)
-    .single();
+    .maybeSingle();
 
-  if (jsError || !job_seeker_profile) {
-    console.error("[getProfileByUsername] job_seeker_profiles error:", jsError);
-    return null;
-  }
+  const job_seeker_profile = job_seeker_profile_data ?? {
+    id: profile_base.id,
+    bio: "",
+    degree: null,
+    institution: null,
+    gpa: null,
+    edu_start: null,
+    edu_end: null,
+    github: null,
+    location: null,
+    website: null,
+    cv_url: null,
+  };
 
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
@@ -88,5 +97,5 @@ export async function getCurrentUsername(): Promise<string | null> {
     return null;
   }
 
-  return data.username;
+  return data.username || null;
 }

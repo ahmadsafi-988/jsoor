@@ -34,22 +34,23 @@ Never merge a feature without updating its feature doc.
 
 | Feature | Status |
 |---|---|
-| Auth (login, signup, roles) | Done |
+| Auth (login, signup, roles, email verification) | Done |
 | Landing page | Done |
 | Job seeker onboarding | Done |
 | Company onboarding | Done |
 | Job discovery & apply | Done |
-| Job seeker profile | Done |
+| Job seeker profile (view + edit) | Done |
 | AI interview simulator | Done |
-| Company job management | Done |
+| Company job management (create / edit / delete + skills) | Done |
 | Database restructure (base + extensions) | Done |
-| **Company applicant management** | **Next — spec ready** |
-| CV signed URL (security fix) | Planned — part of above |
-| Assessments (send + results UI) | Planned |
-| Platform-level assessments | Planned — spec not written |
-| Skill-based matching | Planned |
-| Dynamic portfolio | Planned — definition pending |
-| Saved/bookmarked jobs (DB) | Planned |
+| Company applicant management (status workflow + profile view) | Done |
+| CV signed URL security fix | Done |
+| Assessments V2 (typed questions, auto-scoring, one-question flow, timer, results release) | Done |
+| Saved / bookmarked jobs | Done |
+| Skill-based job matching | Done |
+| Email verification on signup | Done |
+| Email notifications (application status change) | Done — deploy required |
+| RLS policies (job_seeker_profiles, admins) | Done |
 | Admin panel | Foundation done — placeholder page live, panel post-MVP |
 | Settings pages | Planned |
 | Messaging & notifications | Out of scope for MVP |

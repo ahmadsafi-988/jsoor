@@ -5,6 +5,7 @@ import { MapPin, Plus, Edit2, Trash2, Download, ExternalLink, Award, GitBranch }
 import Link from "next/link";
 
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
+import { getCvSignedUrl } from "@/lib/storage/cv";
 import type { project, badge } from "@/lib/global_types";
 import type { user } from "@/lib/global_types";
 
@@ -137,7 +138,7 @@ function ProjectsSection({ projects }: { projects: project[] }) {
 }
 
 // ─── Details Card ─────────────────────────────────────────────────────────────
-function DetailsCard({ user }: { user: user }) {
+function DetailsCard({ user, cvSignedUrl }: { user: user; cvSignedUrl: string | null }) {
   return (
     <section className="bg-[#f6f3f2] rounded-xl p-8">
       <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b] mb-6">
@@ -183,9 +184,9 @@ function DetailsCard({ user }: { user: user }) {
             </a>
           </div>
         )}
-        {user.cv_url && (
+        {cvSignedUrl && (
           <a
-            href={user.cv_url}
+            href={cvSignedUrl}
             download
             className="flex items-center gap-2 mt-2 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:brightness-110 transition-all shadow-[0_8px_16px_rgba(0,109,67,0.15)]"
           >
@@ -279,6 +280,10 @@ export default async function ProfilePage({
   const isOwnProfile = currentUserId === profile_base.id;
   const flatUser = { ...profile_base, ...job_seeker_profile };
 
+  const cvSignedUrl = job_seeker_profile.cv_url
+    ? await getCvSignedUrl(job_seeker_profile.cv_url)
+    : null;
+
   return (
     <div className="p-8 xl:p-12">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -291,7 +296,7 @@ export default async function ProfilePage({
 
         {/* Right column */}
         <div className="lg:col-span-4 space-y-8">
-          <DetailsCard user={flatUser} />
+          <DetailsCard user={flatUser} cvSignedUrl={cvSignedUrl} />
           <SkillsCard skills={skills} />
           <BadgesCard badges={badges} />
         </div>

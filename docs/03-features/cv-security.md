@@ -1,36 +1,32 @@
 # Feature: CV Security (Signed URLs)
 
-**Status:** Known issue — planned fix  
-**Source:** Confirmed by user.
+**Status:** Done  
+**Spec:** `docs/07-specs/cv-signed-urls.md`
 
 ---
 
-## Problem
+## What Was Built
 
-CVs are stored in the `cvs` Supabase Storage bucket, which is set to **private**.
-However, the upload code (`lib/storage/upload.ts`) currently returns a **public URL** instead of a signed URL.
+### Storage Strategy
+- `lib/storage/upload.ts` → `uploadCV()` uploads to the private `cvs` bucket and returns the **storage path only** (e.g. `userId/cv.pdf`), never a public URL
+- `lib/profile/actions.ts` → `updateCvUrl()` saves that path string to `job_seeker_profiles.cv_url`
 
-This means:
-- Anyone with the URL can access a candidate's CV
-- The private bucket setting has no effect
-- This is a security vulnerability
+### Read-Time Signed URL Generation
+- `lib/storage/cv.ts` → `getCvSignedUrl(cvUrl, expiresIn?)`:
+  - Handles **both** old full-URL format (for existing data) and new path-only format
+  - Calls `supabase.storage.from("cvs").createSignedUrl(path, 3600)` (1 hour default)
+  - Returns the signed URL or `null` if generation fails
 
-## Intended Behavior
-
-- CVs must only be accessible via **signed URLs**
-- Signed URLs should expire after a short window (e.g. 60 minutes)
-- Only authorized users should be able to generate a signed URL:
-  - The job seeker who owns the CV
-  - Companies viewing an application from that job seeker
-- The public URL path for CVs must **never** be exposed
-
-## Files Involved
-
-| File | Issue |
+### Where Signed URLs Are Used
+| Location | How |
 |---|---|
-| `lib/storage/upload.ts` | Returns public URL; signed URL logic is commented out (lines ~63–67) |
-| `company/applicants/[applicationId]/page.tsx` | Will need to generate signed URL to display CV link |
+| `src/app/job-seeker/profile/[username]/page.tsx` | Server component calls `getCvSignedUrl`, passes to `DetailsCard`; raw path never sent to client |
+| `src/app/company/applicants/[applicationId]/page.tsx` | Server component calls `getCvSignedUrl`, passes signed URL to `ApplicantDetailClient` |
 
-## Spec
+### Edit Page
+- `src/app/job-seeker/profile/[username]/edit/page.tsx` shows "CV uploaded ✓" text when a CV exists — no link, since this is a client component and cannot call the server-side helper
 
-See [`docs/07-specs/cv-signed-urls.md`](../07-specs/cv-signed-urls.md) — to be written.
+---
+
+## Backward Compatibility
+`getCvSignedUrl` detects the old full-URL format by looking for `/object/public/cvs/` in the string and extracts the path. New uploads always store path-only, so this fallback will become unnecessary over time.

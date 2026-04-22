@@ -34,9 +34,9 @@ User signs up
 On every request:
   middleware.ts reads Supabase session cookie
   → unauthenticated → redirect to /auth/login
-  → authenticated, no profile → redirect to onboarding
+  → authenticated → role-based redirect on login (company → /company/home, job_seeker → /job-seeker/home)
 
-Role stored in: profiles.role (enum: job_seeker | company)
+Role stored in: profiles.role (enum: job_seeker | company | admin)
 ```
 
 **Protected routes (middleware):**
@@ -72,6 +72,11 @@ API Routes
   └── src/app/api/ai/route.ts  (OpenAI: interview question generation + evaluation)
 ```
 
+**Server/client component split pattern:**
+- Server component fetches data + handles auth guard
+- Passes plain data props to a `*Client.tsx` component that owns interactive state
+- Mutations go through server actions in `lib/*/actions.ts`
+
 ---
 
 ## Routing Structure
@@ -94,11 +99,13 @@ src/app/
 │
 ├── job-seeker/
 │   ├── layout.tsx                 ← Sidebar + TopBar wrapper
-│   ├── home/                      ← job feed
+│   ├── home/                      ← job feed with skill matching + search/filter
+│   ├── profile/page.tsx           ← redirect: username lookup → /profile/[username] or /onboarding
 │   ├── profile/[username]/        ← public profile view
-│   ├── profile/[username]/edit/   ← own profile edit
-│   ├── job-applications/          ← my applications
-│   ├── assessments/               ← my assessments
+│   ├── profile/[username]/edit/   ← own profile edit (tabbed: profile, projects, badges, account, skills)
+│   ├── job-applications/          ← my applications (status filter tabs)
+│   ├── saved-jobs/                ← bookmarked jobs
+│   ├── assessments/               ← my assessments (view + submit)
 │   ├── interview-simulator/       ← AI mock interview
 │   ├── messages/                  ← placeholder
 │   ├── notifications/             ← placeholder
@@ -110,11 +117,11 @@ src/app/
 │   ├── profile/                   ← company profile
 │   ├── onboarding/
 │   ├── jobs/                      ← list all jobs
-│   ├── jobs/new/                  ← create job
-│   ├── jobs/[jobId]/              ← job detail / edit
-│   ├── jobs/[jobId]/applicants/   ← applicant list
-│   ├── applicants/[applicationId] ← individual application review
-│   └── assessments/
+│   ├── jobs/new/                  ← create job (with SkillPicker)
+│   ├── jobs/[jobId]/              ← job detail / edit (with SkillPicker)
+│   ├── jobs/[jobId]/applicants/   ← applicant list (URL-based status filter)
+│   ├── applicants/[applicationId] ← individual application review (status + assessment + CV)
+│   └── assessments/               ← placeholder
 │
 └── api/
     └── ai/route.ts                ← OpenAI integration
@@ -124,10 +131,24 @@ src/app/
 
 ## File Storage
 
-| Bucket | Access | Contents | Signed URL? |
+| Bucket | Access | Contents | URL Strategy |
 |---|---|---|---|
-| `avatars` | Public | Profile photos | No (public URL) |
-| `cvs` | Private | Candidate CVs | **Should be yes — not yet implemented** |
+| `avatars` | Public | Profile photos | Public URL — no expiry needed |
+| `cvs` | Private | Candidate CVs | Storage path saved in DB; signed URL generated server-side at read time via `lib/storage/cv.ts` |
+
+---
+
+## Key Library Files
+
+| File | Purpose |
+|---|---|
+| `lib/company/data.ts` | Company-side queries: jobs, applicants, assessments, saved jobs, skill matching — applicant queries use two-step fetch (applications → profiles separately) due to FK boundary with `auth.users` |
+| `lib/company/actions.ts` | Company mutations + job seeker actions (apply, save/unsave job, submit assessment) |
+| `lib/profile/profile_data.ts` | Job seeker profile queries; `getProfileByUsername` handles missing `job_seeker_profiles` gracefully |
+| `lib/profile/actions.ts` | Profile mutations (upsert profile, projects, badges, skills, avatar/CV URL) |
+| `lib/storage/upload.ts` | Client-side file upload helpers (avatar → public URL, CV → storage path only) |
+| `lib/storage/cv.ts` | Server-side `getCvSignedUrl()` — handles both old full-URL and new path-only `cv_url` values |
+| `components/app/SkillPicker.tsx` | Toggleable skill chip selector; serializes to hidden `skill_ids` JSON input |
 
 ---
 
@@ -137,4 +158,6 @@ src/app/
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key |
+| `NEXT_PUBLIC_SITE_URL` | Base URL of the app — used in email confirmation `redirectTo` (e.g. `http://localhost:3000`; update to production URL on deploy) |
 | `OPENAI_API_KEY` | OpenAI (set server-side only, not in NEXT_PUBLIC) |
+| `RESEND_API_KEY` | Resend email provider — needed when email notifications Edge Function is deployed |

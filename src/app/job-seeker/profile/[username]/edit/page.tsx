@@ -291,9 +291,9 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         <Label>CV / Résumé</Label>
         <div className="flex items-center gap-3">
           {profile.cv_url && !cvFile && (
-            <a href={profile.cv_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-primary hover:underline">
-              <FileText className="h-4 w-4" /> Current CV
-            </a>
+            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+              <FileText className="h-4 w-4" /> CV uploaded
+            </span>
           )}
           {cvFile && (
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home, User, FileText, Brain, MessageSquare,
-  Bell, Settings, LogOut, ClipboardCheck,
+  Bell, Settings, LogOut, ClipboardCheck, Bookmark,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: "Home",                href: "/job-seeker/home",                icon: Home },
   { label: "Profile",             href: "/job-seeker/profile",             icon: User },
   { label: "My Applications",     href: "/job-seeker/job-applications",    icon: FileText },
+  { label: "Saved Jobs",          href: "/job-seeker/saved-jobs",          icon: Bookmark },
   { label: "Assessments",         href: "/job-seeker/assessments",         icon: ClipboardCheck },
   { label: "Interview Simulator", href: "/job-seeker/interview-simulator", icon: Brain },
   { label: "Messages",            href: "/job-seeker/messages",            icon: MessageSquare },

@@ -6,7 +6,7 @@ export default async function ProfileRedirectPage() {
   const username = await getCurrentUsername();
 
   if (!username) {
-    redirect("/auth/login");
+    redirect("/job-seeker/onboarding");
   }
   
   redirect(`/job-seeker/profile/${username}`);

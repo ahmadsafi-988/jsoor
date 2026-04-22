@@ -1,27 +1,45 @@
 # Feature: Company Applicant Management
 
-**Status:** Partial — in progress, next priority  
-**Source:** Confirmed by user + inferred from codebase.
+**Status:** Done  
+**Spec:** [`docs/07-specs/company-applicant-management.md`](../07-specs/company-applicant-management.md)
 
 ---
 
-## What Exists
+## What Was Built
 
-- `company/jobs/[jobId]/applicants/page.tsx` — lists applicants for a job
-- `company/applicants/[applicationId]/page.tsx` — individual application review page
-- `job_applications` table with `status` field (`pending | reviewed | accepted | rejected`)
-- `assessments` table with `application_id` FK
+### Applicant Detail Page (`company/applicants/[applicationId]`)
+- Server component fetches full applicant profile in two steps (application + job, then profile + projects + skills + badges in parallel)
+- Auth guard: company must own the job the application belongs to (`company_owns_application` check)
+- Signed CV URL generated server-side via `lib/storage/cv.ts` — raw storage path never sent to client
+- Passes all data to `ApplicantDetailClient` for interactive rendering
 
-## What's Missing
+### ApplicantDetailClient
+- Renders applicant's full profile: name, degree, location, bio, skills, projects (with skill tags), badges, cover letter
+- Status dropdown showing only valid next transitions (mirrors server-side `ALLOWED_TRANSITIONS`)
+- Inline assessment form: company fills title, description, deadline, questions, submits
+- Assessment results view: shows submitted answers once applicant submits
 
-| Gap | Description |
+### Applicant List (`company/jobs/[jobId]/applicants`)
+- URL-based status filter (`?status=`) with count badge per status tab
+- Auth guard: `notFound()` if job doesn't belong to the requesting company
+
+### Status Workflow (`lib/company/actions.ts`)
+- `updateApplicationStatus`: fetches application + job, verifies `company_id === user.id`, validates transition via `ALLOWED_TRANSITIONS`, revalidates both the list and detail paths
+- Allowed transitions:
+  - `pending` → `reviewed`, `rejected`
+  - `reviewed` → `shortlisted`, `rejected`
+  - `shortlisted` → `accepted`, `rejected`
+  - `rejected` → `reviewed` (reconsider)
+
+---
+
+## Key Files
+
+| File | Role |
 |---|---|
-| Applicant status update | No UI or server action to change `job_applications.status` |
-| Secure CV access | CVs stored with public URL; should use signed URL |
-| Full applicant profile view | Company sees limited info; no link to full job seeker profile |
-| Send assessment | No UI for company to create/send an assessment to an applicant |
-| Assessment results view | Company cannot view submitted assessment results |
-
-## Spec
-
-See [`docs/07-specs/company-applicant-management.md`](../07-specs/company-applicant-management.md) for the full implementation spec.
+| `src/app/company/applicants/[applicationId]/page.tsx` | Server component: data fetch + auth guard + signed CV URL |
+| `src/app/company/applicants/[applicationId]/ApplicantDetailClient.tsx` | Client: status dropdown, assessment form, results view |
+| `src/app/company/jobs/[jobId]/applicants/page.tsx` | Applicant list with status filter |
+| `lib/company/data.ts` → `getApplicationWithApplicantProfile` | Two-step fetch returning full profile + `company_owns_application` flag |
+| `lib/company/actions.ts` → `updateApplicationStatus` | Server action with ownership + transition validation |
+| `lib/storage/cv.ts` → `getCvSignedUrl` | Converts stored path to 1-hour signed URL |

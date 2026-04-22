@@ -80,6 +80,13 @@ export async function createJob(formData: FormData) {
   const { data, error } = await supabase.from("jobs").insert(payload).select("id").single();
   if (error) return { error: error.message };
 
+  const skillIds: number[] = JSON.parse((formData.get("skill_ids") as string) || "[]");
+  if (skillIds.length > 0) {
+    await supabase.from("job_to_skills").insert(
+      skillIds.map((skill_id) => ({ job_id: data.id, skill_id }))
+    );
+  }
+
   revalidatePath("/company/jobs");
   return { success: true, jobId: data.id };
 }
@@ -109,6 +116,14 @@ export async function updateJob(formData: FormData) {
     .eq("company_id", user.id);
 
   if (error) return { error: error.message };
+
+  const skillIds: number[] = JSON.parse((formData.get("skill_ids") as string) || "[]");
+  await supabase.from("job_to_skills").delete().eq("job_id", jobId);
+  if (skillIds.length > 0) {
+    await supabase.from("job_to_skills").insert(
+      skillIds.map((skill_id) => ({ job_id: jobId, skill_id }))
+    );
+  }
 
   revalidatePath("/company/jobs");
   revalidatePath(`/company/jobs/${jobId}`);
@@ -155,22 +170,57 @@ export async function applyToJob(jobId: string, coverLetter?: string) {
   return { success: true };
 }
 
+type ApplicationStatus =
+  | "applied"
+  | "under_review"
+  | "assessment_sent"
+  | "assessment_completed"
+  | "shortlisted"
+  | "rejected";
+
+const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
+  applied:            ["under_review"],
+  under_review:       ["applied", "shortlisted", "rejected"],
+  shortlisted:        ["under_review"],
+  rejected:           ["under_review"],
+  assessment_sent:    ["under_review"],
+};
+
 export async function updateApplicationStatus(
   applicationId: string,
-  status: "applied" | "under_review" | "assessment_sent" | "assessment_completed" | "shortlisted" | "rejected"
+  newStatus: ApplicationStatus
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
+  // Fetch current application + owning company in one query
+  const { data: application, error: fetchError } = await supabase
+    .from("job_applications")
+    .select("status, job:jobs!job_applications_job_id_fkey(id, company_id)")
+    .eq("id", applicationId)
+    .single();
+
+  if (fetchError || !application) return { error: "Application not found." };
+
+  const job = application.job as { id: string; company_id: string } | null;
+  if (!job || job.company_id !== user.id) return { error: "Not authorized." };
+
+  const currentStatus = application.status as ApplicationStatus;
+  const allowed = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+  if (!allowed.includes(newStatus)) {
+    return { error: `Cannot transition from '${currentStatus}' to '${newStatus}'.` };
+  }
+
   const { error } = await supabase
     .from("job_applications")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update({ status: newStatus, updated_at: new Date().toISOString() })
     .eq("id", applicationId);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/company/jobs");
+  revalidatePath(`/company/applicants/${applicationId}`);
+  revalidatePath(`/company/jobs/${job.id}/applicants`);
   return { success: true };
 }
 
@@ -190,6 +240,8 @@ export async function sendAssessment(formData: FormData) {
   }
 
   const deadline = formData.get("deadline") as string;
+  const timeLimitRaw = formData.get("time_limit") as string;
+  const timeLimit = timeLimitRaw ? parseInt(timeLimitRaw) : null;
 
   const payload = {
     company_id: user.id,
@@ -198,13 +250,13 @@ export async function sendAssessment(formData: FormData) {
     description: formData.get("description") as string,
     deadline: deadline ? new Date(deadline).toISOString() : null,
     questions,
+    time_limit: timeLimit && !isNaN(timeLimit) ? timeLimit : null,
     status: "pending" as const,
   };
 
   const { error } = await supabase.from("assessments").insert(payload);
   if (error) return { error: error.message };
 
-  // Update application status to assessment_sent
   await supabase
     .from("job_applications")
     .update({ status: "assessment_sent", updated_at: new Date().toISOString() })
@@ -223,30 +275,54 @@ export async function submitAssessment(formData: FormData) {
   const assessmentId = formData.get("assessment_id") as string;
   const submissionRaw = formData.get("submission") as string;
 
-  let submission = null;
+  let submission: any = null;
   try { submission = JSON.parse(submissionRaw); } catch { submission = null; }
 
   const { data: assessment, error: fetchError } = await supabase
     .from("assessments")
-    .select("application_id, status")
+    .select("application_id, status, questions")
     .eq("id", assessmentId)
     .single();
 
   if (fetchError || !assessment) return { error: "Assessment not found." };
   if (assessment.status !== "pending") return { error: "Assessment already submitted." };
 
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("applicant_id")
+    .eq("id", assessment.application_id)
+    .single();
+
+  if (!application || application.applicant_id !== user.id) {
+    return { error: "Not authorized." };
+  }
+
+  // Auto-score MCQ and True/False questions
+  const questions = (assessment.questions as any[]) ?? [];
+  const answers = submission?.answers ?? {};
+  let correct = 0;
+  let scorable = 0;
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    if (q.type === "mcq" || q.type === "truefalse") {
+      scorable++;
+      if (answers[String(i)] === q.correct) correct++;
+    }
+  }
+  const score = scorable > 0 ? Math.round((correct / scorable) * 100) : null;
+
   const { error } = await supabase
     .from("assessments")
     .update({
       submission,
       status: "submitted",
+      score,
       updated_at: new Date().toISOString(),
     })
     .eq("id", assessmentId);
 
   if (error) return { error: error.message };
 
-  // Update application status
   await supabase
     .from("job_applications")
     .update({ status: "assessment_completed", updated_at: new Date().toISOString() })
@@ -254,6 +330,23 @@ export async function submitAssessment(formData: FormData) {
 
   revalidatePath("/job-seeker/job-applications");
   revalidatePath("/job-seeker/assessments");
+  return { success: true, score };
+}
+
+export async function releaseAssessmentResults(assessmentId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("assessments")
+    .update({ results_released: true, updated_at: new Date().toISOString() })
+    .eq("id", assessmentId)
+    .eq("company_id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/company/assessments");
   return { success: true };
 }
 
@@ -280,6 +373,40 @@ export async function reviewAssessment(formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/company/assessments");
+  return { success: true };
+}
+
+// ─── Saved jobs ───────────────────────────────────────────────────────────────
+
+export async function saveJob(jobId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("saved_jobs")
+    .upsert({ user_id: user.id, job_id: jobId }, { ignoreDuplicates: true });
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/job-seeker/saved-jobs");
+  return { success: true };
+}
+
+export async function unsaveJob(jobId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("saved_jobs")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("job_id", jobId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/job-seeker/saved-jobs");
   return { success: true };
 }
 

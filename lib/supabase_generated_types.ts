@@ -47,9 +47,11 @@ export type Database = {
           feedback: string | null
           id: string
           questions: Json | null
+          results_released: boolean
           score: number | null
           status: string
           submission: Json | null
+          time_limit: number | null
           title: string
           updated_at: string
         }
@@ -62,9 +64,11 @@ export type Database = {
           feedback?: string | null
           id?: string
           questions?: Json | null
+          results_released?: boolean
           score?: number | null
           status?: string
           submission?: Json | null
+          time_limit?: number | null
           title: string
           updated_at?: string
         }
@@ -77,9 +81,11 @@ export type Database = {
           feedback?: string | null
           id?: string
           questions?: Json | null
+          results_released?: boolean
           score?: number | null
           status?: string
           submission?: Json | null
+          time_limit?: number | null
           title?: string
           updated_at?: string
         }
@@ -260,6 +266,39 @@ export type Database = {
           },
         ]
       }
+      job_to_skills: {
+        Row: {
+          id: number
+          job_id: string
+          skill_id: number
+        }
+        Insert: {
+          id?: never
+          job_id: string
+          skill_id: number
+        }
+        Update: {
+          id?: never
+          job_id?: string
+          skill_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_to_skills_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_to_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           company_id: string
@@ -429,6 +468,39 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_jobs: {
+        Row: {
+          job_id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          job_id: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          job_id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_jobs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_jobs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skills: {
         Row: {
           id: number
@@ -467,7 +539,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      promote_to_admin: {
+        Args: { admin_name: string; admin_username: string; user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

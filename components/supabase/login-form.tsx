@@ -57,11 +57,11 @@ export function LoginForm({
       // Prefer the profiles row role; fall back to auth metadata set at sign-up
       const role = profile?.role ?? user.user_metadata?.role;
 
-      // if (role === "company") {
-      router.push("/company/home");
-      // } else {
-      //   router.push("/job-seeker/home")
-      // }
+      if (role === "company") {
+        router.push("/company/home");
+      } else {
+        router.push("/job-seeker/home");
+      }
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
