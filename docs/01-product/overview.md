@@ -1,5 +1,7 @@
 # Product Overview
 
+> ⚠️ **LEGACY — OUTDATED.** Use `docs/00-project-overview.md` and `docs/05-features-specification.md` instead. This file predates the 2026-05-03 spec-driven analysis and contains decisions that have since changed (e.g. admin and messaging marked as out of scope — they are now in scope).
+
 > Source: Confirmed by user (interview, 2026-04-21).
 
 ---

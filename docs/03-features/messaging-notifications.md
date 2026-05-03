@@ -1,5 +1,7 @@
 # Feature: Messaging & Notifications
 
+> ⚠️ **LEGACY — OUTDATED.** Use `docs/05-features-specification.md` (F-15, F-16) instead. Both messaging and notifications are now IN SCOPE and fully designed. See Round 2B and 2C decisions in `docs/09-decisions-log.md`.
+
 **Status:** UI placeholder only — out of scope for MVP  
 **Source:** Confirmed by user.
 

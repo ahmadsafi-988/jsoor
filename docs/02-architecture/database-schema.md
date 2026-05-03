@@ -1,5 +1,7 @@
 # Database Schema
 
+> ⚠️ **LEGACY — OUTDATED.** Use `docs/02-database-analysis.md` instead. This file was generated from stale TypeScript types and is missing 6 columns and 3 entire tables. Status values, FKs, and column types are incorrect in several places.
+
 > Source: `lib/supabase_generated_types.ts`
 
 ---

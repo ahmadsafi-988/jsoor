@@ -1,5 +1,7 @@
 # Product Roadmap
 
+> ⚠️ **LEGACY — OUTDATED.** Use `docs/07-roadmap.md` instead. This file marks messaging and notifications as "out of scope for MVP" — both are now confirmed in scope. Priority order has also changed.
+
 Status labels: `done` | `partial` | `in-progress` | `planned` | `out-of-scope`
 
 ---

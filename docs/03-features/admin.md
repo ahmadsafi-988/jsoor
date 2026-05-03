@@ -1,5 +1,7 @@
 # Feature: Admin
 
+> ⚠️ **LEGACY — OUTDATED.** Use `docs/05-features-specification.md` (F-17) instead. This file describes "approve/reject job postings" as the admin approach — that decision was reversed. Admin now locks/unlocks, verifies companies, blocks/suspends users, and reviews reports. See decisions log for full context.
+
 **Status:** Foundation done — panel not yet built
 **Source:** Confirmed by user interview (2026-04-21).
 
