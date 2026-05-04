@@ -1,6 +1,6 @@
 # 06 — System Architecture
 
-> Last updated: 2026-05-03
+> Last updated: 2026-05-04
 
 ---
 
@@ -42,6 +42,7 @@ src/
       update-password/page.tsx
       confirm/route.ts            Email confirmation callback
       sign-up-success/page.tsx
+      suspended/page.tsx          Shown to suspended users (reason displayed)
       error/page.tsx
     job-seeker/
       layout.tsx                  AppSidebar + AppTopBar wrapper
@@ -63,9 +64,13 @@ src/
         page.tsx
         SavedJobsClient.tsx
       interview-simulator/
-        page.tsx                  Client: OpenAI simulator
-      messages/page.tsx           Client: UI-only (no backend)
-      notifications/page.tsx      Client: UI-only (no backend)
+        page.tsx                  Client: OpenAI simulator (needs API key)
+      messages/
+        page.tsx                  Server: getJobSeekerConversations → MessagesClient
+        MessagesClient.tsx        Re-export of components/app/MessagesClient.tsx
+      notifications/
+        page.tsx                  Server: getNotifications → NotificationsClient
+        NotificationsClient.tsx   Client: mark-all-read, display
     company/
       layout.tsx                  CompanySidebar + CompanyTopBar wrapper
       onboarding/page.tsx
@@ -78,12 +83,24 @@ src/
           applicants/page.tsx
       applicants/
         [applicationId]/
-          page.tsx                Server: fetch + guard
-          ApplicantDetailClient.tsx  Client: status management
+          page.tsx                Server: fetch + guard + signed CV URL
+          ApplicantDetailClient.tsx  Client: status + assessment + Message button
       assessments/page.tsx
+      messages/
+        page.tsx                  Server: getCompanyConversations → MessagesClient
+        CompanyMessagesClient.tsx Re-export of components/app/MessagesClient.tsx
+      notifications/
+        page.tsx                  Server: getNotifications → CompanyNotificationsClient
+        CompanyNotificationsClient.tsx  Client: mark-all-read, display
       profile/page.tsx
     admin/
-      page.tsx                    Stub
+      layout.tsx                  AdminSidebar wrapper
+      page.tsx                    Dashboard: live stat cards + quick nav
+      jobs/page.tsx               Lock/unlock jobs
+      companies/page.tsx          Verify/unverify companies
+      users/page.tsx              Block/suspend users
+      reports/page.tsx            Review/dismiss/lock from reports
+      audit-log/page.tsx          Full chronological admin action log
     api/
       ai/route.ts                 POST → OpenAI GPT-4o-mini
   middleware.ts                   Session refresh + role redirect
@@ -151,7 +168,7 @@ Client Component
 ### Buckets
 - `avatars` — user avatars and company logos (public bucket → public URLs)
 - `cvs` — job seeker CVs (private bucket → signed URLs only)
-- `message-attachments` — files sent via messaging (private bucket → signed URLs only) **[to be created]**
+- `message-attachments` — files sent via messaging (private bucket → signed URLs only, uploaded client-side)
 
 ### CV Security
 - CVs are stored under path `{userId}/cv.pdf`
@@ -203,10 +220,12 @@ Statuses that trigger email: `reviewed`, `shortlisted`, `accepted`, `rejected`.
 ```
 components/
   app/
-    AppSidebar.tsx          Job seeker sidebar navigation
+    AppSidebar.tsx          Job seeker sidebar (nav, unread badges for notifs + messages)
     AppTopBar.tsx           Job seeker top bar
-    CompanySidebar.tsx      Company sidebar navigation
+    CompanySidebar.tsx      Company sidebar (same badge logic)
     CompanyTopBar.tsx       Company top bar
+    AdminSidebar.tsx        Admin sidebar navigation
+    MessagesClient.tsx      Shared two-panel chat UI (Realtime, attachments, search)
     SkillPicker.tsx         Reusable skill selector
   supabase/
     login-form.tsx
@@ -222,9 +241,13 @@ components/
 ### Type System
 ```
 lib/
-  supabase_generated_types.ts    Auto-generated from Supabase schema
+  supabase_generated_types.ts    DB types (manually maintained — includes notifications, conversations, messages)
   global_types.ts                Derived types (user, FullJobSeekerProfile, etc.)
   company/data.ts                Query result types + data fetchers
+  messages/actions.ts            ConversationSummary, MessageRow types + actions
+  notifications/actions.ts       Notification insert/fetch/mark-read actions
+  admin/data.ts                  Admin read queries (stats, jobs, companies, users, reports, audit log)
+  admin/actions.ts               Admin mutations with audit log side-writes
 ```
 
 ---

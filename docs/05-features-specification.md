@@ -1,6 +1,6 @@
 # 05 — Features Specification
 
-> Last updated: 2026-05-03 | Status: Living document — updated as features are spec'd and built
+> Last updated: 2026-05-04 | Status: Living document — updated as features are spec'd and built
 
 ---
 
@@ -193,110 +193,109 @@ Supabase Edge Function `email-notification`:
 ## SECONDARY FEATURES
 
 ### F-15: Messages
-**Status:** 🔲 (UI shell only — job seeker page exists, company page does not)
+**Status:** ✅
 
-**Confirmed design (Round 2C — 2026-05-03):**
+**Implementation summary:**
 
-**Access rule:** A conversation can only exist between a company and a job seeker who have an active application together. Validated server-side before any message is sent.
+**Access rule:** A conversation can only exist between a company and a job seeker who share an application. `getOrCreateConversation` validates this server-side before creating any row.
 
-**Shape:** 1-on-1 direct messages only. One conversation per application.
+**Shape:** 1-on-1 direct messages. One conversation per application (`conversations.application_id` UNIQUE FK).
 
-**Updates:** Supabase Realtime — messages appear instantly without refresh.
+**Updates:** Supabase Realtime — `postgres_changes` INSERT subscription filtered by `conversation_id`. Messages appear instantly for both parties.
 
-**Content:** Text + file attachments (stored in private `message-attachments` storage bucket; signed URLs at read time).
+**Content:** Text + file attachments. Attachments uploaded client-side to private `message-attachments` bucket; signed URLs generated on demand for downloads.
 
 **Pages:**
-- `/job-seeker/messages` — existing shell, replace hardcoded data
-- `/company/messages` — new page, same layout (conversation list + thread)
+- `/job-seeker/messages` — server fetches `getJobSeekerConversations()`, passes to `MessagesClient`
+- `/company/messages` — server fetches `getCompanyConversations()`, passes to `MessagesClient`
 
-**Conversation lifecycle:**
-- No conversation row created at application time — lazy creation on first message send
-- Server action validates application exists before creating conversation or inserting message
+Both pages use thin re-exports of the shared `components/app/MessagesClient.tsx` component.
 
-**Per message:**
-- Sender, text content (nullable if attachment-only), optional attachment (URL + filename), timestamp, `is_read`
+**Conversation entry point:** "Message" button on company applicant detail page — calls `getOrCreateConversation(applicationId)`, redirects to `/company/messages?conv=<id>`.
 
-**Unread count badge** on sidebar nav for both roles.
+**Unread count badge** on Messages nav item in both `AppSidebar` and `CompanySidebar`.
+
+**Key files:**
+- `lib/messages/actions.ts` — `getOrCreateConversation`, `getJobSeekerConversations`, `getCompanyConversations`, `getMessages`, `sendMessage`, `markConversationRead`, `getUnreadMessageCount`
+- `components/app/MessagesClient.tsx` — shared two-panel chat UI with Realtime + attachments
 
 ---
 
 ### F-16: In-App Notifications
-**Status:** 🔲 (UI shell only — job seeker page exists, company page does not)
+**Status:** ✅
 
-**Confirmed design (Round 2B — 2026-05-03):**
+**Implementation summary:**
 
 **Shared `notifications` table** — one table, filtered by `user_id`. No Realtime; data loads fresh on page visit.
 
 **Job seeker receives notifications for:**
-- Application status changed (under_review, shortlisted, rejected, assessment_sent, assessment_completed)
-- Assessment sent by company
-- Assessment results released by company
+- `application_status_changed` — when company changes application status
+- `assessment_sent` — when company sends an assessment
+- `assessment_results_released` — when company releases results
 
 **Company receives notifications for:**
-- New application received on one of their jobs
-- Applicant submitted an assessment
+- `new_application` — when a job seeker applies to one of their jobs
+- `assessment_submitted` — when an applicant submits an assessment
 
 **Pages:**
-- `/job-seeker/notifications` — existing shell, replace hardcoded data with real DB reads
-- `/company/notifications` — new page, same design pattern
+- `/job-seeker/notifications` — DB-backed, grouped by Today/Yesterday/Earlier, deep links, mark-all-read
+- `/company/notifications` — same design
 
 **Per notification:**
-- Title + body text
-- Deep link (URL) — destination depends on notification type, to be defined per-type during implementation (see TASK-13)
-- `is_read` flag — "Mark all read" sets all to true
+- `title`, `body`, `link` (deep link URL), `is_read`, `type`, `created_at`
+- "Mark all as read" sets `is_read = true` for all unread rows
 - Grouped by date (Today / Yesterday / Earlier)
+- Unread items styled with green left border
 
-**Trigger mechanism:** Application-level inserts — each Server Action that causes a notification event inserts a row into `notifications` after the main operation.
+**Trigger mechanism:** `insertNotification()` called inside 5 server actions in `lib/company/actions.ts`: `applyToJob`, `updateApplicationStatus`, `sendAssessment`, `submitAssessment`, `releaseAssessmentResults`. Uses service role client to bypass RLS for cross-user writes.
 
-**Unread count badge** on sidebar nav for both roles.
+**Unread count badge** on Bell nav item in both `AppSidebar` and `CompanySidebar`.
+
+**Key files:**
+- `lib/notifications/actions.ts` — `insertNotification` (service role), `getNotifications`, `markAllNotificationsRead`
 
 ---
 
 ### F-17: Admin Panel
-**Status:** 🔲 (stub only — auth guard works, content TBD)
+**Status:** ✅
 
-`/admin` (current): auth guard in place, renders "Admin panel coming soon"
+#### Dashboard Homepage (`/admin`)
+- Live stat cards: total users, companies, jobs, applications
+- Quick-nav to all admin sections
 
-**Confirmed scope (Round 2A — 2026-05-03):**
+#### Job Management (`/admin/jobs`)
+- Table of all jobs across all companies
+- Lock a job (`admin_locked = true`): job hidden from job feed even if company has it active; company cannot reactivate until admin unlocks
+- Unlock a job
+- Every action logged to `admin_audit_logs`
 
-#### Dashboard Homepage
-- Stats: total users, total companies, total jobs, total applications
+#### Company Management (`/admin/companies`)
+- Table of all companies with verification status
+- Verify a company (`is_verified = true`) — logged
+- Unverify a company — logged
 
-#### Job Management
-- View all jobs across all companies
-- **Lock a job** (`admin_locked = true`): hides the job from job seekers even if company has it active. Company cannot reactivate it until admin removes the lock.
-- Unlock a job (remove the lock)
-- Jobs go live immediately on company post — no admin approval needed
+#### User Management (`/admin/users`)
+- Table of all users (job seekers + companies) with block/suspend status
+- Block a user (`is_blocked = true`): middleware forces sign-out on next request — logged
+- Unblock — logged
+- Suspend a user (`is_suspended = true` + reason): middleware redirects to `/auth/suspended` with reason shown — logged
+- Unsuspend — logged
 
-#### Company Management
-- View all companies
-- **Verify a company** (`is_verified = true`): shows a verified badge next to the company name
-- Unverify a company
+#### Job Reports (`/admin/reports`)
+- All reports grouped by status: pending / reviewed / dismissed
+- Mark report reviewed — logged
+- Dismiss report — logged
+- Lock job directly from report view — logged
+- ⚠️ Job seeker "Report" button on job cards not yet built (report page is ready to receive them)
 
-#### User Management
-- View all users (job seekers + companies)
-- **Block a user** (`is_blocked = true`): removes the user from the system
-- **Suspend a user** (`is_suspended = true`): notifies the user via the messaging system; account temporarily restricted. More details TBD.
-- Suspension reason stored in `profiles.suspension_reason`
+#### Admin Audit Log (`/admin/audit-log`)
+- Chronological list of last 200 admin actions
+- Columns: timestamp, admin name, action (color-coded badge), target, reason
 
-#### Job Reports (Proof Feature — confirmed 2026-05-03)
-- Job seekers can report any job from the job feed (Report button on job card)
-- Report form: select or type a reason, submit
-- Inserts into `job_reports` with `status = 'pending'`
-- **Admin view:** `/admin/reports` — list of all reported jobs, grouped by status (pending / reviewed / dismissed)
-- Admin can mark a report as reviewed or dismissed
-- Admin can lock the job directly from the report view
-
-#### Admin Audit Log (Proof Feature — confirmed 2026-05-03)
-- Every admin action is automatically recorded in `admin_audit_logs`
-- Recorded: `action`, `target_type`, `target_id`, `target_label`, `reason`, `admin_id`, `created_at`
-- **Admin view:** `/admin/audit-log` — full chronological log of all admin actions
-- Filterable by action type and admin (supports multi-admin setups — see who did what)
-- Written automatically inside every admin server action (lock job, verify company, block user, etc.)
-
-**DB tables confirmed present:** `admin_audit_logs`, `job_reports` — both exist in live DB, no code written yet.
-
-**DB columns confirmed present:** `jobs.admin_locked`, `companies.is_verified`, `profiles.is_blocked`, `profiles.is_suspended`, `profiles.suspension_reason` — all present in live DB but not yet in generated types or any code.
+**Key files:**
+- `lib/admin/actions.ts` — all admin server actions (lock/unlock, verify, block/suspend, report review)
+- `lib/admin/data.ts` — admin read queries (all jobs, companies, users, reports, audit log, stats)
+- `components/app/AdminSidebar.tsx` — admin navigation sidebar
 
 ---
 
@@ -370,11 +369,16 @@ F-11 Assessments
   depends on → F-10 Applicant Management (application must exist)
 
 F-12 Interview Simulator
-  depends on → OPENAI_API_KEY environment variable
+  depends on → OPENAI_API_KEY environment variable ← STILL BLOCKED
+
+F-15 Messages
+  depends on → F-05 Apply to Job (application must exist to gate conversations)
 
 F-16 Notifications
-  depends on → DB table + triggers (not yet built)
+  depends on → F-10, F-11 (triggered by status changes + assessment events)
+  depends on → service role key for cross-user inserts
 
 F-17 Admin Panel
   depends on → all other features (moderates them)
+  depends on → manual admin row insert (no self-registration)
 ```

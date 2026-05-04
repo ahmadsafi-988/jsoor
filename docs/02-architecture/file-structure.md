@@ -21,14 +21,16 @@ jsoor/
 │   └── interview-simulator/   ← Interview-specific UI
 │
 ├── lib/
-│   ├── supabase/              ← Supabase client setup (browser + server)
+│   ├── supabase/              ← Supabase client setup (browser + server + middleware)
 │   ├── profile/               ← Profile data fetching + server actions
 │   ├── company/               ← Company data fetching + server actions
+│   ├── admin/                 ← Admin read queries + admin server actions (with audit log)
+│   ├── notifications/         ← Notification insert/fetch/mark-read actions
+│   ├── messages/              ← Conversation + message queries and mutations
 │   └── storage/               ← File upload + CV signed URL utilities
 │
 ├── types/                     ← TypeScript type definitions
 ├── hooks/                     ← Custom React hooks
-├── data/                      ← Static/mock data (dev use)
 ├── public/                    ← Static assets
 └── docs/                      ← This documentation
 ```
@@ -50,9 +52,15 @@ jsoor/
 | `lib/storage/upload.ts` | Client-side upload helpers — avatar (public URL) + CV (path only) |
 | `lib/storage/cv.ts` | Server-side `getCvSignedUrl()` — converts stored path to signed URL |
 | `lib/company/data.ts` | All company + job seeker read queries including skill matching |
-| `lib/company/actions.ts` | All mutations: jobs, applications, assessments, saved jobs |
+| `lib/company/actions.ts` | All mutations: jobs, applications, assessments, saved jobs — wires 5 notification triggers |
 | `lib/profile/profile_data.ts` | Profile read queries; handles missing `job_seeker_profiles` gracefully |
 | `lib/profile/actions.ts` | Profile mutations: upsert profile, projects, badges, skills, avatar/CV |
+| `lib/notifications/actions.ts` | `insertNotification` (service role), `getNotifications`, `markAllNotificationsRead` |
+| `lib/messages/actions.ts` | `getOrCreateConversation`, conversation fetchers, `sendMessage`, `markConversationRead`, `getUnreadMessageCount` |
+| `lib/admin/data.ts` | Admin read queries: live stats, all jobs/companies/users/reports, audit log |
+| `lib/admin/actions.ts` | Admin server actions — all auto-write to `admin_audit_logs` |
+| `components/app/MessagesClient.tsx` | Shared two-panel chat UI used by both job-seeker and company message pages |
+| `components/app/AdminSidebar.tsx` | Admin sidebar navigation |
 | `components/app/SkillPicker.tsx` | Reusable skill chip selector used in job create/edit forms |
 | `components.json` | Shadcn/ui config (style: radix-nova, icons: lucide) |
 
@@ -73,10 +81,17 @@ jsoor/
 
 ---
 
-## Development Artifacts (Ignore)
+## Cleaned-Up Dead Code (Sprint 1)
 
-| Path | Notes |
+All development artifacts and orphaned files were removed in Sprint 1. Nothing here is live any more:
+
+| Path | Action |
 |---|---|
-| `src/app/stitch-html/` | Archived HTML mockups from Stitch — not integrated |
-| `src/dummy/` | Old component playground — not part of the app |
-| `src/app/marketing/page.tsx` | Stub placeholder — 3 lines, not the real landing page |
+| `src/app/stitch-html/` | ✅ Deleted — archived HTML mockups from Stitch |
+| `src/dummy/` | ✅ Deleted — old component playground |
+| `src/app/marketing/` | ✅ Deleted — duplicate route (real landing at `(marketing)/`) |
+| `src/app/Company/` | ✅ Deleted — orphaned capital-C duplicate |
+| `src/app/Administrator/` | ✅ Deleted — orphaned folder |
+| `data/jobs.ts` | ✅ Deleted — static mock data, never wired to the app |
+| `components/app-sidebar.tsx` (root) | ✅ Deleted — duplicate of `components/app/AppSidebar.tsx` |
+| `components/TopBar.tsx`, `components/sidebar.tsx` (root) | ✅ Deleted — orphaned components |

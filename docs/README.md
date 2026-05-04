@@ -1,6 +1,6 @@
 # Jsoor — Documentation
 
-> **Spec-Driven Development docs — last full analysis: 2026-05-03**
+> **Spec-Driven Development docs — last full analysis: 2026-05-04 (Sprints 1–5 complete)**
 
 ---
 
@@ -26,11 +26,11 @@
 
 > ⚠️ The folders below are **pre-existing docs** from before the spec-driven analysis. They contain outdated DB schemas, wrong status values, outdated feature scopes, and decisions that have since changed. **The numbered docs (00–10) above are the authoritative source of truth.** The legacy folders are kept for historical reference only.
 
-| Folder | Why it's outdated |
+| Folder | Notes |
 |---|---|
-| [`01-product/`](./01-product/) | Admin and messaging marked as "out of scope for MVP" — both are now in scope |
-| [`02-architecture/`](./02-architecture/) | DB schema is missing 6 columns and 3 entire tables; wrong status values; wrong FK on `job_applications` |
-| [`03-features/`](./03-features/) | Admin doc says "approve/reject jobs" — decided against; messaging doc says "out of scope" |
+| [`01-product/`](./01-product/) | `overview.md` and `roadmap.md` are outdated (admin/messaging wrongly marked out of scope). `user-stories.md` updated 2026-05-04. |
+| [`02-architecture/`](./02-architecture/) | `database-schema.md` is outdated (LEGACY header — use `02-database-analysis.md` instead). `system-overview.md` and `file-structure.md` updated 2026-05-04. |
+| [`03-features/`](./03-features/) | `admin.md` and `messaging-notifications.md` are outdated (LEGACY headers). Other feature docs (`assessments.md`, `auth.md`, `cv-security.md`, etc.) are current. |
 | [`07-specs/`](./07-specs/) | Original implementation specs — useful as historical context only |
 
 ---
@@ -54,24 +54,26 @@ Never merge a feature without updating its feature doc.
 
 | Feature | Status |
 |---|---|
-| Auth (login, signup, roles, email verification) | Done |
-| Landing page | Done |
-| Job seeker onboarding | Done |
-| Company onboarding | Done |
-| Job discovery & apply | Done |
-| Job seeker profile (view + edit) | Done |
-| AI interview simulator | Done |
-| Company job management (create / edit / delete + skills) | Done |
-| Database restructure (base + extensions) | Done |
-| Company applicant management (status workflow + profile view) | Done |
-| CV signed URL security fix | Done |
-| Assessments V2 (typed questions, auto-scoring, one-question flow, timer, results release) | Done |
-| Saved / bookmarked jobs | Done |
-| Skill-based job matching | Done |
-| Email verification on signup | Done |
-| Email notifications (application status change) | Done — deploy required |
-| RLS policies (job_seeker_profiles, admins) | Done |
-| Admin panel | Foundation done — placeholder page live, panel post-MVP |
-| Settings pages | Planned |
-| Messaging & notifications | Out of scope for MVP |
-| Arabic / RTL | Out of scope for MVP |
+| Auth (login, signup, roles, email verification) | ✅ Done |
+| Middleware: blocked/suspended user guards | ✅ Done |
+| Landing page | ✅ Done |
+| Job seeker onboarding (4-step wizard) | ✅ Done |
+| Company onboarding | ✅ Done |
+| Job discovery, apply, save, skill matching | ✅ Done |
+| Job seeker profile (public view + edit) | ✅ Done |
+| AI interview simulator | ✅ Done (API key needed) |
+| Company job management (CRUD + skills) | ✅ Done |
+| Company applicant management (status workflow + profile view) | ✅ Done |
+| CV signed URL security | ✅ Done |
+| Assessments V2 (typed questions, auto-score, timer, release) | ✅ Done |
+| Saved / bookmarked jobs | ✅ Done |
+| Skill-based job matching | ✅ Done |
+| Email notifications (application status change) | ✅ Done — edge function deploy required |
+| In-app notifications (all 5 triggers, both roles, unread badge) | ✅ Done |
+| Real-time messaging (Supabase Realtime, attachments, both roles) | ✅ Done |
+| Admin panel (dashboard, jobs, companies, users, reports, audit log) | ✅ Done |
+| Assessment templates | 🔲 Sprint 6 — table exists, no UI yet |
+| Job seeker "Report job" button | 🔲 Admin reports page ready, button not built |
+| Job pagination (Show More) | 🔲 Button renders, no logic |
+| Settings pages | 🔲 Post-MVP |
+| Arabic / RTL | 🔲 Post-MVP |

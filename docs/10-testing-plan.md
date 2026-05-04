@@ -1,6 +1,6 @@
 # 10 — Testing Plan
 
-> Last updated: 2026-05-03
+> Last updated: 2026-05-04
 
 ---
 
@@ -94,6 +94,59 @@ Requires Flow A applicant and Flow B company job with an application.
 - [ ] Every admin action above appears in `/admin/audit-log` with correct admin name, action, target, and timestamp
 - [ ] With multiple admins: each action shows the correct admin who performed it
 
+### Flow F: Notifications
+Requires at least one job seeker and one company, with an application in place (Flows A + B + C).
+
+**Job seeker notifications:**
+- [ ] Job seeker applies to a job → company receives `new_application` notification
+- [ ] Notification appears in company `/company/notifications` on page load
+- [ ] Unread badge appears on Bell nav item in company sidebar
+- [ ] Company clicks notification → deep-links to applicant detail page
+- [ ] "Mark all as read" button: badge disappears, all items lose green border
+
+- [ ] Company changes application status → job seeker receives `application_status_changed` notification
+- [ ] Company sends assessment → job seeker receives `assessment_sent` notification
+- [ ] Job seeker submits assessment → company receives `assessment_submitted` notification
+- [ ] Company releases results → job seeker receives `assessment_results_released` notification
+
+**Notification display:**
+- [ ] Notifications grouped by Today / Yesterday / Earlier
+- [ ] Unread items show green left border
+- [ ] Read items have no border after mark-all-read
+- [ ] Empty state shown when no notifications exist
+
+---
+
+### Flow G: Messaging
+Requires a company applicant detail page with an existing application.
+
+**Conversation creation:**
+- [ ] Company clicks "Message" on applicant detail → conversation created (or retrieved if exists)
+- [ ] Company redirected to `/company/messages?conv=<id>` with conversation pre-selected
+- [ ] Clicking "Message" again on same applicant → same conversation opened (no duplicate)
+
+**Sending and receiving:**
+- [ ] Company types a message and sends → message appears immediately in company chat
+- [ ] Job seeker opens `/job-seeker/messages` → same conversation appears in list
+- [ ] Job seeker sees the company message in the thread
+- [ ] Job seeker replies → message appears immediately in job seeker chat
+- [ ] **Realtime**: company window receives the job seeker reply without page refresh
+- [ ] **Realtime**: job seeker window receives the company reply without page refresh
+
+**File attachments:**
+- [ ] Attach a file (e.g. PDF) and send → message shows attachment link
+- [ ] Recipient can click attachment link and download the file (signed URL)
+
+**Read status:**
+- [ ] Unread message count badge shows on Messages nav item when new message arrives
+- [ ] Switching to a conversation clears its unread badge
+- [ ] Conversation list shows correct last message and time for each conversation
+
+**Search:**
+- [ ] Typing in conversation search filters the conversation list
+
+---
+
 ### Flow E: Interview Simulator
 Requires `OPENAI_API_KEY` to be configured.
 
@@ -106,13 +159,13 @@ Requires `OPENAI_API_KEY` to be configured.
 
 ---
 
-## Known Issues / Expected Failures (Before Fix)
+## Known Issues / Expected Failures
 
 | Test | Expected Result | Root Cause | Fix |
 |---|---|---|---|
 | Interview simulator setup → submit | 500 error | OPENAI_API_KEY missing | Add env var |
-| Sign-up confirmation email links | Wrong redirect URL | NEXT_PUBLIC_SITE_URL missing | Add env var |
-| Edit profile → save → visit profile | Old data shown | revalidatePath bug | Fix path |
+| ~~Sign-up confirmation email links~~ | ~~Wrong redirect URL~~ | ~~NEXT_PUBLIC_SITE_URL missing~~ | ✅ Fixed (Sprint 2) |
+| ~~Edit profile → save → visit profile~~ | ~~Old data shown~~ | ~~revalidatePath bug~~ | ✅ Fixed (Sprint 2) |
 
 ---
 
@@ -132,3 +185,8 @@ Requires `OPENAI_API_KEY` to be configured.
 - [ ] `updateApplicationStatus` verifies the caller is the company that owns the job
 - [ ] Admin page redirects non-admins to `/`
 - [ ] Interview simulator API key is server-only (not in `NEXT_PUBLIC_*`)
+- [ ] `getOrCreateConversation` validates that the caller is the company on the application (not any arbitrary user)
+- [ ] `getMessages` — verify a job seeker cannot read a conversation that isn't theirs
+- [ ] File attachments stored in private `message-attachments` bucket — raw path is not a public URL
+- [ ] `insertNotification` uses service role key server-side only — client cannot call it directly
+- [ ] Blocked user accessing any authenticated route is signed out by middleware

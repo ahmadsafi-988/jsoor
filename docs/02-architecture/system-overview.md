@@ -107,8 +107,8 @@ src/app/
 │   ├── saved-jobs/                ← bookmarked jobs
 │   ├── assessments/               ← my assessments (view + submit)
 │   ├── interview-simulator/       ← AI mock interview
-│   ├── messages/                  ← placeholder
-│   ├── notifications/             ← placeholder
+│   ├── messages/                  ← real DB + Supabase Realtime
+│   ├── notifications/             ← real DB-backed notifications
 │   └── onboarding/
 │
 ├── company/
@@ -120,9 +120,19 @@ src/app/
 │   ├── jobs/new/                  ← create job (with SkillPicker)
 │   ├── jobs/[jobId]/              ← job detail / edit (with SkillPicker)
 │   ├── jobs/[jobId]/applicants/   ← applicant list (URL-based status filter)
-│   ├── applicants/[applicationId] ← individual application review (status + assessment + CV)
-│   └── assessments/               ← placeholder
+│   ├── applicants/[applicationId] ← individual application review (status + assessment + CV + Message button)
+│   ├── messages/                  ← real DB + Supabase Realtime (company perspective)
+│   ├── notifications/             ← real DB-backed notifications (company perspective)
+│   └── assessments/               ← assessment list + review
 │
+├── admin/
+│   ├── layout.tsx                 ← AdminSidebar wrapper
+│   ├── page.tsx                   ← dashboard with live stats
+│   ├── jobs/                      ← lock/unlock jobs
+│   ├── companies/                 ← verify/unverify companies
+│   ├── users/                     ← block/suspend users
+│   ├── reports/                   ← review/dismiss job reports
+│   └── audit-log/                 ← full admin action history
 └── api/
     └── ai/route.ts                ← OpenAI integration
 ```
@@ -143,12 +153,17 @@ src/app/
 | File | Purpose |
 |---|---|
 | `lib/company/data.ts` | Company-side queries: jobs, applicants, assessments, saved jobs, skill matching — applicant queries use two-step fetch (applications → profiles separately) due to FK boundary with `auth.users` |
-| `lib/company/actions.ts` | Company mutations + job seeker actions (apply, save/unsave job, submit assessment) |
+| `lib/company/actions.ts` | Company mutations + job seeker actions (apply, save/unsave job, submit assessment) — wires 5 notification inserts |
 | `lib/profile/profile_data.ts` | Job seeker profile queries; `getProfileByUsername` handles missing `job_seeker_profiles` gracefully |
 | `lib/profile/actions.ts` | Profile mutations (upsert profile, projects, badges, skills, avatar/CV URL) |
 | `lib/storage/upload.ts` | Client-side file upload helpers (avatar → public URL, CV → storage path only) |
 | `lib/storage/cv.ts` | Server-side `getCvSignedUrl()` — handles both old full-URL and new path-only `cv_url` values |
+| `lib/notifications/actions.ts` | `insertNotification` (service role bypass RLS), `getNotifications`, `markAllNotificationsRead` |
+| `lib/messages/actions.ts` | `getOrCreateConversation`, `getJobSeekerConversations`, `getCompanyConversations`, `getMessages`, `sendMessage`, `markConversationRead`, `getUnreadMessageCount` |
+| `lib/admin/data.ts` | Admin read queries: stats, all jobs/companies/users/reports, audit log |
+| `lib/admin/actions.ts` | Admin mutations (lock/unlock, verify, block/suspend, report review) — all auto-log to `admin_audit_logs` |
 | `components/app/SkillPicker.tsx` | Toggleable skill chip selector; serializes to hidden `skill_ids` JSON input |
+| `components/app/MessagesClient.tsx` | Shared two-panel chat UI: Realtime subscription, file attachments, conversation list, unread management |
 
 ---
 
@@ -160,4 +175,5 @@ src/app/
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/publishable key |
 | `NEXT_PUBLIC_SITE_URL` | Base URL of the app — used in email confirmation `redirectTo` (e.g. `http://localhost:3000`; update to production URL on deploy) |
 | `OPENAI_API_KEY` | OpenAI (set server-side only, not in NEXT_PUBLIC) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — used server-side for cross-user notification inserts (bypasses RLS) |
 | `RESEND_API_KEY` | Resend email provider — needed when email notifications Edge Function is deployed |

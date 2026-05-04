@@ -1,12 +1,12 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-04 | Source: Full codebase analysis + session work
+> Last updated: 2026-05-04 | Source: Full codebase analysis + session work (Sprints 1–5)
 
 ---
 
 ## Summary
 
-The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Structural debt has been cleaned. Two secondary features remain UI-only shells: messages and notifications. Those are next.
+The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are now live with real DB backends and Supabase Realtime. Structural debt has been cleaned. The only remaining secondary features are assessment templates (DB exists, no UI) and the AI interview simulator (blocked on API key).
 
 ---
 
@@ -19,7 +19,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Forgot password / update password flow
 - [x] Role-based route guards in `src/middleware.ts`
 - [x] Admin redirect guard (admin users → `/admin`)
-- [x] Blocked user guard (middleware signs out + redirects to login)
+- [x] Blocked user guard (middleware signs out + redirects to login with `?error=account_blocked`)
 - [x] Suspended user guard (middleware → `/auth/suspended` with reason shown)
 
 ### Job Seeker Onboarding (`/job-seeker/onboarding`)
@@ -52,8 +52,10 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [ ] "Show More" button renders but has no pagination logic
 
 ### Job Applications (`/job-seeker/job-applications`)
-- [x] List of applied jobs with status badge
+- [x] List of applied jobs with status badge and date
+- [x] Filter tabs by status
 - [x] Application status: applied, under_review, assessment_sent, assessment_completed, shortlisted, rejected
+- [x] "View Task" shortcut for assessment_sent applications
 
 ### Saved Jobs (`/job-seeker/saved-jobs`)
 - [x] View saved jobs
@@ -78,12 +80,31 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [ ] **BLOCKED**: `OPENAI_API_KEY` not set in `.env.local`
 
 ### Messages (`/job-seeker/messages`)
-- [x] Full UI: conversation list, chat panel, send input
-- [ ] **NO BACKEND**: All data is hardcoded. No `messages` table. Not connected to DB.
+- [x] Two-panel layout: conversation list (left) + chat thread (right)
+- [x] Conversations fetched from DB on load (`conversations` table, joined with company name + job title)
+- [x] Messages loaded per conversation from DB (`messages` table)
+- [x] **Supabase Realtime** — new messages appear instantly via `postgres_changes` INSERT subscription
+- [x] Send message: text input + file attachment support
+- [x] File attachments: upload to `message-attachments` private storage bucket client-side; signed URL generated for download
+- [x] `markConversationRead` called on conversation switch — unread badge cleared
+- [x] Unread message count badge on Messages nav item in sidebar
+- [x] Conversation search/filter
+- [x] Empty state for no conversations
 
 ### Notifications (`/job-seeker/notifications`)
-- [x] Full UI: grouped by Today / Yesterday / Earlier
-- [ ] **NO BACKEND**: All data is hardcoded. No `notifications` table.
+- [x] Notifications fetched from DB on page load (`notifications` table)
+- [x] Grouped by Today / Yesterday / Earlier
+- [x] Unread notifications styled with green left border
+- [x] Each notification links to its relevant page on click
+- [x] "Mark all as read" button — updates DB + refreshes page
+- [x] Empty state
+- [x] Unread notification count badge on Bell nav item in sidebar
+- [x] Triggered automatically by 5 server actions:
+  - `applyToJob` → notifies company (`new_application`)
+  - `updateApplicationStatus` → notifies job seeker (`application_status_changed`)
+  - `sendAssessment` → notifies job seeker (`assessment_sent`)
+  - `submitAssessment` → notifies company (`assessment_submitted`)
+  - `releaseAssessmentResults` → notifies job seeker (`assessment_results_released`)
 
 ---
 
@@ -111,14 +132,26 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
   - Full applicant profile (bio, education, skills, projects, badges)
   - CV download (signed URL)
   - Application status management (state machine)
-  - Send assessment form
+  - Send assessment form (multi-question builder: MCQ, True/False, Open)
   - Review submitted assessment (score override, feedback)
   - Release assessment results to applicant
+  - **"Message" button** — creates or opens conversation, redirects to `/company/messages?conv=...`
 
 ### Company Assessments (`/company/assessments`)
 - [x] List all assessments across all applications
 - [x] Filter by status (pending / submitted / reviewed)
 - [x] Review individual assessments
+
+### Company Messages (`/company/messages`)
+- [x] Same two-panel layout as job seeker messages
+- [x] Conversations show applicant name + job title (company perspective)
+- [x] Supabase Realtime, send message, file attachments — all identical to job seeker
+- [x] Unread message count badge on Messages nav item in company sidebar
+
+### Company Notifications (`/company/notifications`)
+- [x] Same design as job seeker notifications
+- [x] Receives `new_application` and `assessment_submitted` notifications
+- [x] "Mark all as read", deep links, unread badge on Bell nav item
 
 ### Company Profile (`/company/profile`)
 - [ ] **UNKNOWN**: Page file exists but not fully analyzed — may be stub
@@ -170,16 +203,13 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 | Feature | Status | Notes |
 |---|---|---|
-| Real-time messaging | Missing | Tables not created yet; job seeker UI shell exists; no company page |
-| In-app notifications | Missing | Table not created yet; job seeker UI shell exists; no company page |
+| Assessment templates | Missing | DB table exists (`assessment_templates`); no UI or server actions |
 | Job seeker "Report" button | Missing | Admin reports page is ready to receive them |
-| Assessment templates | Missing | DB table exists; no UI or actions |
 | Job pagination | Partial | "Show More" button does nothing |
 | Company profile edit | Unknown | Page exists, not verified |
-| Company notifications page | Missing | `/company/notifications` not built |
-| Company messages page | Missing | `/company/messages` not built |
-| OpenAI API key | Missing | `OPENAI_API_KEY` not in `.env.local` |
+| OpenAI API key | Missing | `OPENAI_API_KEY` not in `.env.local` — interview simulator blocked |
 | Supabase types — CLI regen | Deferred | Types updated manually; run CLI when login available |
+| "Message" button on job seeker applications | Not built | Company initiates via applicant detail; job seeker sees conversations from messages page |
 
 ---
 
@@ -196,10 +226,9 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 
 ## Supabase Access (Tools)
 
-- **MCP server:** configured at project scope via `claude mcp add --scope project --transport http supabase "https://mcp.supabase.com/mcp?project_ref=hmisspubbdfjrofycmgc"` — authenticated as of 2026-05-04
+- **MCP server:** configured at project scope — Supabase MCP tools are available in every session. Use them to run SQL migrations, inspect tables, and query live data.
 - **Service role key:** saved in `.env.local` as `SUPABASE_SERVICE_ROLE_KEY` — used by server actions for inserts that cross RLS boundaries (e.g. notification inserts from company → job seeker)
 - **Project ref:** `hmisspubbdfjrofycmgc`
-- In new Claude Code sessions the MCP tools are available immediately — use them to run SQL migrations, inspect tables, and query live data directly
 
 ---
 
@@ -214,29 +243,29 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 | `/auth/update-password` | Working | |
 | `/auth/confirm` | Working | Email confirmation callback |
 | `/auth/sign-up-success` | Working | |
-| `/auth/suspended` | Working | Shown to suspended users |
+| `/auth/suspended` | Working | Shown to suspended users with reason |
 | `/auth/error` | Working | |
 | `/job-seeker/onboarding` | Working | 4-step wizard |
 | `/job-seeker/home` | Working | Job feed (filters admin-locked) |
 | `/job-seeker/profile/[username]` | Working | Public profile |
 | `/job-seeker/profile/[username]/edit` | Working | Edit profile (cache fixed) |
-| `/job-seeker/job-applications` | Working | Application list |
+| `/job-seeker/job-applications` | Working | Application list with status tabs |
 | `/job-seeker/saved-jobs` | Working | Saved jobs |
-| `/job-seeker/assessments` | Working | Assessment taker |
+| `/job-seeker/assessments` | Working | Assessment taker + results |
 | `/job-seeker/interview-simulator` | Working (API key needed) | AI simulator |
-| `/job-seeker/messages` | UI only | No real data |
-| `/job-seeker/notifications` | UI only | No real data |
+| `/job-seeker/messages` | **Working** | Real DB + Realtime |
+| `/job-seeker/notifications` | **Working** | Real DB, grouped, deep links |
 | `/company/onboarding` | Working | |
 | `/company/home` | Working | Dashboard |
 | `/company/jobs` | Working | |
 | `/company/jobs/new` | Working | |
 | `/company/jobs/[jobId]` | Working | Shows locked banner if admin-locked |
 | `/company/jobs/[jobId]/applicants` | Working | |
-| `/company/applicants/[applicationId]` | Working | |
+| `/company/applicants/[applicationId]` | Working | Includes "Message" button |
 | `/company/assessments` | Working | |
-| `/company/assessments/templates` | Missing | To be built |
-| `/company/notifications` | Missing | To be built |
-| `/company/messages` | Missing | To be built |
+| `/company/assessments/templates` | Missing | To be built (Sprint 6) |
+| `/company/messages` | **Working** | Real DB + Realtime |
+| `/company/notifications` | **Working** | Real DB, grouped, deep links |
 | `/company/profile` | Unknown | Needs verification |
 | `/admin` | Working | Dashboard with live stats |
 | `/admin/jobs` | Working | Lock/unlock jobs |
@@ -257,7 +286,7 @@ All structural debt from the previous state has been cleaned:
 
 ## Remaining Known Issues
 
-- `ALLOWED_TRANSITIONS` in `lib/company/actions.ts` — live DB status values not verified (needs service key)
 - `OPENAI_API_KEY` missing — interview simulator blocked at runtime
 - Supabase types file is manually maintained — regenerate with CLI when access token is available
 - "Recent Setups" in interview simulator — still hardcoded, not wired to DB history
+- Company profile page state unknown — not fully verified

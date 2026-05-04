@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-03 | Confirmed with project owner (Round 1 answers)
+> Last updated: 2026-05-04 | Phases 1–5 complete (Sprints 1–5)
 
 ---
 
@@ -25,55 +25,61 @@
 
 ---
 
-## Phase 1 — Structural Cleanup (Start Here)
+## Phase 1 — Structural Cleanup ✅ COMPLETE (Sprint 1)
 
-| Task | Issue | Priority |
-|---|---|---|
-| Remove duplicate route `src/app/marketing/` | Routing conflict with `(marketing)` group | 🔴 First |
-| Remove orphaned `src/app/Company/` (capital C) | Dead code, confusing | 🔴 First |
-| Remove orphaned `src/app/Administrator/` | Dead code | 🔴 First |
-| Audit `src/app/(marketing)/RENAMEDTODISABLElayout.tsx` — delete or rename | Left-over disabled layout | 🟠 High |
-| Audit and remove other dead code (`src/dummy/`, `src/app/stitch-html/`) | Reference files, not live pages | 🟡 Medium |
-
----
-
-## Phase 2 — Critical Bug Fixes
-
-| Task | Issue | Priority |
-|---|---|---|
-| Add `NEXT_PUBLIC_SITE_URL` to `.env.local` | Auth email confirmation links use wrong base URL | 🔴 Critical |
-| Fix `revalidatePath` in `lib/profile/actions.ts` | Profile page not refreshing after edits | 🟠 High |
-| Verify `job_applications.status` DB values vs `ALLOWED_TRANSITIONS` | State machine may block valid transitions | 🟠 High — needs secret key |
+| Task | Status |
+|---|---|
+| Remove duplicate route `src/app/marketing/` | ✅ Deleted |
+| Remove orphaned `src/app/Company/` (capital C) | ✅ Deleted |
+| Remove orphaned `src/app/Administrator/` | ✅ Deleted |
+| Remove `src/app/(marketing)/RENAMEDTODISABLElayout.tsx` | ✅ Deleted |
+| Remove dead code (`src/dummy/`, `src/app/stitch-html/`, `data/jobs.ts`, orphaned root components) | ✅ Deleted |
 
 ---
 
-## Phase 3 — Admin Panel (Full Dashboard)
+## Phase 2 — Critical Bug Fixes ✅ COMPLETE (Sprint 2)
 
-Build a real admin panel at `/admin`. Scope to define in Round 2, but confirmed:
-- Stats overview (users, companies, jobs, applications)
-- User listing (job seekers + companies)
-- Job listing (all jobs, ability to deactivate)
-- **No** approve/reject workflow for jobs
-- Admin-specific features to be defined in next interview round
-
----
-
-## Phase 4 — Messaging (Real Backend)
-
-Replace the hardcoded messages UI with real Supabase-backed messaging:
-- Needs `conversations` and `messages` tables
-- Supabase Realtime for live updates
-- Design to be specified in an upcoming round
-- Requires Supabase service/secret key to inspect current schema
+| Task | Status |
+|---|---|
+| Add `NEXT_PUBLIC_SITE_URL` to `.env.local` | ✅ Added |
+| Fix `revalidatePath` in `lib/profile/actions.ts` | ✅ Fixed (correct dynamic path) |
+| Verify `job_applications.status` DB values vs `ALLOWED_TRANSITIONS` | ✅ Verified via MCP — values match |
 
 ---
 
-## Phase 5 — Notifications (Real Backend)
+## Phase 3 — Admin Panel (Full Dashboard) ✅ COMPLETE (Sprint 3)
 
-Replace hardcoded notifications UI with real DB-backed notifications:
-- Will use Supabase for delivery (exact approach TBD)
-- `notifications` table with Supabase Realtime subscription
-- Design to be specified in an upcoming round
+Built at `/admin`:
+- Dashboard with live stat cards (users, companies, jobs, applications)
+- Job management: lock/unlock any job; locked jobs hidden from job feed; reason logged
+- Company management: verify/unverify companies
+- User management: block (force sign-out) and suspend (→ `/auth/suspended` with reason) any user
+- Job reports: review/dismiss reports; lock job directly from report view
+- Audit log: chronological list of last 200 admin actions with color-coded action badges
+- All actions auto-written to `admin_audit_logs`
+
+---
+
+## Phase 4 — Notifications (Real Backend) ✅ COMPLETE (Sprint 4)
+
+Replaced hardcoded notifications UI with real Supabase-backed system:
+- `notifications` table created via migration
+- `lib/notifications/actions.ts`: `insertNotification` (service role — bypasses RLS), `getNotifications`, `markAllNotificationsRead`
+- 5 automatic triggers wired in `lib/company/actions.ts`: `applyToJob`, `updateApplicationStatus`, `sendAssessment`, `submitAssessment`, `releaseAssessmentResults`
+- Job seeker and company notification pages: DB-backed, grouped by Today/Yesterday/Earlier, deep links, mark-all-read
+- Unread badge on Bell nav item in both sidebars
+
+---
+
+## Phase 5 — Messaging (Real Backend) ✅ COMPLETE (Sprint 5)
+
+Replaced hardcoded messages UI with real Supabase Realtime messaging:
+- `conversations` and `messages` tables created via migration
+- `lib/messages/actions.ts`: `getOrCreateConversation`, `getJobSeekerConversations`, `getCompanyConversations`, `getMessages`, `sendMessage`, `markConversationRead`, `getUnreadMessageCount`
+- Shared `components/app/MessagesClient.tsx` with Supabase Realtime (`postgres_changes` INSERT subscription per conversation), file attachment upload to `message-attachments` bucket, signed URL generation for downloads
+- Job seeker and company messages pages use thin re-exports of the shared component
+- "Message" button on company applicant detail: `getOrCreateConversation` → redirect to `/company/messages?conv=...`
+- Unread message count badge on Messages nav item in both sidebars
 
 ---
 
@@ -99,30 +105,30 @@ Replace hardcoded notifications UI with real DB-backed notifications:
 
 ---
 
-## Technical Debt (Clean Up Alongside Other Work)
+## Technical Debt
 
-| Item | Action |
+| Item | Status |
 |---|---|
-| `src/app/stitch-html/` HTML mockups | Delete |
-| `src/dummy/` folder | Delete |
-| `data/jobs.ts` static data | Verify unused → delete |
-| `components/app-sidebar.tsx` (root level) | Audit — may be duplicate of `components/app/AppSidebar.tsx` |
-| Hardcoded "Recent Setups" in interview simulator | Remove or wire to DB history |
-| `components/TopBar.tsx`, `components/sidebar.tsx` (root) | Audit if used; delete if orphaned |
+| `src/app/stitch-html/` HTML mockups | ✅ Deleted (Sprint 1) |
+| `src/dummy/` folder | ✅ Deleted (Sprint 1) |
+| `data/jobs.ts` static data | ✅ Deleted (Sprint 1) |
+| `components/app-sidebar.tsx` (root level) | ✅ Deleted (Sprint 1) |
+| `components/TopBar.tsx`, `components/sidebar.tsx` (root) | ✅ Deleted (Sprint 1) |
+| Hardcoded "Recent Setups" in interview simulator | ⚠️ Still hardcoded — not wired to DB history |
 
 ---
 
 ## Success Criteria for Academic Submission
 
-- [ ] End-to-end hiring flow: post job → apply → manage → assess → decide
-- [ ] All 3 roles (job_seeker, company, admin) access correct dashboards
-- [ ] Assessments: send, take, auto-score, review, release results
-- [ ] AI Interview Simulator working (end-to-end with real API key)
-- [ ] Email notifications fire on application status changes
-- [ ] Profile publicly viewable without login
-- [ ] CV upload and download works (signed URLs)
-- [ ] Messaging works (real messages, not hardcoded)
-- [ ] Notifications work (real DB, not hardcoded)
-- [ ] Admin dashboard shows real platform data
-- [ ] No broken routes in core flows
-- [ ] No orphaned dead code in the repo
+- [x] End-to-end hiring flow: post job → apply → manage → assess → decide
+- [x] All 3 roles (job_seeker, company, admin) access correct dashboards
+- [x] Assessments: send, take, auto-score, review, release results
+- [ ] AI Interview Simulator working (end-to-end with real API key) — **blocked: OPENAI_API_KEY missing**
+- [ ] Email notifications fire on application status changes — **unknown: edge function trigger not verified**
+- [x] Profile publicly viewable without login
+- [x] CV upload and download works (signed URLs)
+- [x] Messaging works (real messages, Supabase Realtime)
+- [x] Notifications work (real DB, 5 automatic triggers)
+- [x] Admin dashboard shows real platform data
+- [x] No broken routes in core flows
+- [x] No orphaned dead code in the repo
