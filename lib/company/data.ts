@@ -114,6 +114,7 @@ export async function getJobApplicants(jobId: string): Promise<ApplicationWithPr
 
   return applications.map((app) => ({
     ...app,
+    job: null,
     profile: profileMap[app.applicant_id]
       ? {
           ...profileMap[app.applicant_id],
@@ -322,6 +323,7 @@ export async function getActiveJobsWithSkills(
       job_to_skills(skill_id, skill:skills(name))
     `)
     .eq("is_active", true)
+    .eq("admin_locked", false)
     .order("created_at", { ascending: false });
 
   const userSkillSet = new Set(userSkillIds);

@@ -2,17 +2,19 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Briefcase, Users, ClipboardCheck,
-  Building2, Settings, LogOut,
+  LayoutDashboard, Briefcase, ClipboardCheck,
+  Building2, Settings, LogOut, Bell, MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
 const NAV_ITEMS = [
-  { label: "Dashboard",    href: "/company/home",        icon: LayoutDashboard },
-  { label: "Jobs",         href: "/company/jobs",         icon: Briefcase },
-  { label: "Assessments",  href: "/company/assessments",  icon: ClipboardCheck },
-  { label: "Profile",      href: "/company/profile",      icon: Building2 },
+  { label: "Dashboard",     href: "/company/home",          icon: LayoutDashboard },
+  { label: "Jobs",          href: "/company/jobs",           icon: Briefcase },
+  { label: "Assessments",   href: "/company/assessments",    icon: ClipboardCheck },
+  { label: "Messages",      href: "/company/messages",       icon: MessageSquare },
+  { label: "Profile",       href: "/company/profile",        icon: Building2 },
+  { label: "Notifications", href: "/company/notifications",  icon: Bell },
 ];
 
 type SidebarCompany = { name: string; logoUrl: string | null };
@@ -21,18 +23,36 @@ export function CompanySidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [company, setCompany] = useState<SidebarCompany | null>(null);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMsgs, setUnreadMsgs] = useState(0);
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data } = await supabase
-        .from("companies")
-        .select("name, logo_url")
-        .eq("id", user.id)
-        .single();
+
+      const [{ data }, { count: notifCount }] = await Promise.all([
+        supabase.from("companies").select("name, logo_url").eq("id", user.id).single(),
+        supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_read", false),
+      ]);
       if (data) setCompany({ name: data.name, logoUrl: data.logo_url });
+      setUnreadNotifs(notifCount ?? 0);
+
+      // Unread messages: count unread msgs in conversations this company is part of
+      const { data: convIds } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("company_id", user.id);
+      if (convIds?.length) {
+        const { count: msgCount } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .in("conversation_id", convIds.map((c) => c.id))
+          .neq("sender_id", user.id)
+          .eq("is_read", false);
+        setUnreadMsgs(msgCount ?? 0);
+      }
     };
     load();
   }, []);
@@ -53,6 +73,9 @@ export function CompanySidebar() {
       <nav className="flex-1 flex flex-col gap-1">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + "/");
+          const badge =
+            label === "Notifications" ? unreadNotifs :
+            label === "Messages"      ? unreadMsgs   : 0;
           return (
             <Link key={href} href={href}>
               <div className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
@@ -60,7 +83,14 @@ export function CompanySidebar() {
                   ? "bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white shadow-lg shadow-[#00a86b]/20"
                   : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
               }`}>
-                <Icon className="w-5 h-5 shrink-0" />
+                <div className="relative shrink-0">
+                  <Icon className="w-5 h-5" />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </div>
                 <span className="text-sm font-medium">{label}</span>
               </div>
             </Link>

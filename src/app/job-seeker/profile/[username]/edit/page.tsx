@@ -383,9 +383,10 @@ function ProjectForm({
 }
 
 // ─── Tab: Projects ────────────────────────────────────────────
-function TabProjects({ projects, onProjectsChange }: {
+function TabProjects({ projects, onProjectsChange, username }: {
   projects: project[];
   onProjectsChange: (p: project[]) => void;
+  username: string;
 }) {
   const [editing, setEditing] = React.useState<project | null>(null);
   const [adding, setAdding] = React.useState(false);
@@ -402,7 +403,7 @@ function TabProjects({ projects, onProjectsChange }: {
     fd.set("description", src.description);
     fd.set("status", src.status);
     fd.set("url", src.url);
-    const result = await upsertProject(fd);
+    const result = await upsertProject(fd, username);
     if (result?.error) { setFeedback({ error: result.error }); return; }
     setFeedback({ message: isNew ? "Project added." : "Project updated." });
     setAdding(false);
@@ -417,7 +418,7 @@ function TabProjects({ projects, onProjectsChange }: {
   }
 
   async function handleDelete(id: number) {
-    const result = await deleteProject(id);
+    const result = await deleteProject(id, username);
     if (result?.error) { setFeedback({ error: result.error }); return; }
     onProjectsChange(projects.filter((x) => x.id !== id));
     setFeedback({ message: "Project deleted." });
@@ -514,9 +515,10 @@ function BadgeForm({
 }
 
 // ─── Tab: Badges ─────────────────────────────────────────────
-function TabBadges({ badges, onBadgesChange }: {
+function TabBadges({ badges, onBadgesChange, username }: {
   badges: badge[];
   onBadgesChange: (b: badge[]) => void;
+  username: string;
 }) {
   const [adding, setAdding] = React.useState(false);
   const [editing, setEditing] = React.useState<badge | null>(null);
@@ -538,7 +540,7 @@ function TabBadges({ badges, onBadgesChange }: {
     const src = isNew ? draft : editing!;
     if (!isNew && editing?.id) fd.set("id", String(editing.id));
     Object.entries(src).forEach(([k, v]) => { if (k !== "id" && k !== "user_id" && k !== "created_at") fd.set(k, String(v)); });
-    const result = await upsertBadge(fd);
+    const result = await upsertBadge(fd, username);
     if (result?.error) { setFeedback({ error: result.error }); return; }
     setFeedback({ message: isNew ? "Badge added." : "Badge updated." });
     setAdding(false);
@@ -547,7 +549,7 @@ function TabBadges({ badges, onBadgesChange }: {
   }
 
   async function handleDelete(id: number) {
-    const result = await deleteBadge(id);
+    const result = await deleteBadge(id, username);
     if (result?.error) { setFeedback({ error: result.error }); return; }
     onBadgesChange(badges.filter((x) => x.id !== id));
     setFeedback({ message: "Badge removed." });
@@ -697,7 +699,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
 type SkillEntry = { skill_id: number; skills: { id: number; name: string } }
 
 
-function TabSkills({ profileSkills: initial = [] }: { profileSkills: SkillEntry[] }) {
+function TabSkills({ profileSkills: initial = [], username }: { profileSkills: SkillEntry[]; username: string }) {
   const supabase = createClient();
   const [profileSkills, setProfileSkills] = React.useState<SkillEntry[]>(initial);
   const [query, setQuery] = React.useState("");
@@ -736,7 +738,7 @@ function TabSkills({ profileSkills: initial = [] }: { profileSkills: SkillEntry[
     setProfileSkills(prev => [...prev, optimisticEntry]);
     setIsPending(skill.id);
 
-    const result = await addProfileSkill(skill.id);
+    const result = await addProfileSkill(skill.id, username);
     if (result?.error) {
       setProfileSkills(prev => prev.filter(s => s.skill_id !== skill.id));
       setFeedback({ error: result.error });
@@ -749,7 +751,7 @@ function TabSkills({ profileSkills: initial = [] }: { profileSkills: SkillEntry[
   async function handleRemove(skillId: number) {
     const previousSkills = [...profileSkills];
     setProfileSkills(prev => prev.filter(s => s.skill_id !== skillId));
-    const result = await removeProfileSkill(skillId);
+    const result = await removeProfileSkill(skillId, username);
     if (result?.error) {
       setProfileSkills(previousSkills);
       setFeedback({ error: result.error });
@@ -960,10 +962,10 @@ export default function EditProfilePage() {
       {/* Tab content */}
       <div>
         {activeTab === "profile" && <TabProfile profile={profile} onSaved={setProfile} />}
-        {activeTab === "projects" && <TabProjects projects={projects} onProjectsChange={setProjects} />}
-        {activeTab === "badges" && <TabBadges badges={badges} onBadgesChange={setBadges} />}
+        {activeTab === "projects" && <TabProjects projects={projects} onProjectsChange={setProjects} username={params.username as string} />}
+        {activeTab === "badges" && <TabBadges badges={badges} onBadgesChange={setBadges} username={params.username as string} />}
         {activeTab === "account" && <TabAccount currentEmail={email} />}
-        {activeTab === "skills" && <TabSkills profileSkills={profileSkills} />}
+        {activeTab === "skills" && <TabSkills profileSkills={profileSkills} username={params.username as string} />}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { insertNotification } from "@/lib/notifications/actions";
 
 // ─── Company profile ──────────────────────────────────────────────────────────
 
@@ -166,6 +167,22 @@ export async function applyToJob(jobId: string, coverLetter?: string) {
     return { error: error.message };
   }
 
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("company_id, title")
+    .eq("id", jobId)
+    .single();
+
+  if (job) {
+    await insertNotification(
+      job.company_id,
+      "new_application",
+      "New Application",
+      `A new candidate applied to "${job.title}"`,
+      `/company/jobs/${jobId}/applicants`
+    );
+  }
+
   revalidatePath("/job-seeker/job-applications");
   return { success: true };
 }
@@ -197,7 +214,7 @@ export async function updateApplicationStatus(
   // Fetch current application + owning company in one query
   const { data: application, error: fetchError } = await supabase
     .from("job_applications")
-    .select("status, job:jobs!job_applications_job_id_fkey(id, company_id)")
+    .select("status, applicant_id, job:jobs!job_applications_job_id_fkey(id, company_id)")
     .eq("id", applicationId)
     .single();
 
@@ -218,6 +235,22 @@ export async function updateApplicationStatus(
     .eq("id", applicationId);
 
   if (error) return { error: error.message };
+
+  const statusLabels: Record<ApplicationStatus, string> = {
+    applied: "Applied",
+    under_review: "Under Review",
+    assessment_sent: "Assessment Sent",
+    assessment_completed: "Assessment Completed",
+    shortlisted: "Shortlisted",
+    rejected: "Rejected",
+  };
+  await insertNotification(
+    application.applicant_id,
+    "application_status_changed",
+    "Application Status Updated",
+    `Your application status has changed to "${statusLabels[newStatus] ?? newStatus}"`,
+    "/job-seeker/job-applications"
+  );
 
   revalidatePath(`/company/applicants/${applicationId}`);
   revalidatePath(`/company/jobs/${job.id}/applicants`);
@@ -257,10 +290,22 @@ export async function sendAssessment(formData: FormData) {
   const { error } = await supabase.from("assessments").insert(payload);
   if (error) return { error: error.message };
 
-  await supabase
+  const { data: appRow } = await supabase
     .from("job_applications")
     .update({ status: "assessment_sent", updated_at: new Date().toISOString() })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .select("applicant_id")
+    .single();
+
+  if (appRow) {
+    await insertNotification(
+      appRow.applicant_id,
+      "assessment_sent",
+      "New Assessment",
+      `You have received a new assessment: "${payload.title}"`,
+      "/job-seeker/assessments"
+    );
+  }
 
   revalidatePath("/company/assessments");
   revalidatePath(`/company/applicants/${applicationId}`);
@@ -311,7 +356,7 @@ export async function submitAssessment(formData: FormData) {
   }
   const score = scorable > 0 ? Math.round((correct / scorable) * 100) : null;
 
-  const { error } = await supabase
+  const { data: updatedAssessment, error } = await supabase
     .from("assessments")
     .update({
       submission,
@@ -319,7 +364,9 @@ export async function submitAssessment(formData: FormData) {
       score,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", assessmentId);
+    .eq("id", assessmentId)
+    .select("company_id, title")
+    .single();
 
   if (error) return { error: error.message };
 
@@ -327,6 +374,16 @@ export async function submitAssessment(formData: FormData) {
     .from("job_applications")
     .update({ status: "assessment_completed", updated_at: new Date().toISOString() })
     .eq("id", assessment.application_id);
+
+  if (updatedAssessment) {
+    await insertNotification(
+      updatedAssessment.company_id,
+      "assessment_submitted",
+      "Assessment Submitted",
+      `A candidate has submitted their assessment: "${updatedAssessment.title}"`,
+      `/company/applicants/${assessment.application_id}`
+    );
+  }
 
   revalidatePath("/job-seeker/job-applications");
   revalidatePath("/job-seeker/assessments");
@@ -338,13 +395,33 @@ export async function releaseAssessmentResults(assessmentId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { error } = await supabase
+  const { data: released, error } = await supabase
     .from("assessments")
     .update({ results_released: true, updated_at: new Date().toISOString() })
     .eq("id", assessmentId)
-    .eq("company_id", user.id);
+    .eq("company_id", user.id)
+    .select("application_id")
+    .single();
 
   if (error) return { error: error.message };
+
+  if (released) {
+    const { data: appRow } = await supabase
+      .from("job_applications")
+      .select("applicant_id")
+      .eq("id", released.application_id)
+      .single();
+
+    if (appRow) {
+      await insertNotification(
+        appRow.applicant_id,
+        "assessment_results_released",
+        "Assessment Results Available",
+        "Your assessment results have been released. Check your assessments page.",
+        "/job-seeker/assessments"
+      );
+    }
+  }
 
   revalidatePath("/company/assessments");
   return { success: true };

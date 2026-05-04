@@ -445,9 +445,11 @@ function StepEducation({
 function StepSkills({
   onFinish,
   onBack,
+  username,
 }: {
   onFinish: () => Promise<void>;
   onBack: () => void;
+  username: string;
 }) {
   const supabase = createClient();
   const [query, setQuery]         = React.useState("");
@@ -468,7 +470,7 @@ function StepSkills({
   async function handleAdd(skill: SkillRow) {
     if (selected.some((s) => s.skill_id === skill.id)) return;
     setIsPending(skill.id);
-    const result = await addProfileSkill(skill.id);
+    const result = await addProfileSkill(skill.id, username);
     if (result?.error) {
       setFeedback({ error: result.error });
     } else {
@@ -778,6 +780,7 @@ export default function OnboardingPage() {
                 <StepSkills
                   onFinish={commitProfile}
                   onBack={() => setStep(2)}
+                  username={identity.username}
                 />
               )}
               {step === 4 && (

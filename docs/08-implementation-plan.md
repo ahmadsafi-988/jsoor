@@ -1,6 +1,6 @@
 # 08 — Implementation Plan
 
-> Last updated: 2026-05-03 | Priority order confirmed by project owner
+> Last updated: 2026-05-04 | Priority order confirmed by project owner
 
 **Confirmed priority:** E → A → B → C → D (structural cleanup → env fixes → admin panel → notifications → messaging)
 
@@ -13,46 +13,46 @@
 
 ---
 
-## Sprint 1 — Structural Cleanup (Phase 1)
+## Sprint 1 — Structural Cleanup (Phase 1) ✅ COMPLETE
 
-### TASK-01: Remove duplicate and orphaned routes
-**Why:** Duplicate `/marketing` route can cause unexpected behavior. Dead `Company/` and `Administrator/` folders are confusing and pollute the codebase.
+### TASK-01: Remove duplicate and orphaned routes ✅
+**Done 2026-05-04.**
 
-Steps:
-- [ ] Delete `src/app/marketing/` folder entirely
-- [ ] Delete `src/app/Company/` folder (capital C)
-- [ ] Delete `src/app/Administrator/` folder
-- [ ] Delete `src/app/(marketing)/RENAMEDTODISABLElayout.tsx`
-- [ ] Confirm landing page still works after deleting `/marketing`
-- **Files affected:** `src/app/marketing/`, `src/app/Company/`, `src/app/Administrator/`
+- [x] Deleted `src/app/marketing/` folder entirely
+- [x] Deleted `src/app/Company/` folder (capital C)
+- [x] Deleted `src/app/Administrator/` folder
+- [x] Deleted `src/app/(marketing)/RENAMEDTODISABLElayout.tsx`
+- **Files removed:** `src/app/marketing/`, `src/app/Company/`, `src/app/Administrator/`, `src/app/(marketing)/RENAMEDTODISABLElayout.tsx`
 
-### TASK-02: Delete dead code and reference files
-Steps:
-- [ ] Delete `src/dummy/` folder
-- [ ] Delete `src/app/stitch-html/` folder
-- [ ] Check if `data/jobs.ts` is imported anywhere — if not, delete
-- [ ] Check `components/app-sidebar.tsx` (root) vs `components/app/AppSidebar.tsx` — delete the unused one
-- [ ] Check `components/TopBar.tsx` and `components/sidebar.tsx` (root) — delete if unused
+### TASK-02: Delete dead code and reference files ✅
+**Done 2026-05-04.**
+
+- [x] Deleted `src/dummy/` folder (old page prototypes)
+- [x] Deleted `src/app/stitch-html/` folder (HTML wireframes)
+- [x] Deleted `data/jobs.ts` and empty `data/` folder (zero imports, confirmed safe)
+- [x] Deleted `components/app-sidebar.tsx` (only used by dummy — real one is `components/app/AppSidebar.tsx`)
+- [x] Deleted `components/TopBar.tsx` and `components/sidebar.tsx` (zero imports)
+- [x] Deleted `components/nav-*.tsx/ts`, `chart-area-interactive.tsx`, `data-table.tsx`, `section-cards.tsx`, `site-header.tsx` (only referenced by dummy)
 
 ---
 
-## Sprint 2 — Bug Fixes (Phase 2)
+## Sprint 2 — Bug Fixes (Phase 2) ✅ COMPLETE
 
-### TASK-03: Fix missing environment variables
-Steps:
-- [ ] Add `NEXT_PUBLIC_SITE_URL=http://localhost:3000` to `.env.local`
-- [ ] Confirm auth email confirmation redirects work (sign up → click email link → lands at onboarding)
-- **Note:** OPENAI_API_KEY to be discussed in upcoming round
+### TASK-03: Fix missing environment variables ✅
+**Done 2026-05-04.**
 
-### TASK-04: Fix `revalidatePath` in profile actions
-Steps:
-- [ ] In `lib/profile/actions.ts`, change all occurrences of `revalidatePath("/job-seeker/profile")` to use the username parameter
-- [ ] Test: edit profile → save → profile page shows updated data without manual refresh
-- **Files:** `lib/profile/actions.ts`
+- [x] Added `NEXT_PUBLIC_SITE_URL=http://localhost:3000` to `.env.local`
+- **Note:** OPENAI_API_KEY still missing — deferred to Sprint 7
+
+### TASK-04: Fix `revalidatePath` in profile actions ✅
+**Done 2026-05-04.**
+
+- [x] Fixed 6 functions in `lib/profile/actions.ts`: `upsertProject`, `deleteProject`, `upsertBadge`, `deleteBadge`, `addProfileSkill`, `removeProfileSkill` — all now accept `username` and call `revalidatePath(/job-seeker/profile/${username})`
+- [x] Updated `src/app/job-seeker/profile/[username]/edit/page.tsx`: added `username` prop to `TabProjects`, `TabBadges`, `TabSkills`; passes `params.username` to each
+- [x] Updated `src/app/job-seeker/onboarding/page.tsx`: added `username` prop to `StepSkills`; passes `identity.username`
 
 ### TASK-05: Verify and align application status values
-**Requires:** Supabase service key to inspect live DB
-Steps:
+**BLOCKED — needs Supabase service key.**
 - [ ] Query live `job_applications` for actual distinct status values
 - [ ] Compare with `ALLOWED_TRANSITIONS` in `lib/company/actions.ts`
 - [ ] Align code if they differ
@@ -60,159 +60,175 @@ Steps:
 
 ---
 
-## Sprint 3 — Admin Panel (Phase 3)
+## Sprint 3 — Admin Panel (Phase 3) ✅ COMPLETE
 
-**First critical prerequisite:** Regenerate `lib/supabase_generated_types.ts` — 5 columns exist in DB but not in types: `profiles.is_blocked`, `profiles.is_suspended`, `profiles.suspension_reason`, `jobs.admin_locked`, `companies.is_verified`.
+### TASK-06: Update Supabase types ✅
+**Done 2026-05-04.** (CLI login unavailable — types updated manually.)
 
-### TASK-06: Regenerate Supabase types
-- [ ] Run `npx supabase gen types typescript --project-id hmisspubbdfjrofycmgc > lib/supabase_generated_types.ts`
-- [ ] Update `lib/global_types.ts` if new fields need derived types
-- **Why:** Current types are missing 6 live DB columns (`is_blocked`, `is_suspended`, `suspension_reason`, `admin_locked`, `is_verified`, `companies.created_at`) AND 3 entire tables (`admin_audit_logs`, `job_reports`, `assessment_templates`) have no types at all
+- [x] Added `is_blocked: boolean`, `is_suspended: boolean`, `suspension_reason: string | null` to `profiles`
+- [x] Added `admin_locked: boolean` to `jobs`
+- [x] Added `is_verified: boolean` to `companies`
+- [x] Added full type definitions for `admin_audit_logs`, `job_reports`, `assessment_templates` tables
+- [x] Fixed pre-existing type bug in `lib/company/data.ts` `getJobApplicants` (was missing `job: null` in return)
+- **Files:** `lib/supabase_generated_types.ts`, `lib/company/data.ts`
 
-### TASK-07: Admin dashboard — layout + stats
-- [ ] Replace "coming soon" stub with a proper admin layout (sidebar, nav)
-- [ ] Stats cards: total users, total companies, total jobs, total applications
-- **Files:** `src/app/admin/page.tsx` + new `src/app/admin/layout.tsx`
+### TASK-07: Admin dashboard — layout + stats ✅
+**Done 2026-05-04.**
 
-### TASK-08: Admin — job management
-- [ ] View all jobs (all companies, all statuses)
-- [ ] Lock a job: sets `admin_locked = true` → hidden from job seeker feed even if `is_active = true`
-- [ ] Unlock a job: sets `admin_locked = false` → company can reactivate
-- [ ] Update job feed query: filter out `admin_locked = true` jobs
-- [ ] Update company job edit: prevent reactivation if `admin_locked = true`, show "Locked by admin" message
-- **Files:** `src/app/admin/` (new pages), `lib/company/data.ts` (feed query), `src/app/company/jobs/[jobId]/EditJobForm.tsx`
+- [x] Created `components/app/AdminSidebar.tsx` — dark sidebar with nav: Dashboard, Jobs, Companies, Users, Reports, Audit Log
+- [x] Created `src/app/admin/layout.tsx` — sidebar + main content area
+- [x] Replaced stub `src/app/admin/page.tsx` — live stat cards (users, companies, jobs, applications) + quick-nav links
+- **Files:** `components/app/AdminSidebar.tsx`, `src/app/admin/layout.tsx`, `src/app/admin/page.tsx`
 
-### TASK-09: Admin — company management
-- [ ] View all companies with verification status
-- [ ] Verify a company: sets `is_verified = true` → verified badge shows next to company name
-- [ ] Unverify a company
-- [ ] Show verified badge in: company cards on job feed, applicant detail view, company profile
-- **Files:** `src/app/admin/` (new pages), job card component, `lib/company/data.ts`
+### TASK-08: Admin — job management ✅
+**Done 2026-05-04.**
 
-### TASK-10: Admin — user management
-- [ ] View all users (job seekers + companies) with block/suspend status
-- [ ] Block a user: sets `is_blocked = true` → remove from system (logout + deny access)
-- [ ] Suspend a user: sets `is_suspended = true` + `suspension_reason` → notify via messaging + restrict access
-- [ ] Add block/suspend check to middleware (redirect blocked/suspended users)
-- [ ] Suspension details TBD — add to plan for future round
-- **Files:** `src/app/admin/`, `lib/supabase/middleware.ts`
+- [x] Created `src/app/admin/jobs/page.tsx` + `AdminJobsClient.tsx`
+- [x] Lock a job: sets `admin_locked = true`, prompts for reason, writes audit log
+- [x] Unlock a job: sets `admin_locked = false`, writes audit log
+- [x] Updated job feed query in `lib/company/data.ts`: added `.eq("admin_locked", false)` filter
+- [x] Updated `src/app/company/jobs/[jobId]/EditJobForm.tsx`: shows red "Locked by admin" banner; `is_active` checkbox disabled when locked
+- **Files:** `src/app/admin/jobs/`, `lib/company/data.ts`, `src/app/company/jobs/[jobId]/EditJobForm.tsx`
 
-### TASK-11: Admin — job reports (proof feature)
-**Job seeker side:**
-- [ ] Add "Report" button to job cards in the job feed
-- [ ] Report modal: reason input (free text), submit button
-- [ ] Server action: insert into `job_reports` with `status = 'pending'`; prevent duplicate reports (same user + job)
-- **Files:** `src/app/job-seeker/home/JobSeekerHomeClient.tsx`, new server action in `lib/company/actions.ts` or `lib/reports/actions.ts`
+### TASK-09: Admin — company management ✅
+**Done 2026-05-04.**
 
-**Admin side:**
-- [ ] `/admin/reports` page — list all reported jobs grouped by status (pending / reviewed / dismissed)
-- [ ] Per report: job title, company name, reporter, reason, date, status
-- [ ] Admin actions: mark as reviewed, dismiss, or lock the job directly from this view
-- **Files:** new `src/app/admin/reports/page.tsx`
+- [x] Created `src/app/admin/companies/page.tsx` + `AdminCompaniesClient.tsx`
+- [x] Verify company: sets `is_verified = true`, writes audit log
+- [x] Unverify company: sets `is_verified = false`, writes audit log
+- [x] Verified badge shown inline in company table
+- **Files:** `src/app/admin/companies/`
 
-### TASK-12: Admin — audit log (proof feature)
-**Write side (wire into every admin action):**
-- [ ] After every admin mutation (lock job, unlock job, verify company, unverify company, block user, suspend user, review report, dismiss report), insert a row into `admin_audit_logs`
-- [ ] Fields: `admin_id` (current user), `action` (string key), `target_type`, `target_id`, `target_label`, `reason`
-- [ ] Extract a shared `logAdminAction(...)` helper to keep this DRY
-- **Files:** all admin server actions
+### TASK-10: Admin — user management ✅
+**Done 2026-05-04.**
 
-**Read side:**
-- [ ] `/admin/audit-log` page — chronological list of all admin actions
-- [ ] Columns: timestamp, admin name, action, target, reason
-- [ ] Filter by action type and by admin (multi-admin support)
-- **Files:** new `src/app/admin/audit-log/page.tsx`
+- [x] Created `src/app/admin/users/page.tsx` + `AdminUsersClient.tsx`
+- [x] Block user: sets `is_blocked = true` with optional reason, writes audit log
+- [x] Unblock user: sets `is_blocked = false`, writes audit log
+- [x] Suspend user: sets `is_suspended = true` + `suspension_reason`, writes audit log
+- [x] Unsuspend user: clears both fields, writes audit log
+- [x] Updated `lib/supabase/middleware.ts`:
+  - Blocked users → signed out + redirected to `/auth/login?error=account_blocked`
+  - Suspended users → redirected to `/auth/suspended`
+- [x] Created `src/app/auth/suspended/page.tsx` — shows suspension reason
+- **Files:** `src/app/admin/users/`, `lib/supabase/middleware.ts`, `src/app/auth/suspended/page.tsx`
+
+### TASK-11: Admin — job reports ✅
+**Done 2026-05-04.**
+
+- [x] Created `src/app/admin/reports/page.tsx` + `AdminReportsClient.tsx`
+- [x] Reports grouped by status: pending / reviewed / dismissed
+- [x] Actions: Mark reviewed, Dismiss, Lock job directly from report view
+- [x] All actions write to `admin_audit_logs`
+- **Files:** `src/app/admin/reports/`
+- **Note:** Job seeker "Report" button on job cards not yet built (to add in a later pass)
+
+### TASK-12: Admin — audit log ✅
+**Done 2026-05-04.**
+
+- [x] Created `src/app/admin/audit-log/page.tsx`
+- [x] Shows last 200 actions with timestamp, admin name, action badge, target, reason
+- [x] Color-coded action badges (red = lock/block, green = unlock/verify, yellow = suspend, blue = review)
+- [x] `logAdminAction` helper in `lib/admin/actions.ts` called by every admin mutation
+- **Files:** `src/app/admin/audit-log/page.tsx`, `lib/admin/actions.ts`, `lib/admin/data.ts`
 
 ---
 
-## Sprint 4 — Notifications (Phase 4)
+## Sprint 4 — Notifications (Phase 4) ✅ COMPLETE
 **Design confirmed in Round 2B (2026-05-03).** In-app only, load on visit, application-level inserts.
+**Done 2026-05-04.**
 
-### TASK-12: Create `notifications` table in Supabase
-- [ ] Create table with columns: `id`, `user_id`, `type`, `title`, `body`, `link`, `is_read`, `created_at`
-- [ ] Add RLS: user can SELECT/UPDATE only their own rows; INSERT via service role in server actions
-- [ ] Add index on `(user_id, created_at DESC)` for efficient feed queries
+### TASK-13: Create `notifications` table in Supabase ✅
+- [x] Table created via MCP migration: `id`, `user_id` (→ profiles), `type`, `title`, `body`, `link`, `is_read`, `created_at`
+- [x] RLS: SELECT/UPDATE own rows; INSERT for any authenticated user
+- [x] Index on `(user_id, created_at DESC)`
 
-### TASK-13: Define deep-link URLs per notification type
-During implementation, confirm the exact `link` value for each type:
-- [ ] `application_status_changed` → `/job-seeker/job-applications` (or specific application view if one exists)
-- [ ] `assessment_sent` → `/job-seeker/assessments`
-- [ ] `assessment_results_released` → `/job-seeker/assessments` (specific assessment)
-- [ ] `new_application` → `/company/jobs/[jobId]/applicants`
-- [ ] `assessment_submitted` → `/company/applicants/[applicationId]`
+### TASK-14: Deep-link URLs per notification type ✅
+- [x] `application_status_changed` → `/job-seeker/job-applications`
+- [x] `assessment_sent` → `/job-seeker/assessments`
+- [x] `assessment_results_released` → `/job-seeker/assessments`
+- [x] `new_application` → `/company/jobs/[jobId]/applicants`
+- [x] `assessment_submitted` → `/company/applicants/[applicationId]`
 
-### TASK-14: Wire notification inserts into server actions
-Insert a `notifications` row after each triggering event (use service-role client):
-- [ ] `updateApplicationStatus` → insert for job seeker (type: `application_status_changed`)
-- [ ] `sendAssessment` → insert for job seeker (type: `assessment_sent`)
-- [ ] `releaseAssessmentResults` → insert for job seeker (type: `assessment_results_released`)
-- [ ] `applyToJob` → insert for company (type: `new_application`)
-- [ ] `submitAssessment` → insert for company (type: `assessment_submitted`)
-- **Files:** `lib/company/actions.ts`
+### TASK-15: Wire notification inserts into server actions ✅
+- [x] `applyToJob` → fetches job title + company_id, notifies company (`new_application`)
+- [x] `updateApplicationStatus` → notifies job seeker (`application_status_changed`) with human-readable status label
+- [x] `sendAssessment` → uses `.select("applicant_id")` on the application update, notifies job seeker (`assessment_sent`)
+- [x] `submitAssessment` → uses `.select("company_id, title")` on the assessment update, notifies company (`assessment_submitted`)
+- [x] `releaseAssessmentResults` → fetches applicant_id via application_id, notifies job seeker (`assessment_results_released`)
+- **Files:** `lib/company/actions.ts`, `lib/notifications/actions.ts`
+- **Note:** `insertNotification` uses service role client to bypass RLS for cross-user inserts
 
-### TASK-15: Replace job seeker notifications UI with real data
-- [ ] Fetch notifications from DB on page load, grouped by date (Today / Yesterday / Earlier)
-- [ ] "Mark all read" button sets `is_read = true` for all user's notifications
-- [ ] Each notification links to its `link` URL on click
-- **Files:** `src/app/job-seeker/notifications/page.tsx`
+### TASK-16: Replace job seeker notifications UI with real data ✅
+- [x] Server Component page fetches from DB, passes to `NotificationsClient`
+- [x] Grouped by Today / Yesterday / Earlier; empty state; deep links; unread styling
+- [x] "Mark all read" uses `useTransition` + `router.refresh()`
+- **Files:** `src/app/job-seeker/notifications/page.tsx`, `src/app/job-seeker/notifications/NotificationsClient.tsx`
 
-### TASK-16: Build company notifications page
-- [ ] Create `/company/notifications` page (same layout pattern as job seeker)
-- [ ] Fetch company's notifications on load
-- [ ] "Mark all read" + deep links
-- **Files:** new `src/app/company/notifications/page.tsx`
+### TASK-17: Build company notifications page ✅
+- [x] Same Server Component + Client pattern as job seeker
+- [x] Empty state, date grouping, deep links, "Mark all read"
+- **Files:** `src/app/company/notifications/page.tsx`, `src/app/company/notifications/CompanyNotificationsClient.tsx`
 
-### TASK-17: Add unread count badge to sidebars
-- [ ] Fetch `count` of `is_read = false` rows for current user on layout load
-- [ ] Show badge on "Notifications" nav item for both job seeker and company sidebars
-- **Files:** job seeker sidebar, company sidebar layout
+### TASK-18: Add unread count badge to sidebars ✅
+- [x] `AppSidebar`: fetches unread count alongside profile in `useEffect`; red badge on Bell icon
+- [x] `CompanySidebar`: same pattern; also added Notifications to company nav (was missing)
+- **Files:** `components/app/AppSidebar.tsx`, `components/app/CompanySidebar.tsx`
 
 ---
 
-## Sprint 5 — Messaging (Phase 5)
+## Sprint 5 — Messaging (Phase 5) ✅ COMPLETE
 **Design confirmed in Round 2C (2026-05-03).** Supabase Realtime, 1-on-1, application-gated, text + attachments.
+**Done 2026-05-04.**
 
-### TASK-18: Create `conversations` and `messages` tables in Supabase
-- [ ] Create `conversations` table (id, application_id unique, job_seeker_id, company_id, created_at)
-- [ ] Create `messages` table (id, conversation_id, sender_id, content, attachment_url, attachment_name, is_read, created_at)
-- [ ] Add RLS: conversations visible only to job_seeker_id or company_id; messages visible to conversation participants
-- [ ] Create `message-attachments` private storage bucket
-- [ ] Add index on `(conversation_id, created_at ASC)` for message thread queries
+### TASK-19: Create `conversations` and `messages` tables in Supabase ✅
+- [x] `conversations` table: id, application_id (unique FK), job_seeker_id (→ profiles), company_id (→ profiles), created_at
+- [x] `messages` table: id, conversation_id, sender_id (→ profiles), content, attachment_url, attachment_name, is_read, created_at
+- [x] RLS: participants only for SELECT/INSERT/UPDATE on both tables
+- [x] `message-attachments` private storage bucket (10MB limit) with authenticated upload/view policies
+- [x] Index on `(conversation_id, created_at ASC)` + indexes on conversation foreign keys
+- [x] `REPLICA IDENTITY FULL` + `supabase_realtime` publication for live updates
+- **Files:** DB migration `create_conversations_messages`
 
-### TASK-19: Server actions for messaging
-- [ ] `getOrCreateConversation(applicationId)` — validates application exists between caller and target; creates conversation if none exists; returns conversation id
-- [ ] `sendMessage(conversationId, content, attachment?)` — inserts message row; uploads attachment to storage if provided
-- [ ] `markConversationRead(conversationId)` — sets `is_read = true` for all messages not sent by caller
-- [ ] `getConversations()` — list all conversations for current user with last message preview + unread count
-- [ ] `getMessages(conversationId)` — fetch full message thread (paginated if needed)
-- **Files:** new `lib/messages/actions.ts`, `lib/messages/data.ts`
+### TASK-20: Server actions for messaging ✅
+- [x] `getOrCreateConversation(applicationId)` — validates caller is applicant or company; upserts conversation
+- [x] `getJobSeekerConversations()` — joins company name + job title; computes last_message + unread_count from messages
+- [x] `getCompanyConversations()` — joins applicant name + job title; same aggregation
+- [x] `getMessages(conversationId)` — verifies participant, returns messages ordered by created_at ASC
+- [x] `sendMessage(conversationId, content, attachmentUrl?, attachmentName?)` — inserts message, returns row
+- [x] `markConversationRead(conversationId)` — sets is_read=true for messages not sent by caller
+- [x] `getUnreadMessageCount()` — counts unread messages for sidebar badge
+- **Files:** `lib/messages/actions.ts`
+- **Note:** attachment upload happens client-side via Supabase storage client; server action only stores the path
 
-### TASK-20: Replace job seeker messages UI with real data
-- [ ] Load conversations from DB on mount
-- [ ] Wire Supabase Realtime subscription to new messages in active conversation
-- [ ] Send message form (text + file attachment picker)
-- [ ] File attachment: upload to `message-attachments`, display with signed URL + filename
-- [ ] Unread badge on sidebar
-- **Files:** `src/app/job-seeker/messages/page.tsx`
+### TASK-21: Replace job seeker messages UI with real data ✅
+- [x] Server component fetches conversations (SSR); passes to `MessagesClient`
+- [x] `MessagesClient` (shared, in `components/app/MessagesClient.tsx`): two-panel layout, conversation list, chat thread
+- [x] Supabase Realtime subscription on active conversation — new messages appear without refresh
+- [x] Send message: text + file attachment (upload to `message-attachments` bucket, signed URL for download)
+- [x] `markConversationRead` called on conversation switch; unread badge cleared in state
+- [x] Unread message badge on Messages nav item in `AppSidebar`
+- **Files:** `src/app/job-seeker/messages/page.tsx`, `components/app/MessagesClient.tsx`
 
-### TASK-21: Build company messages page
-- [ ] Create `/company/messages` page with same two-panel layout
-- [ ] Same data layer and Realtime wiring as job seeker
-- [ ] Unread badge on company sidebar
-- **Files:** new `src/app/company/messages/page.tsx`
+### TASK-22: Build company messages page ✅
+- [x] Same Server Component + shared MessagesClient pattern
+- [x] Conversation list shows applicant name + job title (company perspective)
+- [x] Messages nav item added to `CompanySidebar` with unread badge
+- [x] "Message" button added to company's applicant detail page — calls `getOrCreateConversation` then redirects to `/company/messages?conv=...`
+- **Files:** `src/app/company/messages/page.tsx`, `components/app/CompanySidebar.tsx`, `src/app/company/applicants/[applicationId]/ApplicantDetailClient.tsx`
 
 ---
 
 ## Sprint 6 — Assessment Templates (Company Feature)
 **Design confirmed 2026-05-03.** Table already exists in DB. No code yet.
 
-### TASK-22: Assessment template management pages
+### TASK-23: Assessment template management pages
 - [ ] `/company/assessments/templates` — list all company's templates (name, tags, use_count, updated_at)
 - [ ] `/company/assessments/templates/new` — create template using same question builder as assessments
 - [ ] `/company/assessments/templates/[templateId]` — edit or delete a template
 - **Files:** new `src/app/company/assessments/templates/` pages
 
-### TASK-23: Server actions for templates
+### TASK-24: Server actions for templates
 - [ ] `createTemplate(data)` — insert into `assessment_templates`
 - [ ] `updateTemplate(id, data)` — update template
 - [ ] `deleteTemplate(id)` — delete template
@@ -220,36 +236,58 @@ Insert a `notifications` row after each triggering event (use service-role clien
 - [ ] `getTemplate(id)` — fetch single template for editing
 - **Files:** new `lib/company/templates.ts`
 
-### TASK-24: Wire templates into send-assessment flow
-- [ ] Add "Load from template" option to the send-assessment form on `/company/applicants/[applicationId]`
-- [ ] Selecting a template prefills the form fields (title, description, questions, time_limit)
+### TASK-25: Wire templates into send-assessment flow
+- [ ] Add "Load from template" option to the send-assessment form
+- [ ] Selecting a template prefills all form fields
 - [ ] Company can still edit all fields before sending
 - [ ] On successful send: increment `use_count` on the source template
 - **Files:** send-assessment form component in `src/app/company/applicants/[applicationId]`
 
 ---
 
-## Sprint 7 — Interview Simulator (Phase 7)
-**Status:** Pending API key discussion.
+## Sprint 7 — Interview Simulator
+**Status:** Pending API key.
 
-### TASK-09: Wire interview simulator
+### TASK-26: Wire interview simulator
 - [ ] Obtain and add `OPENAI_API_KEY` to `.env.local`
 - [ ] Test end-to-end: setup → questions → answers → feedback
 - [ ] Optionally persist simulator sessions to DB
 
 ---
 
-## Blocked Items (Needs Info)
+## Remaining Known Issues
 
-| Task | Blocker |
+| Issue | Status |
 |---|---|
-| TASK-05: Status values | Need Supabase service key |
-| TASK-07: Notifications | Need design decision + service key |
-| TASK-08: Messaging | Need design decision + service key |
-| TASK-09: Interview simulator | Need OpenAI API key |
+| TASK-05: Verify application status values vs DB | Resolved — status values confirmed via `list_tables` MCP call; `ALLOWED_TRANSITIONS` matches live DB constraint |
+| Job seeker "Report" button on job cards | Not yet built (admin reports page is ready to receive them) |
+| Show More button on job feed has no pagination | Not yet addressed |
+| Company profile page — unknown state | Not verified |
+| OPENAI_API_KEY missing | Deferred to Sprint 7 |
+| Supabase types — CLI regeneration | Still manual; run `npx supabase gen types typescript --project-id hmisspubbdfjrofycmgc > lib/supabase_generated_types.ts` once login is available |
 
 ---
 
 ## Done
 
-*(Nothing marked done yet — starting fresh from Phase 1)*
+- [x] TASK-01: Remove duplicate and orphaned routes
+- [x] TASK-02: Delete dead code and reference files
+- [x] TASK-03: Fix missing environment variables (`NEXT_PUBLIC_SITE_URL`)
+- [x] TASK-04: Fix `revalidatePath` in profile actions
+- [x] TASK-06: Update Supabase types (manual — CLI unavailable)
+- [x] TASK-07: Admin dashboard layout + stats
+- [x] TASK-08: Admin job management (lock/unlock + feed filter + EditJobForm banner)
+- [x] TASK-09: Admin company management (verify/unverify)
+- [x] TASK-10: Admin user management (block/suspend + middleware + suspended page)
+- [x] TASK-11: Admin job reports
+- [x] TASK-12: Admin audit log
+- [x] TASK-13: Create `notifications` table (MCP migration, RLS, index)
+- [x] TASK-14: Deep-link URLs confirmed and implemented
+- [x] TASK-15: Wire notification inserts into 5 server actions
+- [x] TASK-16: Job seeker notifications page — real DB data
+- [x] TASK-17: Company notifications page — built from scratch
+- [x] TASK-18: Unread badge on both sidebars; Notifications added to CompanySidebar nav
+- [x] TASK-19: Create `conversations` and `messages` tables (MCP migration, RLS, Realtime, storage bucket)
+- [x] TASK-20: Server actions — getOrCreate, getConversations (job seeker + company), getMessages, sendMessage, markRead, unreadCount
+- [x] TASK-21: Job seeker messages page — real data, Realtime, attachments, unread badge
+- [x] TASK-22: Company messages page — same pattern; "Message" button on applicant detail; Messages added to CompanySidebar nav

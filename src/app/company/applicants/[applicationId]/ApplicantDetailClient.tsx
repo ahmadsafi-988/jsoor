@@ -13,9 +13,11 @@ import type { Tables } from "@/lib/supabase_generated_types";
 import {
   ArrowLeft, User, MapPin, Globe, GraduationCap,
   FileText, ClipboardCheck, ChevronDown, ChevronUp, Star, Code2, ExternalLink,
-  Plus, Trash2, Check, X, Timer,
+  Plus, Trash2, Check, X, Timer, MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { getOrCreateConversation } from "@/lib/messages/actions";
 
 type ApplicationStatus =
   | "applied"
@@ -267,6 +269,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
   const jsp = applicant.job_seeker_profile;
   const job = application.job;
   const name = `${applicant.first_name} ${applicant.last_name}`.trim();
+  const router = useRouter();
 
   const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(
     application.status as ApplicationStatus
@@ -379,12 +382,27 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
     <div className="p-8 max-w-4xl mx-auto w-full flex flex-col gap-6">
       {/* Header */}
       <div>
-        <Link
-          href={`/company/jobs/${job.id}/applicants`}
-          className="inline-flex items-center gap-1.5 text-sm text-[#3d4a41] hover:text-[#006d43] mb-4 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Back to Applicants
-        </Link>
+        <div className="flex items-center justify-between mb-4">
+          <Link
+            href={`/company/jobs/${job.id}/applicants`}
+            className="inline-flex items-center gap-1.5 text-sm text-[#3d4a41] hover:text-[#006d43] transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> Back to Applicants
+          </Link>
+          <button
+            type="button"
+            onClick={async () => {
+              const result = await getOrCreateConversation(application.id);
+              if ("conversationId" in result) {
+                router.push(`/company/messages?conv=${result.conversationId}`);
+              }
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#006d43] text-[#006d43] text-sm font-medium hover:bg-[#006d43] hover:text-white transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Message
+          </button>
+        </div>
 
         <div className="flex items-start justify-between gap-4">
           <h2 className="font-headline text-[1.75rem] font-medium tracking-tight text-[#1c1b1b]">

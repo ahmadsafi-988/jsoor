@@ -138,7 +138,7 @@ export async function updateCvUrl(cvPath: string, username: string) {
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
-export async function upsertProject(formData: FormData) {
+export async function upsertProject(formData: FormData, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -158,11 +158,11 @@ export async function upsertProject(formData: FormData) {
   const { error } = await supabase.from("projects").upsert(payload);
   if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
-export async function deleteProject(projectId: number) {
+export async function deleteProject(projectId: number, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -176,13 +176,13 @@ export async function deleteProject(projectId: number) {
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
 // ─── Badges ───────────────────────────────────────────────────────────────────
 
-export async function upsertBadge(formData: FormData) {
+export async function upsertBadge(formData: FormData, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -203,11 +203,11 @@ export async function upsertBadge(formData: FormData) {
   const { error } = await supabase.from("badges").upsert(payload);
   if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
-export async function deleteBadge(badgeId: number) {
+export async function deleteBadge(badgeId: number, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -221,11 +221,11 @@ export async function deleteBadge(badgeId: number) {
     .eq("user_id", user.id);
 
   if (error) return { error: error.message };
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
-export async function addProfileSkill(skillId: number) {
+export async function addProfileSkill(skillId: number, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -237,11 +237,11 @@ export async function addProfileSkill(skillId: number) {
     .insert({ user_id: user.id, skill_id: skillId });
   if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }
 
-export async function removeProfileSkill(skillId: number) {
+export async function removeProfileSkill(skillId: number, username: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -255,6 +255,6 @@ export async function removeProfileSkill(skillId: number) {
     .eq("skill_id", skillId);
   if (error) return { error: error.message };
 
-  revalidatePath("/job-seeker/profile");
+  if (username) revalidatePath(`/job-seeker/profile/${username}`);
   return { success: true };
 }

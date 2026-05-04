@@ -53,18 +53,32 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Guard dashboard routes against wrong roles.
+  // Guard dashboard routes against wrong roles, blocked, or suspended users.
   // Only runs when an authenticated user hits /job-seeker/* or /company/*.
   if (user && (pathname.startsWith('/job-seeker') || pathname.startsWith('/company'))) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, is_blocked, is_suspended')
       .eq('id', user.sub)
       .single()
 
     if (profile?.role === 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+
+    if (profile?.is_blocked) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/login'
+      url.searchParams.set('error', 'account_blocked')
+      return NextResponse.redirect(url)
+    }
+
+    if (profile?.is_suspended) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/auth/suspended'
       return NextResponse.redirect(url)
     }
   }

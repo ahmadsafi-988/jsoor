@@ -29,15 +29,18 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<SidebarUser | null>(null);
+  const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [unreadMsgs, setUnreadMsgs] = useState(0);
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient();
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
-      const [{ data }, { data: jsProfile }] = await Promise.all([
+      const [{ data }, { data: jsProfile }, { count: notifCount }] = await Promise.all([
         supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", authUser.id).single(),
         supabase.from("job_seeker_profiles").select("degree").eq("id", authUser.id).single(),
+        supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", authUser.id).eq("is_read", false),
       ]);
       if (data) {
         setUser({
@@ -45,6 +48,22 @@ export function AppSidebar() {
           role: jsProfile?.degree || "Job Seeker",
           avatarUrl: data.avatar_url,
         });
+      }
+      setUnreadNotifs(notifCount ?? 0);
+
+      // Unread messages: count unread msgs in conversations this user is part of
+      const { data: convIds } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("job_seeker_id", authUser.id);
+      if (convIds?.length) {
+        const { count: msgCount } = await supabase
+          .from("messages")
+          .select("*", { count: "exact", head: true })
+          .in("conversation_id", convIds.map((c) => c.id))
+          .neq("sender_id", authUser.id)
+          .eq("is_read", false);
+        setUnreadMsgs(msgCount ?? 0);
       }
     };
     load();
@@ -72,6 +91,9 @@ export function AppSidebar() {
           const isActive =
             pathname === href ||
             (href !== "/job-seeker/profile" && pathname.startsWith(href + "/"));
+          const badge =
+            label === "Notifications" ? unreadNotifs :
+            label === "Messages"      ? unreadMsgs   : 0;
           return (
             <Link key={href} href={href}>
               <div
@@ -81,7 +103,14 @@ export function AppSidebar() {
                     : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
                 }`}
               >
-                <Icon className="w-5 h-5 shrink-0" />
+                <div className="relative shrink-0">
+                  <Icon className="w-5 h-5" />
+                  {badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </div>
                 <span className="text-sm font-medium">{label}</span>
               </div>
             </Link>

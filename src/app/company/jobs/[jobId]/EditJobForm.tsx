@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { updateJob, deleteJob } from "@/lib/company/actions";
 import { SkillPicker } from "@/components/app/SkillPicker";
 import type { Tables } from "@/lib/supabase_generated_types";
-import { ArrowLeft, Users, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Users, Trash2, Save, Lock } from "lucide-react";
 import Link from "next/link";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Remote", "Hybrid", "Contract", "Internship"] as const;
@@ -70,6 +70,13 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
           <Users className="w-4 h-4" /> View Applicants
         </Link>
       </div>
+
+      {job.admin_locked && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <Lock className="w-4 h-4 shrink-0" />
+          <span>This job has been locked by an admin and is hidden from job seekers. You cannot reactivate it until the admin removes the lock.</span>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#e5e2e1] p-8 flex flex-col gap-6">
         <div className="flex flex-col gap-1.5">
@@ -145,12 +152,14 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
             type="checkbox"
             name="is_active"
             id="is_active"
-            defaultChecked={job.is_active}
+            defaultChecked={job.is_active && !job.admin_locked}
             value="true"
-            className="w-4 h-4 accent-[#006d43]"
+            disabled={job.admin_locked}
+            className="w-4 h-4 accent-[#006d43] disabled:opacity-40"
           />
-          <label htmlFor="is_active" className="text-sm font-medium text-[#1c1b1b]">
+          <label htmlFor="is_active" className={`text-sm font-medium ${job.admin_locked ? "text-neutral-400" : "text-[#1c1b1b]"}`}>
             Job is active (visible to applicants)
+            {job.admin_locked && <span className="ml-1.5 text-red-600 font-normal">(locked by admin)</span>}
           </label>
         </div>
 
