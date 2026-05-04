@@ -322,7 +322,7 @@ Allows users to report a job posting to admin. Admin reviews via `/admin/reports
 ---
 
 ### `assessment_templates`
-Allows companies to save reusable assessment templates. **Table exists in DB — UI and server actions not yet built (Sprint 6).**
+Allows companies to save reusable assessment templates. **Fully built (Sprint 6)** — list, create, edit, delete pages at `/company/assessments/templates`; "Load Template" picker in send-assessment form; `use_count` incremented on each use via `lib/company/templates.ts`.
 
 | Column | Type | Notes |
 |---|---|---|

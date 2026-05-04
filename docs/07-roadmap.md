@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-04 | Phases 1–5 complete (Sprints 1–5)
+> Last updated: 2026-05-04 | Phases 1–8 complete (Sprints 1–8)
 
 ---
 
@@ -83,25 +83,51 @@ Replaced hardcoded messages UI with real Supabase Realtime messaging:
 
 ---
 
-## Phase 6 — Interview Simulator
+## Phase 6 — Assessment Templates ✅ COMPLETE (Sprint 6)
 
-- `OPENAI_API_KEY` configuration + end-to-end test
-- Discussion deferred to upcoming round
-- Plan to wire: add to env, test all flows, optionally store session history in DB
+Built at `/company/assessments/templates`:
+- List page: all templates with name, tags, question count, use count; edit/delete per row; accessible via "Templates" button on the assessments page
+- Create (`/templates/new`) and edit (`/templates/[templateId]`) using a full question builder (MCQ / True-False / Open), time limit, comma-separated tags
+- "Load Template" picker in the send-assessment form on applicant detail — prefills title, instructions, time limit, and all questions; `use_count` increments on each use
+- All actions in `lib/company/templates.ts` (company-scoped, ownership-checked)
 
 ---
 
-## Phase 7 — Post-MVP (After Submission)
+## Phase 7 — Job Reporting + Pagination + Company Profile ✅ COMPLETE (Sprint 7)
+
+- Job seeker "Report" button on every job card (Flag icon, inline form, `reportJob` server action)
+- "Show More" pagination on job feed (client-side, 9 per page, resets on filter/search change)
+- Company profile page verified as fully working (not a stub)
+
+---
+
+## Phase 8 — Messaging Bug Fixes + UI Polish ✅ COMPLETE (Sprint 8)
+
+Fixed three production bugs in the messaging system and rewrote the chat UI:
+
+- **Bug 1 (data):** `getJobSeekerConversations` used a broken PostgREST join — the FK `conversations_company_id_fkey` references `profiles`, not `companies`, so company name was always null. Fixed by fetching companies separately in a parallel query.
+- **Bug 2 (data):** Empty `first_name`/`last_name` fields caused applicant name to render as `""`. Fixed with `fullName || "Applicant"` fallback in `buildSummaries`.
+- **Bug 3 (sort):** Conversations were sorted by `created_at` (when conversation was created) instead of `last_message_at` (most recent activity). Fixed by sorting summaries by `last_message_at` DESC in `buildSummaries`.
+- **UI:** `MessagesClient.tsx` fully rewritten — date separators, grouped timestamps, auto-resize textarea, error state, job title subtitle in conversation list.
+
+---
+
+## Phase 9 — Interview Simulator
+
+- `OPENAI_API_KEY` configuration + end-to-end test
+- Plan: add to env, test all flows (setup → questions → answers → feedback), optionally persist session history to DB
+
+---
+
+## Phase 8 — Post-MVP (After Submission)
 
 | Feature | Value | Effort |
 |---|---|---|
 | Platform-level assessments (skill tests) | High | High |
-| Job pagination / infinite scroll | Medium | Low |
 | Arabic language / RTL support | High (MENA market) | High |
 | Company verification workflow | Medium | Medium |
 | Mobile responsiveness audit | Medium | Medium |
 | Candidate recommendation engine | High | Very High |
-| Company profile public page | Medium | Low |
 
 ---
 
@@ -124,7 +150,7 @@ Replaced hardcoded messages UI with real Supabase Realtime messaging:
 - [x] All 3 roles (job_seeker, company, admin) access correct dashboards
 - [x] Assessments: send, take, auto-score, review, release results
 - [ ] AI Interview Simulator working (end-to-end with real API key) — **blocked: OPENAI_API_KEY missing**
-- [ ] Email notifications fire on application status changes — **unknown: edge function trigger not verified**
+- [ ] Email notifications fire on application status changes — **unknown: DB webhook trigger not verified in Supabase dashboard**
 - [x] Profile publicly viewable without login
 - [x] CV upload and download works (signed URLs)
 - [x] Messaging works (real messages, Supabase Realtime)

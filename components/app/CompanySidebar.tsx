@@ -57,6 +57,11 @@ export function CompanySidebar() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (pathname.startsWith("/company/messages"))      setUnreadMsgs(0);
+    if (pathname.startsWith("/company/notifications")) setUnreadNotifs(0);
+  }, [pathname]);
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();

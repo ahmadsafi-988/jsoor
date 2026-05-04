@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building } from "lucide-react";
-import { applyToJob, saveJob, unsaveJob } from "@/lib/company/actions";
+import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building, Flag } from "lucide-react";
+import { applyToJob, saveJob, unsaveJob, reportJob } from "@/lib/company/actions";
 import type { JobWithSkillsAndMatch } from "@/lib/company/data";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -52,6 +52,11 @@ function JobCard({
   const [error, setError] = useState<string | null>(null);
   const [showApply, setShowApply] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportPending, setReportPending] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [reportDone, setReportDone] = useState(false);
 
   function handleApply() {
     startTransition(async () => {
@@ -74,6 +79,21 @@ function JobCard({
     setSavePending(false);
   }
 
+  async function handleReport() {
+    if (!reportReason.trim()) return;
+    setReportPending(true);
+    setReportError(null);
+    const result = await reportJob(job.id, reportReason.trim());
+    if (result?.error) {
+      setReportError(result.error);
+    } else {
+      setReportDone(true);
+      setShowReport(false);
+      setReportReason("");
+    }
+    setReportPending(false);
+  }
+
   const visibleSkills = job.requiredSkills.slice(0, 4);
   const extraSkills = job.requiredSkills.length - visibleSkills.length;
 
@@ -91,17 +111,30 @@ function JobCard({
               <Building className="w-6 h-6 text-[#3d4a41]" />
             )}
           </div>
-          <button
-            onClick={handleSaveToggle}
-            disabled={savePending}
-            className={`p-1.5 rounded-full transition-colors disabled:opacity-50 ${
-              saved
-                ? "text-[#006d43] bg-[#78fbb6]/20"
-                : "text-neutral-400 hover:text-[#006d43] hover:bg-[#f6f3f2]"
-            }`}
-          >
-            <Bookmark className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleSaveToggle}
+              disabled={savePending}
+              className={`p-1.5 rounded-full transition-colors disabled:opacity-50 ${
+                saved
+                  ? "text-[#006d43] bg-[#78fbb6]/20"
+                  : "text-neutral-400 hover:text-[#006d43] hover:bg-[#f6f3f2]"
+              }`}
+            >
+              <Bookmark className={`w-4 h-4 ${saved ? "fill-current" : ""}`} />
+            </button>
+            {!reportDone ? (
+              <button
+                onClick={() => { setShowReport((s) => !s); setShowApply(false); }}
+                title="Report this job"
+                className="p-1.5 rounded-full text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Flag className="w-4 h-4" />
+              </button>
+            ) : (
+              <span className="text-[10px] text-red-500 font-medium px-1.5">Reported</span>
+            )}
+          </div>
         </div>
 
         {/* Title + company + match badge */}
@@ -193,6 +226,36 @@ function JobCard({
             </div>
           </div>
         )}
+
+        {/* Inline report form */}
+        {showReport && !reportDone && (
+          <div className="border-t border-[#f0edec] pt-4 flex flex-col gap-3">
+            <p className="text-xs font-semibold text-red-600">Report this job listing</p>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              rows={3}
+              placeholder="Describe the issue (e.g. misleading, spam, inappropriate)..."
+              className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-3 py-2.5 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-red-200 resize-none"
+            />
+            {reportError && <p className="text-xs text-red-600">{reportError}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setShowReport(false); setReportReason(""); setReportError(null); }}
+                className="flex-1 py-2 rounded-lg border border-[#e5e2e1] text-sm text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReport}
+                disabled={reportPending || !reportReason.trim()}
+                className="flex-1 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:brightness-110 transition-all disabled:opacity-60"
+              >
+                {reportPending ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -204,15 +267,18 @@ type Props = {
   initialSavedIds: string[];
 };
 
+const PAGE_SIZE = 9;
+
 export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSavedIds }: Props) {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [appliedIds, setAppliedIds] = useState(new Set(initialAppliedIds));
   const [savedIds, setSavedIds] = useState(new Set(initialSavedIds));
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const filters = ["All", "Best Match", "Full-time", "Remote", "Hybrid", "Internship"];
 
-  const displayed = initialJobs.filter((j) => {
+  const allFiltered = initialJobs.filter((j) => {
     if (filter === "Best Match") {
       if (j.matchTotal === 0 || j.matchCount === 0) return false;
     } else if (filter !== "All") {
@@ -227,6 +293,9 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
     }
     return true;
   });
+
+  const displayed = allFiltered.slice(0, visibleCount);
+  const hasMore = allFiltered.length > visibleCount;
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full">
@@ -245,7 +314,7 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
             <input
               type="text"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setVisibleCount(PAGE_SIZE); }}
               placeholder="Search roles, companies, or skills..."
               className="flex-1 py-3.5 px-3 bg-transparent border-none focus:outline-none focus:ring-0 text-sm text-[#1c1b1b] placeholder:text-neutral-400"
             />
@@ -259,7 +328,7 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
           {filters.map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setVisibleCount(PAGE_SIZE); }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 filter === f
                   ? "bg-[#006d43] text-white"
@@ -271,7 +340,7 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
           ))}
         </div>
         <span className="text-xs font-semibold text-[#3d4a41] uppercase tracking-widest">
-          {displayed.length} opportunities
+          {allFiltered.length} opportunities
         </span>
       </div>
 
@@ -283,7 +352,7 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
           : "Recommended for you"}
       </h3>
 
-      {displayed.length === 0 ? (
+      {allFiltered.length === 0 ? (
         <div className="text-center py-16 text-[#3d4a41]">
           <p className="text-lg font-semibold text-[#1c1b1b] mb-2">No jobs found</p>
           <p className="text-sm">
@@ -313,9 +382,12 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
         </div>
       )}
 
-      {displayed.length > 0 && (
+      {hasMore && (
         <div className="mt-10 flex justify-center">
-          <button className="flex items-center gap-2 px-8 py-3.5 border border-[#bccabe] text-[#006d43] font-semibold text-sm rounded-xl hover:bg-[#f6f3f2] transition-colors">
+          <button
+            onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+            className="flex items-center gap-2 px-8 py-3.5 border border-[#bccabe] text-[#006d43] font-semibold text-sm rounded-xl hover:bg-[#f6f3f2] transition-colors"
+          >
             Show More Opportunities <ChevronDown className="w-4 h-4" />
           </button>
         </div>

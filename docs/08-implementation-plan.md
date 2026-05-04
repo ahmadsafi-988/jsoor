@@ -1,6 +1,6 @@
 # 08 — Implementation Plan
 
-> Last updated: 2026-05-04 | Priority order confirmed by project owner
+> Last updated: 2026-05-04 | Sprints 1–8 complete | Priority order confirmed by project owner
 
 **Confirmed priority:** E → A → B → C → D (structural cleanup → env fixes → admin panel → notifications → messaging)
 
@@ -120,7 +120,7 @@
 - [x] Actions: Mark reviewed, Dismiss, Lock job directly from report view
 - [x] All actions write to `admin_audit_logs`
 - **Files:** `src/app/admin/reports/`
-- **Note:** Job seeker "Report" button on job cards not yet built (to add in a later pass)
+- **Note:** Job seeker "Report" button completed in Sprint 7 (TASK-26)
 
 ### TASK-12: Admin — audit log ✅
 **Done 2026-05-04.**
@@ -218,36 +218,118 @@
 
 ---
 
-## Sprint 6 — Assessment Templates (Company Feature)
-**Design confirmed 2026-05-03.** Table already exists in DB. No code yet.
+## Sprint 6 — Assessment Templates (Company Feature) ✅ COMPLETE
+**Design confirmed 2026-05-03.** Table already exists in DB.
+**Done 2026-05-04.**
 
-### TASK-23: Assessment template management pages
-- [ ] `/company/assessments/templates` — list all company's templates (name, tags, use_count, updated_at)
-- [ ] `/company/assessments/templates/new` — create template using same question builder as assessments
-- [ ] `/company/assessments/templates/[templateId]` — edit or delete a template
-- **Files:** new `src/app/company/assessments/templates/` pages
+### TASK-23: Assessment template management pages ✅
+- [x] `/company/assessments/templates` — list: name, tags, question count, use_count, edit/delete per row
+- [x] `/company/assessments/templates/new` — create form with same question builder; tags (comma-separated)
+- [x] `/company/assessments/templates/[templateId]` — edit form pre-populated from DB; delete via list
+- [x] "Templates" button added to `/company/assessments` page header for navigation
+- **Files:** `src/app/company/assessments/templates/page.tsx`, `TemplatesClient.tsx`, `TemplateFormClient.tsx`, `templates/new/page.tsx`, `templates/[templateId]/page.tsx`
 
-### TASK-24: Server actions for templates
-- [ ] `createTemplate(data)` — insert into `assessment_templates`
-- [ ] `updateTemplate(id, data)` — update template
-- [ ] `deleteTemplate(id)` — delete template
-- [ ] `getCompanyTemplates()` — list templates for current company
-- [ ] `getTemplate(id)` — fetch single template for editing
-- **Files:** new `lib/company/templates.ts`
+### TASK-24: Server actions for templates ✅
+- [x] `getCompanyTemplates()` — fetches all templates for current company, ordered by updated_at DESC
+- [x] `getTemplate(id)` — fetches single template (company-scoped, for edit page)
+- [x] `createTemplate(formData)` — validates name, parses tags/questions, inserts, revalidates, redirects
+- [x] `updateTemplate(id, formData)` — same validation, updates row, revalidates, redirects
+- [x] `deleteTemplate(id)` — company-scoped delete, revalidates list
+- **Files:** `lib/company/templates.ts`
 
-### TASK-25: Wire templates into send-assessment flow
-- [ ] Add "Load from template" option to the send-assessment form
-- [ ] Selecting a template prefills all form fields
-- [ ] Company can still edit all fields before sending
-- [ ] On successful send: increment `use_count` on the source template
-- **Files:** send-assessment form component in `src/app/company/applicants/[applicationId]`
+### TASK-25: Wire templates into send-assessment flow ✅
+- [x] `getCompanyTemplates()` fetched in server page alongside assessment; passed as `templates` prop
+- [x] "Load Template" button in assessment form header — opens dropdown of company's templates
+- [x] Selecting a template prefills title, instructions, time limit, and all questions via refs
+- [x] Button label changes to "Template Loaded ✓" after selection
+- [x] Hidden `template_id` field injected into formData on send
+- [x] `sendAssessment` reads `template_id` and increments `use_count` on the template after successful insert
+- **Files:** `src/app/company/applicants/[applicationId]/page.tsx`, `ApplicantDetailClient.tsx`, `lib/company/actions.ts`
 
 ---
 
-## Sprint 7 — Interview Simulator
+## Sprint 7 — Job Reporting + Pagination + Company Profile ✅ COMPLETE
+**Done 2026-05-04.**
+
+### TASK-26: Job seeker "Report" button ✅
+- [x] Added `reportJob(jobId, reason)` server action to `lib/company/actions.ts`
+- [x] Inserts into `job_reports` with `status: 'pending'`; returns `{ error: "already reported" }` on duplicate (23505)
+- [x] Added Flag icon button to every `JobCard` in `JobSeekerHomeClient.tsx`
+- [x] Clicking Flag opens inline form (reason textarea, Cancel, Submit Report)
+- [x] On success: form closes, Flag replaced with "Reported" label; report flows to `/admin/reports`
+- **Files:** `lib/company/actions.ts`, `src/app/job-seeker/home/JobSeekerHomeClient.tsx`
+
+### TASK-27: Job feed pagination ("Show More") ✅
+- [x] Added `PAGE_SIZE = 9` constant and `visibleCount` state to `JobSeekerHomeClient`
+- [x] `allFiltered` array holds all matching jobs; `displayed = allFiltered.slice(0, visibleCount)`
+- [x] "Show More Opportunities" button calls `setVisibleCount(c => c + PAGE_SIZE)`; hidden when all jobs visible
+- [x] Filter tab switches and search input changes reset `visibleCount` to `PAGE_SIZE`
+- [x] Opportunity count badge now reflects `allFiltered.length` (total), not just visible count
+- **Files:** `src/app/job-seeker/home/JobSeekerHomeClient.tsx`
+
+### TASK-28: Verify company profile page ✅
+- [x] Confirmed `src/app/company/profile/page.tsx` is fully implemented (not a stub)
+- [x] Loads existing company data + username from Supabase client-side
+- [x] Form fields: name, username, description, industry, size, location, founded year, website
+- [x] Saves via `upsertCompany` server action; writes both `companies` and `profiles` tables
+- **Files:** `src/app/company/profile/page.tsx` (no changes needed)
+
+---
+
+## Sprint 8 — Messaging Bug Fixes + UI Polish ✅ COMPLETE
+
+### TASK-29: Fix broken company name join in `getJobSeekerConversations` ✅
+**Done 2026-05-04.**
+
+- [x] Identified: PostgREST join `company:companies!conversations_company_id_fkey` silently failed — FK references `profiles`, not `companies`
+- [x] Removed broken join from the `conversations` select query
+- [x] Added separate parallel `companies.select("id, name, logo_url").in("id", companyIds)` query
+- [x] Built `companyMap` and passed it into `buildSummaries` as optional parameter
+- **Files:** `lib/messages/actions.ts`
+
+### TASK-30: Fix empty applicant name in `buildSummaries` ✅
+**Done 2026-05-04.**
+
+- [x] Old: `s ? \`${s.first_name} ${s.last_name}\`.trim() : "Applicant"` — `s` truthy with empty fields → `""`
+- [x] New: `const fullName = \`${s?.first_name ?? ""} ${s?.last_name ?? ""}\`.trim(); otherName = fullName || "Applicant"`
+- **Files:** `lib/messages/actions.ts`
+
+### TASK-31: Fix conversation sort order ✅
+**Done 2026-05-04.**
+
+- [x] Conversations were sorted by `created_at` (conversation creation time), not activity time
+- [x] Added sort by `last_message_at` DESC at the end of `buildSummaries` — applies to both job seeker and company
+- **Files:** `lib/messages/actions.ts`
+
+### TASK-32: Rewrite `MessagesClient.tsx` UI ✅
+**Done 2026-05-04.**
+
+- [x] Date separators between messages from different days (`formatDateLabel` + `isSameDay` helpers)
+- [x] Timestamps shown only at end of consecutive same-sender message blocks
+- [x] Auto-resizing textarea (`textareaRef` + `useEffect` on input value)
+- [x] Enter to send, Shift+Enter for newline; hint text below input
+- [x] Error state (`AlertCircle`) with "Try again" link if `getMessages` returns an error
+- [x] Conversation list: name as primary label, job title as green subtitle
+- **Files:** `components/app/MessagesClient.tsx`
+
+---
+
+## Sprint 9 — Sidebar Badge UX Fix ✅ COMPLETE
+
+### TASK-33: Clear unread badge immediately on page visit ✅
+**Done 2026-05-04.**
+
+- [x] Added `useEffect` watching `pathname` in `AppSidebar.tsx` — sets `unreadMsgs(0)` when on `/job-seeker/messages`, sets `unreadNotifs(0)` when on `/job-seeker/notifications`
+- [x] Same fix in `CompanySidebar.tsx` for `/company/messages` and `/company/notifications`
+- [x] Badge now disappears the moment the user navigates to those pages — no refresh needed
+- **Files:** `components/app/AppSidebar.tsx`, `components/app/CompanySidebar.tsx`
+
+---
+
+## Sprint 10 — Interview Simulator
 **Status:** Pending API key.
 
-### TASK-26: Wire interview simulator
+### TASK-34: Wire interview simulator
 - [ ] Obtain and add `OPENAI_API_KEY` to `.env.local`
 - [ ] Test end-to-end: setup → questions → answers → feedback
 - [ ] Optionally persist simulator sessions to DB
@@ -259,11 +341,9 @@
 | Issue | Status |
 |---|---|
 | TASK-05: Verify application status values vs DB | Resolved — status values confirmed via `list_tables` MCP call; `ALLOWED_TRANSITIONS` matches live DB constraint |
-| Job seeker "Report" button on job cards | Not yet built (admin reports page is ready to receive them) |
-| Show More button on job feed has no pagination | Not yet addressed |
-| Company profile page — unknown state | Not verified |
-| OPENAI_API_KEY missing | Deferred to Sprint 7 |
+| OPENAI_API_KEY missing | Deferred to Sprint 10 |
 | Supabase types — CLI regeneration | Still manual; run `npx supabase gen types typescript --project-id hmisspubbdfjrofycmgc > lib/supabase_generated_types.ts` once login is available |
+| Email edge function trigger | Unknown — edge function exists but DB webhook not verified in Supabase dashboard |
 
 ---
 
@@ -291,3 +371,14 @@
 - [x] TASK-20: Server actions — getOrCreate, getConversations (job seeker + company), getMessages, sendMessage, markRead, unreadCount
 - [x] TASK-21: Job seeker messages page — real data, Realtime, attachments, unread badge
 - [x] TASK-22: Company messages page — same pattern; "Message" button on applicant detail; Messages added to CompanySidebar nav
+- [x] TASK-23: Assessment template list, create, edit, delete pages
+- [x] TASK-24: `lib/company/templates.ts` — all template server actions
+- [x] TASK-25: "Load Template" picker in send-assessment form; `use_count` incremented on send
+- [x] TASK-26: Job seeker "Report" button — `reportJob` action + Flag icon + inline form on job cards
+- [x] TASK-27: Job feed pagination — "Show More" (9 per page, client-side slice, resets on filter/search)
+- [x] TASK-28: Company profile page — verified as fully working
+- [x] TASK-29: Fix broken PostgREST join in `getJobSeekerConversations` — fetch companies separately
+- [x] TASK-30: Fix empty applicant name fallback in `buildSummaries`
+- [x] TASK-31: Fix conversation sort order — sort by `last_message_at` DESC
+- [x] TASK-32: Rewrite `MessagesClient.tsx` — date separators, grouped timestamps, error state, auto-resize textarea
+- [x] TASK-33: Clear unread badge immediately when user visits messages or notifications page

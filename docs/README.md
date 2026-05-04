@@ -72,8 +72,8 @@ Never merge a feature without updating its feature doc.
 | In-app notifications (all 5 triggers, both roles, unread badge) | ✅ Done |
 | Real-time messaging (Supabase Realtime, attachments, both roles) | ✅ Done |
 | Admin panel (dashboard, jobs, companies, users, reports, audit log) | ✅ Done |
-| Assessment templates | 🔲 Sprint 6 — table exists, no UI yet |
-| Job seeker "Report job" button | 🔲 Admin reports page ready, button not built |
-| Job pagination (Show More) | 🔲 Button renders, no logic |
+| Assessment templates (create, edit, delete, load into send-assessment) | ✅ Done |
+| Job seeker "Report job" button | ✅ Done — Flag icon + inline form + `reportJob` action |
+| Job pagination (Show More) | ✅ Done — 9 per page, client-side, resets on filter/search |
 | Settings pages | 🔲 Post-MVP |
 | Arabic / RTL | 🔲 Post-MVP |

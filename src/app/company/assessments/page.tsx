@@ -1,5 +1,5 @@
 import { getCompanyAssessments } from "@/lib/company/data";
-import { ClipboardCheck, User, ArrowRight } from "lucide-react";
+import { ClipboardCheck, User, ArrowRight, LayoutTemplate } from "lucide-react";
 import Link from "next/link";
 
 const STATUS_STYLES: Record<string, string> = {
@@ -15,9 +15,17 @@ export default async function CompanyAssessmentsPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto w-full flex flex-col gap-8">
-      <div>
-        <h2 className="font-headline text-[1.75rem] font-medium tracking-tight text-[#1c1b1b]">Assessments</h2>
-        <p className="text-[#3d4a41] text-sm mt-1">Track all assessments you've sent to applicants.</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="font-headline text-[1.75rem] font-medium tracking-tight text-[#1c1b1b]">Assessments</h2>
+          <p className="text-[#3d4a41] text-sm mt-1">Track all assessments you've sent to applicants.</p>
+        </div>
+        <Link
+          href="/company/assessments/templates"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#e5e2e1] text-sm font-medium text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43] transition-colors"
+        >
+          <LayoutTemplate className="w-4 h-4" /> Templates
+        </Link>
       </div>
 
       {/* Stats row */}

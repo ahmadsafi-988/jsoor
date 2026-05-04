@@ -60,7 +60,7 @@ Edit profile at `/job-seeker/profile/[username]/edit`:
 ---
 
 ### F-04: Job Feed
-**Status:** ⚠️ (pagination not implemented)
+**Status:** ✅
 
 Job seeker home at `/job-seeker/home`:
 - Hero search bar (search by role or company name)
@@ -69,7 +69,8 @@ Job seeker home at `/job-seeker/home`:
 - Per-card: company logo, job title, match badge, location, type tag, description excerpt, required skills, salary
 - Apply inline (with optional cover letter textarea)
 - Save/unsave button per card
-- "Show More" button (UI only — no pagination backend)
+- "Show More" button — client-side pagination, 9 per page, resets on filter/search change
+- Report button (Flag icon) — inline form; `reportJob` server action; duplicate insert rejected at DB level
 
 ---
 
@@ -215,6 +216,18 @@ Both pages use thin re-exports of the shared `components/app/MessagesClient.tsx`
 
 **Unread count badge** on Messages nav item in both `AppSidebar` and `CompanySidebar`.
 
+**Data fetch notes (Sprint 8 bug fixes):**
+- `getJobSeekerConversations` previously used a broken PostgREST join (`company:companies!conversations_company_id_fkey`) — the FK references `profiles`, not `companies`, so the join silently returned null. Fixed by fetching `companies` in a separate parallel query and building a `companyMap`.
+- `buildSummaries` now uses `fullName || "Applicant"` fallback — previously `""` was possible when profile name fields were empty strings.
+- Conversations sorted by `last_message_at` DESC (was `created_at` DESC — wrong for active threads).
+
+**UI (Sprint 8 improvements):**
+- Date separators between messages from different days
+- Timestamps shown only at end of consecutive same-sender blocks (not on every message)
+- Auto-resizing textarea; Enter to send, Shift+Enter for newline
+- Error state (`AlertCircle`) with "Try again" link if `getMessages` fails
+- Conversation list: company/applicant name as primary label, job title as green subtitle
+
 **Key files:**
 - `lib/messages/actions.ts` — `getOrCreateConversation`, `getJobSeekerConversations`, `getCompanyConversations`, `getMessages`, `sendMessage`, `markConversationRead`, `getUnreadMessageCount`
 - `components/app/MessagesClient.tsx` — shared two-panel chat UI with Realtime + attachments
@@ -286,7 +299,7 @@ Both pages use thin re-exports of the shared `components/app/MessagesClient.tsx`
 - Mark report reviewed — logged
 - Dismiss report — logged
 - Lock job directly from report view — logged
-- ⚠️ Job seeker "Report" button on job cards not yet built (report page is ready to receive them)
+- Job seeker "Report" button on job cards — Flag icon, inline form, `reportJob` action in `lib/company/actions.ts`
 
 #### Admin Audit Log (`/admin/audit-log`)
 - Chronological list of last 200 admin actions
@@ -323,34 +336,43 @@ Per product overview: platform-created skill tests (not company-specific) that a
 ---
 
 ### F-20: Job Reporting (Job Seeker)
-**Status:** 🔲 (table exists in DB — `job_reports` — no UI or code)
+**Status:** ✅
 
-- "Report" button on every job card in the feed
-- Report modal: reason input (free text or predefined options)
-- Submit → inserts row into `job_reports` with `status = 'pending'`
-- Seeker cannot report the same job twice (unique constraint or error handling)
+- Flag icon button on every job card in the feed (top-right, next to bookmark)
+- Clicking opens an inline form with a free-text reason textarea
+- Submit → `reportJob` server action in `lib/company/actions.ts` inserts into `job_reports` with `status = 'pending'`
+- Duplicate prevention: DB unique constraint (error code 23505) → friendly "already reported" message
+- After success: Flag replaced with "Reported" label; form cannot be re-opened
+- Reports flow directly into `/admin/reports` grouped by status
+
+**Key files:**
+- `lib/company/actions.ts` — `reportJob` server action
+- `src/app/job-seeker/home/JobSeekerHomeClient.tsx` — Flag button + inline report form in `JobCard`
 
 ---
 
 ### F-21: Assessment Templates (Company)
-**Status:** 🔲 (table exists in DB — `assessment_templates` — no UI or code)
+**Status:** ✅
 
-**Confirmed design (2026-05-03):**
+**Implementation:**
 
-Companies can build reusable assessment templates so they don't have to create assessments from scratch every time. A template is a saved blueprint (title, description, questions, time limit, tags) that the company can load when sending an assessment to an applicant, edit if needed, then send.
+Companies build reusable assessment templates at `/company/assessments/templates`. Each template has a name, description, questions (same MCQ/T-F/Open types), time limit, and comma-separated tags.
 
-**Template management pages:**
-- `/company/assessments/templates` — list all saved templates with name, tags, use count, last updated
-- `/company/assessments/templates/new` — create a new template using the same question builder as assessments (MCQ / True-False / Open)
-- `/company/assessments/templates/[templateId]` — edit or delete an existing template
+**Template management:**
+- List page: name, tags, question count, use count, edit/delete per row; accessible via "Templates" button on the assessments page
+- Create (`/templates/new`) and edit (`/templates/[templateId]`) use the same `TemplateFormClient` component with the full question builder
+- Delete: confirmation dialog from the list, company-scoped
 
 **Integration with send-assessment flow:**
-- When a company opens the "Send Assessment" form on an applicant's page, they get two options: **Start from scratch** (existing) or **Load from template**
-- Loading a template prefills the form — company can still edit everything before sending
-- On send: `use_count` on the template increments by 1
+- "Load Template" button appears in the assessment form header when the company has at least one template
+- Clicking it opens a dropdown of templates with question count + time limit preview
+- Selecting a template prefills title, instructions, time limit, and all questions (editable before send)
+- Button changes to "Template Loaded ✓" to indicate which template is active
+- On send: `template_id` passed in formData → `sendAssessment` increments `use_count` on the template
 
-**Per template:**
-- `title`, `description`, `questions` (same shape as `assessments.questions`), `time_limit`, `tags` (text array for filtering), `use_count` (auto-tracked)
+**Key files:**
+- `lib/company/templates.ts` — `getCompanyTemplates`, `getTemplate`, `createTemplate`, `updateTemplate`, `deleteTemplate`
+- `src/app/company/assessments/templates/` — list, create, edit pages + shared `TemplateFormClient`
 
 ---
 

@@ -307,7 +307,24 @@ export async function sendAssessment(formData: FormData) {
     );
   }
 
+  const templateId = formData.get("template_id") as string | null;
+  if (templateId) {
+    const { data: tpl } = await supabase
+      .from("assessment_templates")
+      .select("use_count")
+      .eq("id", templateId)
+      .eq("company_id", user.id)
+      .maybeSingle();
+    if (tpl) {
+      await supabase
+        .from("assessment_templates")
+        .update({ use_count: tpl.use_count + 1 })
+        .eq("id", templateId);
+    }
+  }
+
   revalidatePath("/company/assessments");
+  revalidatePath("/company/assessments/templates");
   revalidatePath(`/company/applicants/${applicationId}`);
   return { success: true };
 }
@@ -467,6 +484,26 @@ export async function saveJob(jobId: string) {
   if (error) return { error: error.message };
 
   revalidatePath("/job-seeker/saved-jobs");
+  return { success: true };
+}
+
+export async function reportJob(jobId: string, reason: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase.from("job_reports").insert({
+    job_id: jobId,
+    reporter_id: user.id,
+    reason,
+    status: "pending",
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "You have already reported this job." };
+    return { error: error.message };
+  }
+
   return { success: true };
 }
 

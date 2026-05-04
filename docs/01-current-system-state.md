@@ -1,12 +1,12 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-04 | Source: Full codebase analysis + session work (Sprints 1–5)
+> Last updated: 2026-05-04 | Source: Full codebase analysis + session work (Sprints 1–8)
 
 ---
 
 ## Summary
 
-The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are now live with real DB backends and Supabase Realtime. Structural debt has been cleaned. The only remaining secondary features are assessment templates (DB exists, no UI) and the AI interview simulator (blocked on API key).
+The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are live with real DB backends and Supabase Realtime. Assessment templates are fully built (Sprint 6). Job reporting (Report button + server action), job feed pagination, and company profile have all been completed (Sprint 7). Three messaging system bugs were fixed and the chat UI fully rewritten in Sprint 8 (broken PostgREST join, empty name fallback, conversation sort order). The only remaining feature is the AI interview simulator (blocked on API key).
 
 ---
 
@@ -49,7 +49,8 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Search by role or company name
 - [x] Apply to job with optional cover letter (inline form)
 - [x] Save/unsave jobs (persisted to DB)
-- [ ] "Show More" button renders but has no pagination logic
+- [x] "Show More" button — client-side pagination, 9 jobs per page; resets on filter/search change
+- [x] Report button (Flag icon) on every job card — inline form with reason textarea; `reportJob` server action inserts into `job_reports` with `status: 'pending'`
 
 ### Job Applications (`/job-seeker/job-applications`)
 - [x] List of applied jobs with status badge and date
@@ -81,15 +82,20 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 ### Messages (`/job-seeker/messages`)
 - [x] Two-panel layout: conversation list (left) + chat thread (right)
-- [x] Conversations fetched from DB on load (`conversations` table, joined with company name + job title)
+- [x] Conversations fetched from DB on load — `getJobSeekerConversations` fetches companies in a separate parallel query (broken PostgREST FK join fixed in Sprint 8)
+- [x] Conversations sorted by most recent activity (`last_message_at` DESC)
 - [x] Messages loaded per conversation from DB (`messages` table)
 - [x] **Supabase Realtime** — new messages appear instantly via `postgres_changes` INSERT subscription
-- [x] Send message: text input + file attachment support
+- [x] Send message: auto-resizing textarea; Enter to send, Shift+Enter for newline
 - [x] File attachments: upload to `message-attachments` private storage bucket client-side; signed URL generated for download
 - [x] `markConversationRead` called on conversation switch — unread badge cleared
-- [x] Unread message count badge on Messages nav item in sidebar
+- [x] Unread message count badge on Messages nav item in sidebar — clears immediately when user navigates to messages page
 - [x] Conversation search/filter
 - [x] Empty state for no conversations
+- [x] Date separators between messages from different days
+- [x] Timestamps shown only at end of consecutive same-sender message blocks
+- [x] Error state with "Try again" link if message load fails
+- [x] Conversation list shows company name (not job title) as primary label; job title as subtitle
 
 ### Notifications (`/job-seeker/notifications`)
 - [x] Notifications fetched from DB on page load (`notifications` table)
@@ -98,7 +104,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Each notification links to its relevant page on click
 - [x] "Mark all as read" button — updates DB + refreshes page
 - [x] Empty state
-- [x] Unread notification count badge on Bell nav item in sidebar
+- [x] Unread notification count badge on Bell nav item in sidebar — clears immediately when user navigates to notifications page
 - [x] Triggered automatically by 5 server actions:
   - `applyToJob` → notifies company (`new_application`)
   - `updateApplicationStatus` → notifies job seeker (`application_status_changed`)
@@ -154,7 +160,8 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] "Mark all as read", deep links, unread badge on Bell nav item
 
 ### Company Profile (`/company/profile`)
-- [ ] **UNKNOWN**: Page file exists but not fully analyzed — may be stub
+- [x] Full form for editing company name, username, description, industry, size, location, founded year, website
+- [x] Data loaded client-side from `companies` + `profiles` tables; `upsertCompany` server action writes both
 
 ### Email Notifications (Supabase Edge Function)
 - [x] Edge function `email-notification` exists in `supabase/functions/`
@@ -191,7 +198,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Mark report reviewed; logged
 - [x] Dismiss report; logged
 - [x] Lock job directly from report view; logged
-- [ ] Job seeker "Report" button on job cards not yet built
+- [x] Job seeker "Report" button on job cards — Flag icon opens inline form; `reportJob` action in `lib/company/actions.ts`
 
 ### Admin — Audit Log (`/admin/audit-log`)
 - [x] Chronological list of last 200 admin actions
@@ -203,10 +210,10 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 | Feature | Status | Notes |
 |---|---|---|
-| Assessment templates | Missing | DB table exists (`assessment_templates`); no UI or server actions |
-| Job seeker "Report" button | Missing | Admin reports page is ready to receive them |
-| Job pagination | Partial | "Show More" button does nothing |
-| Company profile edit | Unknown | Page exists, not verified |
+| Assessment templates | ✅ Done | List, create, edit, delete pages; "Load Template" picker in send-assessment form; `use_count` tracked |
+| Job seeker "Report" button | ✅ Done | Flag icon on every job card; inline form + `reportJob` action; duplicate prevented by DB constraint |
+| Job pagination ("Show More") | ✅ Done | Client-side pagination, 9 per page, resets on filter/search change |
+| Company profile edit | ✅ Done | Full form — name, username, description, industry, size, location, founded year, website |
 | OpenAI API key | Missing | `OPENAI_API_KEY` not in `.env.local` — interview simulator blocked |
 | Supabase types — CLI regen | Deferred | Types updated manually; run CLI when login available |
 | "Message" button on job seeker applications | Not built | Company initiates via applicant detail; job seeker sees conversations from messages page |
@@ -263,10 +270,12 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 | `/company/jobs/[jobId]/applicants` | Working | |
 | `/company/applicants/[applicationId]` | Working | Includes "Message" button |
 | `/company/assessments` | Working | |
-| `/company/assessments/templates` | Missing | To be built (Sprint 6) |
+| `/company/assessments/templates` | Working | List all templates |
+| `/company/assessments/templates/new` | Working | Create template with question builder |
+| `/company/assessments/templates/[templateId]` | Working | Edit or delete a template |
 | `/company/messages` | **Working** | Real DB + Realtime |
 | `/company/notifications` | **Working** | Real DB, grouped, deep links |
-| `/company/profile` | Unknown | Needs verification |
+| `/company/profile` | Working | Full edit form for company details |
 | `/admin` | Working | Dashboard with live stats |
 | `/admin/jobs` | Working | Lock/unlock jobs |
 | `/admin/companies` | Working | Verify/unverify companies |
@@ -289,4 +298,3 @@ All structural debt from the previous state has been cleaned:
 - `OPENAI_API_KEY` missing — interview simulator blocked at runtime
 - Supabase types file is manually maintained — regenerate with CLI when access token is available
 - "Recent Setups" in interview simulator — still hardcoded, not wired to DB history
-- Company profile page state unknown — not fully verified

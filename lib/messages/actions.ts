@@ -76,6 +76,7 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
+  // conversations_company_id_fkey → profiles, NOT companies, so we fetch companies separately
   const { data: convRows } = await supabase
     .from("conversations")
     .select(`
@@ -85,22 +86,32 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
       created_at,
       application:job_applications!conversations_application_id_fkey(
         job:jobs!job_applications_job_id_fkey(title)
-      ),
-      company:companies!conversations_company_id_fkey(name, logo_url)
+      )
     `)
     .eq("job_seeker_id", user.id)
     .order("created_at", { ascending: false });
 
   if (!convRows?.length) return [];
 
-  const convIds = convRows.map((c) => c.id);
-  const { data: msgRows } = await supabase
-    .from("messages")
-    .select("id, conversation_id, content, sender_id, is_read, created_at, attachment_name")
-    .in("conversation_id", convIds)
-    .order("created_at", { ascending: false });
+  const convIds = (convRows as any[]).map((c) => c.id);
+  const companyIds = [...new Set((convRows as any[]).map((c) => c.company_id))] as string[];
 
-  return buildSummaries(convRows, msgRows ?? [], user.id, "job_seeker");
+  const [{ data: msgRows }, { data: companies }] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("id, conversation_id, content, sender_id, is_read, created_at, attachment_name")
+      .in("conversation_id", convIds)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("companies")
+      .select("id, name, logo_url")
+      .in("id", companyIds),
+  ]);
+
+  const companyMap: Record<string, { name: string; logo_url: string | null }> =
+    Object.fromEntries(((companies ?? []) as any[]).map((c) => [c.id, c]));
+
+  return buildSummaries(convRows as any[], msgRows ?? [], user.id, "job_seeker", companyMap);
 }
 
 export async function getCompanyConversations(): Promise<ConversationSummary[]> {
@@ -125,21 +136,22 @@ export async function getCompanyConversations(): Promise<ConversationSummary[]> 
 
   if (!convRows?.length) return [];
 
-  const convIds = convRows.map((c) => c.id);
+  const convIds = (convRows as any[]).map((c) => c.id);
   const { data: msgRows } = await supabase
     .from("messages")
     .select("id, conversation_id, content, sender_id, is_read, created_at, attachment_name")
     .in("conversation_id", convIds)
     .order("created_at", { ascending: false });
 
-  return buildSummaries(convRows, msgRows ?? [], user.id, "company");
+  return buildSummaries(convRows as any[], msgRows ?? [], user.id, "company");
 }
 
 function buildSummaries(
   convRows: any[],
   msgRows: any[],
   userId: string,
-  perspective: "job_seeker" | "company"
+  perspective: "job_seeker" | "company",
+  companyMap?: Record<string, { name: string; logo_url: string | null }>
 ): ConversationSummary[] {
   const msgsByConv = new Map<string, any[]>();
   for (const msg of msgRows) {
@@ -147,25 +159,24 @@ function buildSummaries(
     msgsByConv.get(msg.conversation_id)!.push(msg);
   }
 
-  return convRows.map((conv) => {
+  const summaries = convRows.map((conv) => {
     const msgs = msgsByConv.get(conv.id) ?? [];
     const lastMsg = msgs[0];
     const unreadCount = msgs.filter((m) => m.sender_id !== userId && !m.is_read).length;
 
     let otherName: string;
     let otherAvatar: string | null = null;
+
     if (perspective === "job_seeker") {
-      otherName = conv.company?.name ?? "Unknown Company";
-      otherAvatar = conv.company?.logo_url ?? null;
+      const co = companyMap?.[conv.company_id];
+      otherName = co?.name ?? "Unknown Company";
+      otherAvatar = co?.logo_url ?? null;
     } else {
       const s = conv.seeker;
-      otherName = s ? `${s.first_name} ${s.last_name}`.trim() : "Applicant";
+      const fullName = `${s?.first_name ?? ""} ${s?.last_name ?? ""}`.trim();
+      otherName = fullName || "Applicant";
       otherAvatar = s?.avatar_url ?? null;
     }
-
-    const lastMsgPreview = lastMsg
-      ? lastMsg.content || `📎 ${lastMsg.attachment_name ?? "attachment"}`
-      : "";
 
     return {
       id: conv.id,
@@ -173,11 +184,18 @@ function buildSummaries(
       other_name: otherName,
       other_avatar: otherAvatar,
       job_title: (conv.application?.job?.title as string | undefined) ?? "Unknown Job",
-      last_message: lastMsgPreview,
+      last_message: lastMsg
+        ? lastMsg.content || `📎 ${lastMsg.attachment_name ?? "attachment"}`
+        : "",
       last_message_at: lastMsg?.created_at ?? conv.created_at,
       unread_count: unreadCount,
     };
   });
+
+  // Sort by most recent activity (last message) descending
+  return summaries.sort(
+    (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+  );
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────

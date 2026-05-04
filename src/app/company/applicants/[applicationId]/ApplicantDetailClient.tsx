@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   sendAssessment,
@@ -13,11 +13,12 @@ import type { Tables } from "@/lib/supabase_generated_types";
 import {
   ArrowLeft, User, MapPin, Globe, GraduationCap,
   FileText, ClipboardCheck, ChevronDown, ChevronUp, Star, Code2, ExternalLink,
-  Plus, Trash2, Check, X, Timer, MessageSquare,
+  Plus, Trash2, Check, X, Timer, MessageSquare, LayoutTemplate,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getOrCreateConversation } from "@/lib/messages/actions";
+import type { TemplateRow } from "@/lib/company/templates";
 
 type ApplicationStatus =
   | "applied"
@@ -262,9 +263,10 @@ type Props = {
   result: ApplicantProfileResult;
   cvSignedUrl: string | null;
   initialAssessment: Tables<"assessments"> | null;
+  templates: TemplateRow[];
 };
 
-export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }: Props) {
+export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, templates }: Props) {
   const { application, applicant, projects, badges, skills } = result;
   const jsp = applicant.job_seeker_profile;
   const job = application.job;
@@ -286,6 +288,13 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
   // Question builder state
   const [draftQuestions, setDraftQuestions] = useState<QuestionDraft[]>([]);
   const [showAddType, setShowAddType] = useState(false);
+
+  // Template state
+  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const titleRef = React.useRef<HTMLInputElement>(null);
+  const descRef = React.useRef<HTMLTextAreaElement>(null);
+  const timeLimitRef = React.useRef<HTMLInputElement>(null);
 
   const allowedTargets = ALLOWED_TRANSITIONS[currentStatus] ?? [];
 
@@ -724,11 +733,54 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
           {/* Assessment builder form */}
           {showAssessmentForm && !assessment && (
             <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-4">New Assessment</h4>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-[#1c1b1b]">New Assessment</h4>
+                {templates.length > 0 && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatePicker((s) => !s)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006d43] border border-[#006d43]/30 px-3 py-1.5 rounded-lg hover:bg-[#006d43]/5 transition-colors"
+                    >
+                      <LayoutTemplate className="w-3.5 h-3.5" />
+                      {loadedTemplateId ? "Template Loaded ✓" : "Load Template"}
+                    </button>
+                    {showTemplatePicker && (
+                      <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-xl border border-[#e5e2e1] shadow-lg z-20 p-2 flex flex-col gap-1">
+                        {templates.map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              if (titleRef.current) titleRef.current.value = t.name;
+                              if (descRef.current) descRef.current.value = t.description ?? "";
+                              if (timeLimitRef.current) timeLimitRef.current.value = t.time_limit ? String(t.time_limit) : "";
+                              setDraftQuestions((t.questions as QuestionDraft[] | null) ?? []);
+                              setLoadedTemplateId(t.id);
+                              setShowTemplatePicker(false);
+                            }}
+                            className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#f6f3f2] transition-colors"
+                          >
+                            <p className="text-sm font-medium text-[#1c1b1b] truncate">{t.name}</p>
+                            <p className="text-xs text-[#5f5e5e]">
+                              {((t.questions as any[]) ?? []).length} questions
+                              {t.time_limit ? ` · ${t.time_limit} min` : ""}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <form onSubmit={handleSendAssessment} className="flex flex-col gap-4">
+                {loadedTemplateId && (
+                  <input type="hidden" name="template_id" value={loadedTemplateId} />
+                )}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#1c1b1b]">Title *</label>
                   <input
+                    ref={titleRef}
                     name="title"
                     required
                     placeholder="e.g. Technical Assessment"
@@ -738,6 +790,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
                 <div className="flex flex-col gap-1.5">
                   <label className="text-xs font-semibold text-[#1c1b1b]">Instructions *</label>
                   <textarea
+                    ref={descRef}
                     name="description"
                     required
                     rows={3}
@@ -757,6 +810,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment }
                   <div className="flex-1 flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-[#1c1b1b]">Time Limit (min)</label>
                     <input
+                      ref={timeLimitRef}
                       name="time_limit"
                       type="number"
                       min="1"

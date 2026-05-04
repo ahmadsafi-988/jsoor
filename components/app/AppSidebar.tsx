@@ -69,6 +69,11 @@ export function AppSidebar() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (pathname.startsWith("/job-seeker/messages"))      setUnreadMsgs(0);
+    if (pathname.startsWith("/job-seeker/notifications")) setUnreadNotifs(0);
+  }, [pathname]);
+
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
