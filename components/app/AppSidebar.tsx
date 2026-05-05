@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Home, User, FileText, Brain, MessageSquare,
-  Bell, Settings, LogOut, ClipboardCheck, Bookmark,
+  Bell, LogOut, ClipboardCheck, Bookmark,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
@@ -123,14 +123,8 @@ export function AppSidebar() {
         })}
       </nav>
 
-      {/* Bottom: Settings + Logout */}
+      {/* Bottom: Logout */}
       <div className="mt-auto flex flex-col gap-1">
-        <Link href="/job-seeker/settings">
-          <div className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors cursor-pointer">
-            <Settings className="w-4 h-4 shrink-0" />
-            <span className="text-sm font-medium">Settings</span>
-          </div>
-        </Link>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors w-full text-left"

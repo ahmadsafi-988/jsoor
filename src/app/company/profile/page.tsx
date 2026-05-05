@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { upsertCompany } from "@/lib/company/actions";
-import { Building2, Globe, MapPin, Users, Calendar, Briefcase } from "lucide-react";
+import { Building2, Camera, Loader2 } from "lucide-react";
 
 const INDUSTRIES = [
   "Technology", "Finance", "Healthcare", "Education", "Retail",
@@ -14,26 +14,76 @@ const SIZES = ["1–10", "11–50", "51–200", "201–500", "501–1,000", "1,0
 export default function CompanyProfilePage() {
   const [company, setCompany] = useState<any>(null);
   const [username, setUsername] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      userIdRef.current = user.id;
       const [companyRes, profileRes] = await Promise.all([
         supabase.from("companies").select("*").eq("id", user.id).single(),
         supabase.from("profiles").select("username").eq("id", user.id).single(),
       ]);
       setCompany(companyRes.data ?? {});
+      setLogoUrl(companyRes.data?.logo_url ?? null);
       setUsername(profileRes.data?.username ?? "");
       setLoading(false);
     };
     load();
   }, []);
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userIdRef.current) return;
+
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const path = `company-logos/${userIdRef.current}.${ext}`;
+    const supabase = createClient();
+
+    setUploading(true);
+    setError(null);
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      setError("Failed to upload photo. Please try again.");
+      setUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(path);
+
+    // Bust cache so the new image loads immediately
+    const urlWithBust = `${publicUrl}?t=${Date.now()}`;
+
+    const { error: dbError } = await supabase
+      .from("companies")
+      .update({ logo_url: urlWithBust })
+      .eq("id", userIdRef.current);
+
+    if (dbError) {
+      setError("Photo uploaded but failed to save. Please try again.");
+    } else {
+      setLogoUrl(urlWithBust);
+    }
+
+    setUploading(false);
+    // Reset input so the same file can be re-selected
+    e.target.value = "";
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -64,6 +114,52 @@ export default function CompanyProfilePage() {
       <div className="mb-8">
         <h2 className="font-headline text-[1.75rem] font-medium tracking-tight text-[#1c1b1b]">Company Profile</h2>
         <p className="text-[#3d4a41] text-sm mt-1">This information is shown to job seekers on your listings.</p>
+      </div>
+
+      {/* Company photo */}
+      <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 mb-5 flex items-center gap-6">
+        <div className="relative shrink-0">
+          <div className="w-24 h-24 rounded-2xl bg-[#f6f3f2] border border-[#e5e2e1] overflow-hidden flex items-center justify-center">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Company logo" className="w-full h-full object-cover" />
+            ) : (
+              <Building2 className="w-10 h-10 text-[#3d4a41]" />
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-[#006d43] text-white flex items-center justify-center shadow-md hover:bg-[#005232] transition-colors disabled:opacity-60"
+            title="Upload company photo"
+          >
+            {uploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Camera className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
+        <div>
+          <p className="font-semibold text-[#1c1b1b] text-sm">Company Logo</p>
+          <p className="text-[#5f5e5e] text-xs mt-0.5">Shown on job cards seen by applicants. JPG, PNG or WebP, max 2 MB.</p>
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#006d43] border border-[#006d43]/30 px-3 py-1.5 rounded-lg hover:bg-[#006d43]/5 transition-colors disabled:opacity-60"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            {uploading ? "Uploading..." : logoUrl ? "Change Photo" : "Upload Photo"}
+          </button>
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleLogoUpload}
+        />
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#e5e2e1] p-8 flex flex-col gap-6">

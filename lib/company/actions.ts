@@ -494,7 +494,7 @@ export async function reportJob(jobId: string, reason: string) {
 
   const { error } = await supabase.from("job_reports").insert({
     job_id: jobId,
-    reporter_id: user.id,
+    reported_by: user.id,
     reason,
     status: "pending",
   });

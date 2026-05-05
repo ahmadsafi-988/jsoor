@@ -65,8 +65,9 @@ Edit profile at `/job-seeker/profile/[username]/edit`:
 Job seeker home at `/job-seeker/home`:
 - Hero search bar (search by role or company name)
 - Filter tabs: All, Best Match, Full-time, Remote, Hybrid, Internship
+  - **Best Match**: only shows jobs where `matchCount / matchTotal >= 0.5` (user has ≥50% of required skills); jobs with no required skills excluded
 - Jobs sorted by skill match ratio (highest match first)
-- Per-card: company logo, job title, match badge, location, type tag, description excerpt, required skills, salary
+- Per-card: company logo (from `companies.logo_url`, falls back to building icon), job title, match badge, location, type tag, description excerpt, required skills, salary
 - Apply inline (with optional cover letter textarea)
 - Save/unsave button per card
 - "Show More" button — client-side pagination, 9 per page, resets on filter/search change
@@ -101,12 +102,16 @@ Job seeker home at `/job-seeker/home`:
 
 ---
 
-### F-08: Company Onboarding
+### F-08: Company Onboarding & Profile
 **Status:** ✅
 
 `/company/onboarding`:
 - Company name, username, industry, location, description
 - Creates `companies` + `profiles` rows
+
+`/company/profile`:
+- Edit company name, username, description, industry, size, location, founded year, website
+- **Company logo upload** — dedicated card above the form; uploads to `avatars/company-logos/{userId}.{ext}` (upsert overwrites on re-upload); public URL saved immediately to `companies.logo_url`; logo appears on all job cards in the job seeker feed
 
 ---
 
@@ -291,7 +296,7 @@ Both pages use thin re-exports of the shared `components/app/MessagesClient.tsx`
 - Table of all users (job seekers + companies) with block/suspend status
 - Block a user (`is_blocked = true`): middleware forces sign-out on next request — logged
 - Unblock — logged
-- Suspend a user (`is_suspended = true` + reason): middleware redirects to `/auth/suspended` with reason shown — logged
+- Suspend a user (`is_suspended = true` + reason): middleware redirects to `/auth/suspended` with reason shown + sign-out button — logged
 - Unsuspend — logged
 
 #### Job Reports (`/admin/reports`)
@@ -320,6 +325,7 @@ Current implementation:
 - `matchTotal` = total job-required skills
 - `matchRatio` = matchCount / matchTotal
 - Used for "Strong Match" (≥70%) and "Partial Match" (≥40%) badges
+- "Best Match" filter threshold: ≥50% ratio
 - Jobs sorted by ratio descending
 
 **Future:** Could incorporate assessment scores, project relevance, etc.
@@ -365,9 +371,10 @@ Companies build reusable assessment templates at `/company/assessments/templates
 
 **Integration with send-assessment flow:**
 - "Load Template" button appears in the assessment form header when the company has at least one template
-- Clicking it opens a dropdown of templates with question count + time limit preview
-- Selecting a template prefills title, instructions, time limit, and all questions (editable before send)
-- Button changes to "Template Loaded ✓" to indicate which template is active
+- Clicking it opens a **centered modal** (fixed overlay, backdrop blur) with a scrollable list of template cards — each card shows name, description (line-clamped), question count, time limit, and tag pills
+- "Use" button on each card prefills title, instructions, time limit, and all questions (editable before send); button turns solid green with "Loaded ✓" once selected
+- A small **X button** next to the trigger clears the loaded template without affecting edited form fields
+- Button label changes to "Template Loaded ✓" with a green tint to indicate active selection
 - On send: `template_id` passed in formData → `sendAssessment` increments `use_count` on the template
 
 **Key files:**

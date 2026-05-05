@@ -280,7 +280,7 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
 
   const allFiltered = initialJobs.filter((j) => {
     if (filter === "Best Match") {
-      if (j.matchTotal === 0 || j.matchCount === 0) return false;
+      if (j.matchTotal === 0 || j.matchCount / j.matchTotal < 0.5) return false;
     } else if (filter !== "All") {
       if (j.type !== filter) return false;
     }

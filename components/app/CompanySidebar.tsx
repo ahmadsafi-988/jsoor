@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, ClipboardCheck,
-  Building2, Settings, LogOut, Bell, MessageSquare,
+  Building2, LogOut, Bell, MessageSquare,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
@@ -104,12 +104,6 @@ export function CompanySidebar() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-1">
-        <Link href="/company/settings">
-          <div className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors cursor-pointer">
-            <Settings className="w-4 h-4 shrink-0" />
-            <span className="text-sm font-medium">Settings</span>
-          </div>
-        </Link>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors w-full text-left"

@@ -1,6 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+async function signOut() {
+  "use server";
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/auth/login");
+}
+
 export default async function SuspendedPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,6 +39,14 @@ export default async function SuspendedPage() {
         <p className="text-xs text-neutral-500">
           If you believe this is a mistake, please contact support.
         </p>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="mt-2 w-full rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-sm font-medium py-2.5 transition-colors"
+          >
+            Sign out
+          </button>
+        </form>
       </div>
     </div>
   );

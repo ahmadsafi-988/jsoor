@@ -20,7 +20,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Role-based route guards in `src/middleware.ts`
 - [x] Admin redirect guard (admin users → `/admin`)
 - [x] Blocked user guard (middleware signs out + redirects to login with `?error=account_blocked`)
-- [x] Suspended user guard (middleware → `/auth/suspended` with reason shown)
+- [x] Suspended user guard (middleware → `/auth/suspended` with reason shown + sign-out button)
 
 ### Job Seeker Onboarding (`/job-seeker/onboarding`)
 - [x] 4-step wizard: Identity → Education → Skills → Done
@@ -46,6 +46,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Skill matching: matchCount / matchTotal displayed per job
 - [x] Match badges: "Strong Match" (≥70%), "Partial Match" (≥40%)
 - [x] Filter tabs: All, Best Match, Full-time, Remote, Hybrid, Internship
+  - **Best Match** filter: shows only jobs where user has ≥50% of required skills (`matchCount / matchTotal >= 0.5`); jobs with no required skills are excluded
 - [x] Search by role or company name
 - [x] Apply to job with optional cover letter (inline form)
 - [x] Save/unsave jobs (persisted to DB)
@@ -114,9 +115,22 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 ---
 
+### Job Seeker Sidebar (`AppSidebar`)
+- Nav items: Home, Profile, Applications, Saved Jobs, Assessments, Interview Simulator, Messages, Notifications
+- Bottom: Logout only — **Settings link removed** (no `/job-seeker/settings` page exists)
+- Unread badges on Messages and Notifications items
+
+---
+
 ### Company Onboarding (`/company/onboarding`)
 - [x] Company name, username, industry, location, description
 - [x] Creates row in `companies` + `profiles` tables
+
+### Company Sidebar (`CompanySidebar`)
+- Nav items: Dashboard, Jobs, Assessments, Messages, Profile, Notifications
+- Bottom: Logout only — **Settings link removed** (no `/company/settings` page exists; profile editing is under `/company/profile`)
+- Unread badges on Messages and Notifications items
+- Company logo + name shown at the bottom of the sidebar
 
 ### Company Dashboard (`/company/home`)
 - [x] Stats: total jobs, active jobs, total applications, pending assessments
@@ -139,9 +153,11 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
   - CV download (signed URL)
   - Application status management (state machine)
   - Send assessment form (multi-question builder: MCQ, True/False, Open)
+  - **Template picker modal** — "Load Template" button opens a centered modal with template cards (name, description, question count, time limit, tags); "Use" loads the template; X button clears the selection
   - Review submitted assessment (score override, feedback)
   - Release assessment results to applicant
   - **"Message" button** — creates or opens conversation, redirects to `/company/messages?conv=...`
+  - **Polished UI** — `max-w-5xl` layout, shadowed cards, uppercase section headers with border-b dividers, larger round avatar with ring, name+status in a dedicated header card
 
 ### Company Assessments (`/company/assessments`)
 - [x] List all assessments across all applications
@@ -162,6 +178,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Company Profile (`/company/profile`)
 - [x] Full form for editing company name, username, description, industry, size, location, founded year, website
 - [x] Data loaded client-side from `companies` + `profiles` tables; `upsertCompany` server action writes both
+- [x] **Company logo upload** — separate card above the form; uploads to `avatars/company-logos/{userId}.{ext}` (upsert); saves public URL directly to `companies.logo_url`; preview updates immediately without saving the form
 
 ### Email Notifications (Supabase Edge Function)
 - [x] Edge function `email-notification` exists in `supabase/functions/`
@@ -173,7 +190,14 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Admin Panel (`/admin`)
 - [x] Auth guard (only `role = admin` can access)
 - [x] Sidebar with nav: Dashboard, Jobs, Companies, Users, Reports, Audit Log
-- [x] Dashboard: live stat cards (total users, companies, jobs, applications) + quick-nav
+- [x] **Dashboard** (fully rebuilt — `getAdminStats` extended):
+  - **Stat cards** — Total Users (blocked/suspended sub-line, links to users page), Total Companies (verified/unverified sub-line, links to companies page), Total Jobs (active/locked sub-line, links to jobs page), Total Applications
+  - **Needs Attention strip** — conditional alerts for: pending reports (red), unverified companies (amber), blocked users (grey); each links to the relevant management page; hidden when nothing needs action
+  - **Application Pipeline chart** — horizontal CSS bar chart for all 6 application statuses (applied, under review, shortlisted, assessment sent, assessment done, rejected); bars scaled to the highest count; uses service role client to bypass `job_applications` RLS (policy restricts reads to applicant/company — admin would get 0 rows otherwise)
+  - **Jobs Health card** — stacked bar + legend: active (green) / inactive (grey) / locked (red)
+  - **Company Verification card** — stacked bar + legend: verified (blue) / unverified (amber)
+  - **Recent Admin Activity** — last 6 audit log entries (action badge, target, admin name, time-ago); "View all" links to audit log
+  - Removed: redundant quick-nav links that duplicated the sidebar
 
 ### Admin — Job Management (`/admin/jobs`)
 - [x] Table of all jobs across all companies
@@ -199,6 +223,10 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Dismiss report; logged
 - [x] Lock job directly from report view; logged
 - [x] Job seeker "Report" button on job cards — Flag icon opens inline form; `reportJob` action in `lib/company/actions.ts`
+- **Bug fixes (2026-05-05):**
+  - `reportJob` was inserting `reporter_id` → corrected to `reported_by` (actual column name)
+  - `getAllReports` PostgREST FK hint was `!job_reports_reporter_id_fkey` → corrected to `!job_reports_reported_by_fkey`
+  - Reporter name now resolves as: full name → username → "Unknown" (handles users with empty first/last name)
 
 ### Admin — Audit Log (`/admin/audit-log`)
 - [x] Chronological list of last 200 admin actions
@@ -234,7 +262,7 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 ## Supabase Access (Tools)
 
 - **MCP server:** configured at project scope — Supabase MCP tools are available in every session. Use them to run SQL migrations, inspect tables, and query live data.
-- **Service role key:** saved in `.env.local` as `SUPABASE_SERVICE_ROLE_KEY` — used by server actions for inserts that cross RLS boundaries (e.g. notification inserts from company → job seeker)
+- **Service role key:** saved in `.env.local` as `SUPABASE_SERVICE_ROLE_KEY` — used by server actions for inserts that cross RLS boundaries (e.g. notification inserts from company → job seeker); also used in `getAdminStats` for `job_applications` reads (RLS restricts to applicant/company — admin role gets 0 rows without service role)
 - **Project ref:** `hmisspubbdfjrofycmgc`
 
 ---
@@ -250,7 +278,7 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 | `/auth/update-password` | Working | |
 | `/auth/confirm` | Working | Email confirmation callback |
 | `/auth/sign-up-success` | Working | |
-| `/auth/suspended` | Working | Shown to suspended users with reason |
+| `/auth/suspended` | Working | Shown to suspended users with reason + sign-out button |
 | `/auth/error` | Working | |
 | `/job-seeker/onboarding` | Working | 4-step wizard |
 | `/job-seeker/home` | Working | Job feed (filters admin-locked) |
@@ -268,15 +296,15 @@ SUPABASE_SERVICE_ROLE_KEY=<set — see .env.local>
 | `/company/jobs/new` | Working | |
 | `/company/jobs/[jobId]` | Working | Shows locked banner if admin-locked |
 | `/company/jobs/[jobId]/applicants` | Working | |
-| `/company/applicants/[applicationId]` | Working | Includes "Message" button |
+| `/company/applicants/[applicationId]` | Working | Message button, template picker modal, polished layout |
 | `/company/assessments` | Working | |
 | `/company/assessments/templates` | Working | List all templates |
 | `/company/assessments/templates/new` | Working | Create template with question builder |
 | `/company/assessments/templates/[templateId]` | Working | Edit or delete a template |
 | `/company/messages` | **Working** | Real DB + Realtime |
 | `/company/notifications` | **Working** | Real DB, grouped, deep links |
-| `/company/profile` | Working | Full edit form for company details |
-| `/admin` | Working | Dashboard with live stats |
+| `/company/profile` | Working | Full edit form + company logo upload |
+| `/admin` | Working | Rich dashboard: stat cards, attention alerts, pipeline chart, health bars, activity feed |
 | `/admin/jobs` | Working | Lock/unlock jobs |
 | `/admin/companies` | Working | Verify/unverify companies |
 | `/admin/users` | Working | Block/suspend users |

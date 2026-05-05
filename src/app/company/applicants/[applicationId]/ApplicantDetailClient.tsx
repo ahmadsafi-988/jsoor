@@ -388,13 +388,13 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
     submissionRaw?.answers ?? submissionRaw ?? {};
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full flex flex-col gap-6">
+    <div className="px-6 py-10 max-w-5xl mx-auto w-full flex flex-col gap-8">
       {/* Header */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-5">
+        <div className="flex items-center justify-between">
           <Link
             href={`/company/jobs/${job.id}/applicants`}
-            className="inline-flex items-center gap-1.5 text-sm text-[#3d4a41] hover:text-[#006d43] transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm text-[#5f5e5e] hover:text-[#006d43] transition-colors font-medium"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Applicants
           </Link>
@@ -406,18 +406,30 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                 router.push(`/company/messages?conv=${result.conversationId}`);
               }
             }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-[#006d43] text-[#006d43] text-sm font-medium hover:bg-[#006d43] hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#006d43] text-[#006d43] text-sm font-semibold hover:bg-[#006d43] hover:text-white transition-colors shadow-sm"
           >
             <MessageSquare className="w-4 h-4" />
             Message
           </button>
         </div>
 
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="font-headline text-[1.75rem] font-medium tracking-tight text-[#1c1b1b]">
-            {name}
-          </h2>
-          <div className="flex flex-col items-end gap-1">
+        <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm px-7 py-5 flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="font-headline text-2xl font-bold tracking-tight text-[#1c1b1b]">
+              {name}
+            </h2>
+            <p className="text-[#5f5e5e] text-sm">
+              Applying for{" "}
+              <span className="font-semibold text-[#1c1b1b]">{job.title}</span>
+              {job.type && (
+                <span className="text-[#5f5e5e]"> · {job.type}</span>
+              )}
+              {job.location && (
+                <span className="text-[#5f5e5e]"> · {job.location}</span>
+              )}
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
             {allowedTargets.length > 0 ? (
               <select
                 value={currentStatus}
@@ -438,55 +450,49 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
             {statusError && <p className="text-xs text-red-500">{statusError}</p>}
           </div>
         </div>
-
-        <p className="text-[#3d4a41] text-sm mt-1">
-          Applying for: <span className="font-semibold text-[#1c1b1b]">{job.title}</span>
-          {job.type && ` · ${job.type}`}
-          {job.location && ` · ${job.location}`}
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* ── Left column ── */}
-        <div className="lg:col-span-2 flex flex-col gap-5">
+        <div className="lg:col-span-2 flex flex-col gap-6">
           {/* Profile card */}
-          <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 flex items-start gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-[#f0edec] overflow-hidden shrink-0 flex items-center justify-center">
+          <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6 flex items-start gap-6">
+            <div className="w-20 h-20 rounded-full bg-[#f0edec] overflow-hidden shrink-0 flex items-center justify-center ring-2 ring-[#e5e2e1]">
               {applicant.avatar_url ? (
                 <img src={applicant.avatar_url} alt={name} className="w-full h-full object-cover" />
               ) : (
-                <User className="w-8 h-8 text-[#3d4a41]" />
+                <User className="w-9 h-9 text-[#3d4a41]" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-[#1c1b1b] text-lg">{name}</h3>
+              <h3 className="font-bold text-[#1c1b1b] text-xl leading-tight">{name}</h3>
               {jsp?.degree && (
-                <p className="text-[#3d4a41] text-sm flex items-center gap-1.5 mt-1">
-                  <GraduationCap className="w-4 h-4" />
+                <p className="text-[#3d4a41] text-sm flex items-center gap-1.5 mt-1.5">
+                  <GraduationCap className="w-4 h-4 shrink-0" />
                   {jsp.degree}{jsp.institution ? ` at ${jsp.institution}` : ""}
                 </p>
               )}
               {jsp?.location && (
-                <p className="text-[#5f5e5e] text-sm flex items-center gap-1.5 mt-0.5">
-                  <MapPin className="w-4 h-4" /> {jsp.location}
+                <p className="text-[#5f5e5e] text-sm flex items-center gap-1.5 mt-1">
+                  <MapPin className="w-4 h-4 shrink-0" /> {jsp.location}
                 </p>
               )}
-              <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+              <div className="flex items-center gap-3 mt-3 flex-wrap">
                 {jsp?.github && (
                   <a href={`https://github.com/${jsp.github}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[#3d4a41] hover:text-[#006d43] transition-colors" title="GitHub">
+                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="GitHub">
                     <Code2 className="w-4 h-4" />
                   </a>
                 )}
                 {jsp?.website && (
                   <a href={jsp.website} target="_blank" rel="noopener noreferrer"
-                    className="text-[#3d4a41] hover:text-[#006d43] transition-colors" title="Website">
+                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="Website">
                     <Globe className="w-4 h-4" />
                   </a>
                 )}
                 {cvSignedUrl && (
                   <a href={cvSignedUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006d43] border border-[#006d43]/30 px-3 py-1 rounded-full hover:bg-[#006d43]/5 transition-colors">
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#006d43] border border-[#006d43]/30 px-3 py-1.5 rounded-full hover:bg-[#006d43]/5 transition-colors">
                     <FileText className="w-3.5 h-3.5" /> Download CV
                   </a>
                 )}
@@ -495,18 +501,18 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           </div>
 
           {jsp?.bio && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-3">About</h4>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">About</h4>
               <p className="text-[#3d4a41] text-sm leading-relaxed">{jsp.bio}</p>
             </div>
           )}
 
           {skills.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-3">Skills</h4>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">Skills</h4>
               <div className="flex flex-wrap gap-2">
                 {skills.map((s) => (
-                  <span key={s} className="px-3 py-1 rounded-full bg-[#f6f3f2] border border-[#e5e2e1] text-sm text-[#3d4a41] font-medium">
+                  <span key={s} className="px-3 py-1.5 rounded-full bg-[#f6f3f2] border border-[#e5e2e1] text-sm text-[#3d4a41] font-medium">
                     {s}
                   </span>
                 ))}
@@ -515,30 +521,30 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           )}
 
           {projects.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-4">Projects</h4>
-              <div className="flex flex-col gap-4">
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-4 pb-3 border-b border-[#f0edec]">Projects</h4>
+              <div className="flex flex-col gap-5">
                 {projects.map((project) => (
-                  <div key={project.id} className="flex flex-col gap-1.5">
+                  <div key={project.id} className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-[#1c1b1b] text-sm">{project.name}</span>
+                      <span className="font-semibold text-[#1c1b1b] text-sm">{project.name}</span>
                       {project.url && (
                         <a href={project.url} target="_blank" rel="noopener noreferrer"
-                          className="text-[#3d4a41] hover:text-[#006d43] transition-colors">
+                          className="text-[#5f5e5e] hover:text-[#006d43] transition-colors">
                           <ExternalLink className="w-3.5 h-3.5" />
                         </a>
                       )}
-                      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
+                      <span className={`ml-auto text-xs font-medium px-2.5 py-0.5 rounded-full ${
                         project.status === "Live" ? "bg-[#78fbb6]/20 text-[#005232]" : "bg-amber-50 text-amber-700"
                       }`}>
                         {project.status}
                       </span>
                     </div>
-                    <p className="text-[#5f5e5e] text-xs leading-relaxed">{project.description}</p>
+                    <p className="text-[#5f5e5e] text-sm leading-relaxed">{project.description}</p>
                     {project.skills.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-0.5">
+                      <div className="flex flex-wrap gap-1.5">
                         {project.skills.map((s) => (
-                          <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-[#f6f3f2] border border-[#e5e2e1] text-[#3d4a41]">{s}</span>
+                          <span key={s} className="text-xs px-2.5 py-0.5 rounded-full bg-[#f6f3f2] border border-[#e5e2e1] text-[#3d4a41]">{s}</span>
                         ))}
                       </div>
                     )}
@@ -549,21 +555,21 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           )}
 
           {badges.length > 0 && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-4">Certifications & Badges</h4>
-              <div className="flex flex-col gap-3">
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-4 pb-3 border-b border-[#f0edec]">Certifications & Badges</h4>
+              <div className="flex flex-col gap-4">
                 {badges.map((badge) => (
-                  <div key={badge.id} className="flex items-center gap-3">
+                  <div key={badge.id} className="flex items-center gap-4">
                     {badge.image && (
-                      <img src={badge.image} alt={badge.name} className="w-10 h-10 rounded-lg object-contain shrink-0" />
+                      <img src={badge.image} alt={badge.name} className="w-11 h-11 rounded-xl object-contain shrink-0 border border-[#e5e2e1]" />
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[#1c1b1b] truncate">{badge.name}</p>
-                      <p className="text-xs text-[#5f5e5e]">{badge.issuer} · {badge.date}</p>
+                      <p className="text-sm font-semibold text-[#1c1b1b] truncate">{badge.name}</p>
+                      <p className="text-xs text-[#5f5e5e] mt-0.5">{badge.issuer} · {badge.date}</p>
                     </div>
                     {badge.url && (
                       <a href={badge.url} target="_blank" rel="noopener noreferrer"
-                        className="text-[#3d4a41] hover:text-[#006d43] transition-colors shrink-0">
+                        className="text-[#5f5e5e] hover:text-[#006d43] transition-colors shrink-0">
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
@@ -574,8 +580,8 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           )}
 
           {application.cover_letter && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-3">Cover Letter</h4>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">Cover Letter</h4>
               <p className="text-[#3d4a41] text-sm leading-relaxed whitespace-pre-wrap">
                 {application.cover_letter}
               </p>
@@ -584,12 +590,12 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
         </div>
 
         {/* ── Right column ── */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {/* Assessment panel */}
           {assessment ? (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold text-[#1c1b1b]">Assessment</h4>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6 flex flex-col gap-4">
+              <div className="flex items-center justify-between pb-3 border-b border-[#f0edec]">
+                <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide">Assessment</h4>
                 <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${
                   assessment.status === "pending"   ? "bg-amber-50 text-amber-700" :
                   assessment.status === "submitted" ? "bg-blue-50 text-blue-700"  :
@@ -717,12 +723,12 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
               )}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <h4 className="font-semibold text-[#1c1b1b] mb-1">Assessment</h4>
-              <p className="text-[#5f5e5e] text-sm mb-4">No assessment sent yet.</p>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-1 pb-3 border-b border-[#f0edec]">Assessment</h4>
+              <p className="text-[#5f5e5e] text-sm mt-3 mb-4">No assessment sent yet.</p>
               <button
                 onClick={() => setShowAssessmentForm((s) => !s)}
-                className="w-full bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white font-semibold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white font-semibold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-sm"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 {showAssessmentForm ? "Cancel" : "Send Assessment"}
@@ -732,43 +738,32 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
 
           {/* Assessment builder form */}
           {showAssessmentForm && !assessment && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-semibold text-[#1c1b1b]">New Assessment</h4>
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#f0edec]">
+                <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide">New Assessment</h4>
                 {templates.length > 0 && (
-                  <div className="relative">
+                  <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => setShowTemplatePicker((s) => !s)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-[#006d43] border border-[#006d43]/30 px-3 py-1.5 rounded-lg hover:bg-[#006d43]/5 transition-colors"
+                      onClick={() => setShowTemplatePicker(true)}
+                      className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+                        loadedTemplateId
+                          ? "bg-[#006d43]/10 text-[#006d43] border-[#006d43]/30"
+                          : "text-[#006d43] border-[#006d43]/30 hover:bg-[#006d43]/5"
+                      }`}
                     >
                       <LayoutTemplate className="w-3.5 h-3.5" />
                       {loadedTemplateId ? "Template Loaded ✓" : "Load Template"}
                     </button>
-                    {showTemplatePicker && (
-                      <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-xl border border-[#e5e2e1] shadow-lg z-20 p-2 flex flex-col gap-1">
-                        {templates.map((t) => (
-                          <button
-                            key={t.id}
-                            type="button"
-                            onClick={() => {
-                              if (titleRef.current) titleRef.current.value = t.name;
-                              if (descRef.current) descRef.current.value = t.description ?? "";
-                              if (timeLimitRef.current) timeLimitRef.current.value = t.time_limit ? String(t.time_limit) : "";
-                              setDraftQuestions((t.questions as QuestionDraft[] | null) ?? []);
-                              setLoadedTemplateId(t.id);
-                              setShowTemplatePicker(false);
-                            }}
-                            className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#f6f3f2] transition-colors"
-                          >
-                            <p className="text-sm font-medium text-[#1c1b1b] truncate">{t.name}</p>
-                            <p className="text-xs text-[#5f5e5e]">
-                              {((t.questions as any[]) ?? []).length} questions
-                              {t.time_limit ? ` · ${t.time_limit} min` : ""}
-                            </p>
-                          </button>
-                        ))}
-                      </div>
+                    {loadedTemplateId && (
+                      <button
+                        type="button"
+                        onClick={() => setLoadedTemplateId(null)}
+                        title="Clear template"
+                        className="p-1.5 rounded-lg text-[#5f5e5e] hover:text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
                 )}
@@ -880,18 +875,18 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           )}
 
           {/* Application meta */}
-          <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6">
-            <h4 className="font-semibold text-[#1c1b1b] mb-3">Application Details</h4>
-            <div className="flex flex-col gap-2 text-sm text-[#3d4a41]">
-              <div className="flex justify-between">
-                <span>Applied</span>
-                <span className="font-medium text-[#1c1b1b]">
+          <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+            <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">Application Details</h4>
+            <div className="flex flex-col gap-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-[#5f5e5e]">Applied</span>
+                <span className="font-semibold text-[#1c1b1b]">
                   {new Date(application.created_at).toLocaleDateString()}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span>Last Updated</span>
-                <span className="font-medium text-[#1c1b1b]">
+              <div className="flex justify-between items-center">
+                <span className="text-[#5f5e5e]">Last Updated</span>
+                <span className="font-semibold text-[#1c1b1b]">
                   {new Date(application.updated_at).toLocaleDateString()}
                 </span>
               </div>
@@ -899,6 +894,104 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
           </div>
         </div>
       </div>
+
+      {/* Template picker modal */}
+      {showTemplatePicker && templates.length > 0 && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowTemplatePicker(false); }}
+        >
+          <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e2e1] shrink-0">
+              <div className="flex items-center gap-2">
+                <LayoutTemplate className="w-5 h-5 text-[#006d43]" />
+                <div>
+                  <h3 className="font-semibold text-[#1c1b1b] text-sm">Choose a Template</h3>
+                  <p className="text-xs text-[#5f5e5e]">{templates.length} template{templates.length !== 1 ? "s" : ""} available</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTemplatePicker(false)}
+                className="p-1.5 rounded-lg hover:bg-[#f6f3f2] text-[#5f5e5e] hover:text-[#1c1b1b] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Template list */}
+            <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-3">
+              {templates.map((t) => {
+                const qCount = ((t.questions as any[]) ?? []).length;
+                const tags = t.tags as string[] | null;
+                const isLoaded = loadedTemplateId === t.id;
+                return (
+                  <div
+                    key={t.id}
+                    className={`rounded-xl border p-4 transition-all ${
+                      isLoaded
+                        ? "border-[#006d43] bg-[#006d43]/5"
+                        : "border-[#e5e2e1] hover:border-[#006d43]/30 hover:bg-[#f6f3f2]/60"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm text-[#1c1b1b] truncate">{t.name}</p>
+                        {t.description && (
+                          <p className="text-xs text-[#5f5e5e] mt-0.5 line-clamp-2">{t.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-[#5f5e5e]">
+                          <span className="flex items-center gap-1">
+                            <ClipboardCheck className="w-3.5 h-3.5" />
+                            {qCount} question{qCount !== 1 ? "s" : ""}
+                          </span>
+                          {t.time_limit && (
+                            <span className="flex items-center gap-1">
+                              <Timer className="w-3.5 h-3.5" />
+                              {t.time_limit} min
+                            </span>
+                          )}
+                        </div>
+                        {tags && tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[10px] font-medium bg-[#006d43]/10 text-[#006d43] px-2 py-0.5 rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (titleRef.current) titleRef.current.value = t.name;
+                          if (descRef.current) descRef.current.value = t.description ?? "";
+                          if (timeLimitRef.current) timeLimitRef.current.value = t.time_limit ? String(t.time_limit) : "";
+                          setDraftQuestions((t.questions as QuestionDraft[] | null) ?? []);
+                          setLoadedTemplateId(t.id);
+                          setShowTemplatePicker(false);
+                        }}
+                        className={`shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          isLoaded
+                            ? "bg-[#006d43] text-white"
+                            : "bg-white border border-[#006d43]/30 text-[#006d43] hover:bg-[#006d43] hover:text-white"
+                        }`}
+                      >
+                        {isLoaded ? "Loaded ✓" : "Use"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
