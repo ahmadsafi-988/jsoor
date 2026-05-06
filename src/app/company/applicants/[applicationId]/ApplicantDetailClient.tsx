@@ -26,6 +26,7 @@ type ApplicationStatus =
   | "assessment_sent"
   | "assessment_completed"
   | "shortlisted"
+  | "accepted"
   | "rejected";
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
@@ -34,6 +35,7 @@ const STATUS_LABELS: Record<ApplicationStatus, string> = {
   assessment_sent:       "Assessment Sent",
   assessment_completed:  "Assessment Done",
   shortlisted:           "Shortlisted",
+  accepted:              "Accepted",
   rejected:              "Rejected",
 };
 
@@ -43,15 +45,18 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
   assessment_sent:       "bg-purple-50 text-purple-700 border-purple-200",
   assessment_completed:  "bg-[#78fbb6]/20 text-[#005232] border-[#78fbb6]/40",
   shortlisted:           "bg-[#006d43]/10 text-[#006d43] border-[#006d43]/20",
+  accepted:              "bg-emerald-500/15 text-emerald-700 border-emerald-300",
   rejected:              "bg-red-50 text-red-600 border-red-200",
 };
 
 const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
-  applied:          ["under_review"],
-  under_review:     ["applied", "shortlisted", "rejected"],
-  shortlisted:      ["under_review"],
-  rejected:         ["under_review"],
-  assessment_sent:  ["under_review"],
+  applied:               ["under_review"],
+  under_review:          ["applied", "shortlisted", "rejected"],
+  shortlisted:           ["accepted", "rejected", "under_review"],
+  accepted:              ["rejected"],
+  rejected:              ["under_review"],
+  assessment_sent:       ["shortlisted", "accepted", "rejected", "under_review"],
+  assessment_completed:  ["shortlisted", "accepted", "rejected", "under_review"],
 };
 
 // ─── Question types ───────────────────────────────────────────────────────────

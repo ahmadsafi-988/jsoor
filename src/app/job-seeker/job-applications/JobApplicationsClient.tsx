@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building, ArrowRight, ClipboardList, X } from "lucide-react";
+import { Building, ArrowRight, ClipboardList, X, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 type AppStatus =
@@ -10,6 +10,7 @@ type AppStatus =
   | "assessment_sent"
   | "assessment_completed"
   | "shortlisted"
+  | "accepted"
   | "rejected";
 
 const STATUS_LABELS: Record<AppStatus, string> = {
@@ -18,6 +19,7 @@ const STATUS_LABELS: Record<AppStatus, string> = {
   assessment_sent:       "Assessment Sent",
   assessment_completed:  "Assessment Done",
   shortlisted:           "Shortlisted",
+  accepted:              "Accepted",
   rejected:              "Rejected",
 };
 
@@ -27,6 +29,7 @@ const STATUS_STYLES: Record<AppStatus, string> = {
   assessment_sent:       "bg-purple-50 text-purple-700",
   assessment_completed:  "bg-[#78fbb6]/20 text-[#005232]",
   shortlisted:           "bg-[#006d43]/10 text-[#006d43]",
+  accepted:              "bg-emerald-500/15 text-emerald-700",
   rejected:              "bg-red-50 text-red-600",
 };
 
@@ -37,12 +40,14 @@ const STATUS_TABS = [
   "Assessment Sent",
   "Assessment Done",
   "Shortlisted",
+  "Accepted",
   "Rejected",
 ] as const;
 
 function StatusBadge({ status }: { status: AppStatus }) {
   const icons: Partial<Record<AppStatus, React.ReactNode>> = {
     assessment_sent: <ClipboardList className="w-3.5 h-3.5" />,
+    accepted:        <CheckCircle className="w-3.5 h-3.5" />,
     rejected:        <X className="w-3.5 h-3.5" />,
   };
   return (

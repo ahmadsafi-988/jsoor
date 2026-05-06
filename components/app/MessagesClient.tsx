@@ -69,7 +69,7 @@ export default function MessagesClient({
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [conversations, setConversations] = useState(initialConversations);
   const [activeConvId, setActiveConvId] = useState<string | null>(
-    initialConvId ?? initialConversations[0]?.id ?? null
+    initialConvId ?? null
   );
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
@@ -130,8 +130,8 @@ export default function MessagesClient({
             if (prev.some((m) => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
-          setConversations((prev) =>
-            prev.map((c) =>
+          setConversations((prev) => {
+            const updated = prev.map((c) =>
               c.id === activeConvId
                 ? {
                     ...c,
@@ -139,8 +139,11 @@ export default function MessagesClient({
                     last_message_at: newMsg.created_at,
                   }
                 : c
-            )
-          );
+            );
+            return updated.sort(
+              (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+            );
+          });
         }
       )
       .subscribe();
@@ -184,8 +187,8 @@ export default function MessagesClient({
       setMessages((prev) =>
         prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]
       );
-      setConversations((prev) =>
-        prev.map((c) =>
+      setConversations((prev) => {
+        const updated = prev.map((c) =>
           c.id === activeConvId
             ? {
                 ...c,
@@ -193,8 +196,11 @@ export default function MessagesClient({
                 last_message_at: result.message.created_at,
               }
             : c
-        )
-      );
+        );
+        return updated.sort(
+          (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+        );
+      });
     }
 
     setInput("");
@@ -209,8 +215,10 @@ export default function MessagesClient({
   const activeConv = conversations.find((c) => c.id === activeConvId);
   const filteredConvs = conversations.filter(
     (c) =>
-      c.other_name.toLowerCase().includes(search.toLowerCase()) ||
-      c.job_title.toLowerCase().includes(search.toLowerCase())
+      c.last_message !== "" && (
+        c.other_name.toLowerCase().includes(search.toLowerCase()) ||
+        c.job_title.toLowerCase().includes(search.toLowerCase())
+      )
   );
 
   return (

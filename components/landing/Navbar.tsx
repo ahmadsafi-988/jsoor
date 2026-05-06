@@ -38,17 +38,17 @@ export function Navbar() {
 
         {/* Desktop CTAs */}
         <div className="hidden md:flex items-center gap-4">
-          {/* Sign Up as Talent → /auth/sign-up */}
-          <Link href="/auth/sign-up">
-            <button className="text-[#006d43] font-semibold font-headline tracking-tight hover:text-[#00a86b] transition-colors duration-300">
-              Sign Up as Talent
-            </button>
+          <Link
+            href="/auth/sign-up"
+            className="text-[#006d43] font-semibold font-headline tracking-tight hover:text-[#00a86b] transition-colors duration-300"
+          >
+            Sign Up
           </Link>
-          {/* Hire with JSOOR → /auth/login */}
-          <Link href="/auth/login">
-            <button className="bg-[#006d43] text-white px-6 py-2 rounded-md font-semibold font-headline tracking-tight hover:bg-[#00a86b] transition-colors duration-300">
-              Hire with JSOOR
-            </button>
+          <Link
+            href="/auth/login"
+            className="bg-[#006d43] text-white px-6 py-2 rounded-md font-semibold font-headline tracking-tight hover:bg-[#00a86b] transition-colors duration-300"
+          >
+            Log In
           </Link>
         </div>
 
@@ -76,15 +76,19 @@ export function Navbar() {
               </a>
             ))}
             <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-neutral-100">
-              <Link href="/auth/sign-up" onClick={closeMenu}>
-                <button className="w-full px-4 py-2.5 text-sm font-semibold text-[#006d43] rounded-lg hover:bg-emerald-50 transition-colors text-left font-headline">
-                  Sign Up as Talent
-                </button>
+              <Link
+                href="/auth/sign-up"
+                onClick={closeMenu}
+                className="px-4 py-2.5 text-sm font-semibold text-[#006d43] rounded-lg hover:bg-emerald-50 transition-colors font-headline"
+              >
+                Sign Up
               </Link>
-              <Link href="/auth/login" onClick={closeMenu}>
-                <button className="w-full px-4 py-2.5 text-sm font-semibold text-white bg-[#006d43] hover:bg-[#00a86b] rounded-md transition-colors text-center font-headline">
-                  Hire with JSOOR
-                </button>
+              <Link
+                href="/auth/login"
+                onClick={closeMenu}
+                className="px-4 py-2.5 text-sm font-semibold text-white bg-[#006d43] hover:bg-[#00a86b] rounded-md transition-colors text-center font-headline"
+              >
+                Log In
               </Link>
             </div>
           </div>

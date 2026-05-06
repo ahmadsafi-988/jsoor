@@ -45,7 +45,7 @@ export async function getOrCreateConversation(applicationId: string) {
   const isCompany   = job?.company_id === user.id;
   if (!isApplicant && !isCompany) return { error: "Not authorized." };
 
-  // Return existing conversation if already created
+  // Return existing conversation if one already exists for this application
   const { data: existing } = await supabase
     .from("conversations")
     .select("id")
@@ -64,6 +64,16 @@ export async function getOrCreateConversation(applicationId: string) {
     })
     .select("id")
     .single();
+
+  // Race condition: another request created it between our check and insert
+  if (error?.code === "23505") {
+    const { data: fallback } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("application_id", applicationId)
+      .single();
+    if (fallback) return { conversationId: fallback.id };
+  }
 
   if (error) return { error: error.message };
   return { conversationId: created.id };

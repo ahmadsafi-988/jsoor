@@ -16,7 +16,8 @@ export async function insertNotification(
   type: string,
   title: string,
   body: string,
-  link?: string
+  link?: string,
+  jobId?: string
 ) {
   const service = serviceClient();
   await service.from("notifications").insert({
@@ -25,6 +26,7 @@ export async function insertNotification(
     title,
     body,
     link: link ?? null,
+    job_id: jobId ?? null,
   });
 }
 

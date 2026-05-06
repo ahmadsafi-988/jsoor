@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -66,6 +66,10 @@ export default function NotificationsClient({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const groups = groupByDate(notifications);
+
+  useEffect(() => {
+    if (notifications.some((n) => !n.is_read)) markAllNotificationsRead();
+  }, []);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

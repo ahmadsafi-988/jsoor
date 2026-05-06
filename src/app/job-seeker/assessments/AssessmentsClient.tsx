@@ -89,13 +89,7 @@ function InstructionsScreen({
 
 // ─── Confirmation screen ──────────────────────────────────────────────────────
 
-function ConfirmationScreen({
-  score,
-  onBack,
-}: {
-  score: number | null | undefined;
-  onBack: () => void;
-}) {
+function ConfirmationScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="bg-white rounded-2xl border border-[#e5e2e1] p-12 flex flex-col items-center text-center gap-6">
       <div className="w-16 h-16 rounded-full bg-[#78fbb6]/20 flex items-center justify-center">
@@ -108,12 +102,9 @@ function ConfirmationScreen({
         <p className="text-[#3d4a41] text-sm">Your response has been recorded successfully.</p>
       </div>
 
-      {score !== undefined && score !== null && (
-        <div className="bg-[#f6f3f2] rounded-2xl px-8 py-4">
-          <p className="text-xs text-[#5f5e5e] mb-1">Your Score</p>
-          <p className="text-3xl font-bold text-[#005232]">{score}<span className="text-lg font-medium text-[#3d4a41]">/100</span></p>
-        </div>
-      )}
+      <div className="bg-[#f6f3f2] rounded-2xl px-8 py-4 text-center">
+        <p className="text-sm text-[#3d4a41]">Results will be shared once the company reviews your submission.</p>
+      </div>
 
       <button
         onClick={onBack}
@@ -143,7 +134,6 @@ function AssessmentTaker({
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [finalScore, setFinalScore] = useState<number | null | undefined>(undefined);
 
   const answersRef = useRef(answers);
   useEffect(() => { answersRef.current = answers; }, [answers]);
@@ -165,8 +155,6 @@ function AssessmentTaker({
       setPending(false);
       return;
     }
-    const allScorable = questions.every((q: any) => q.type === "mcq" || q.type === "truefalse");
-    setFinalScore(allScorable && questions.length > 0 ? (result.score ?? null) : undefined);
     setStep("done");
     onComplete(assessment.id);
     setPending(false);
@@ -209,7 +197,7 @@ function AssessmentTaker({
   }
 
   if (step === "done") {
-    return <ConfirmationScreen score={finalScore} onBack={onBack} />;
+    return <ConfirmationScreen onBack={onBack} />;
   }
 
   // step === "taking"

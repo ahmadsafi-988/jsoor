@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Bell, ClipboardCheck, FileText } from "lucide-react";
@@ -61,6 +61,10 @@ export default function CompanyNotificationsClient({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const groups = groupByDate(notifications);
+
+  useEffect(() => {
+    if (notifications.some((n) => !n.is_read)) markAllNotificationsRead();
+  }, []);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

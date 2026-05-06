@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Navbar } from "@/components/landing/Navbar";
 import { Hero } from "@/components/landing/Hero";
 import { Stats } from "@/components/landing/Stats";
@@ -18,7 +19,9 @@ export default function Home() {
           <Hero />
         </section>
         <section id="stats">
-          <Stats />
+          <Suspense fallback={<div className="bg-neutral-900 py-16" />}>
+            <Stats />
+          </Suspense>
         </section>
         <section id="trust">
           <Trust />

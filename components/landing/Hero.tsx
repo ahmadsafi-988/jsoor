@@ -24,18 +24,13 @@ export function Hero() {
           </p>
 
           <div className="flex flex-wrap gap-4 pt-4">
-            {/* Primary CTA → sign-up */}
-            <Link href="/auth/sign-up">
-              <button className="hero-gradient-bg text-white px-8 py-4 rounded-xl font-semibold text-lg hover:brightness-110 transition-all shadow-[0_20px_40px_rgba(0,109,67,0.15)] flex items-center gap-2">
-                Explore Opportunities
-                <ArrowRight className="w-5 h-5" />
-              </button>
+            <Link
+              href="/auth/sign-up"
+              className="hero-gradient-bg text-white px-8 py-4 rounded-xl font-semibold text-lg hover:brightness-110 transition-all shadow-[0_20px_40px_rgba(0,109,67,0.15)] flex items-center gap-2"
+            >
+              Explore Opportunities
+              <ArrowRight className="w-5 h-5" />
             </Link>
-
-            {/* Secondary CTA — placeholder until employer flow exists */}
-            <button className="border border-[#6d7a70] text-[#006d43] px-8 py-4 rounded-xl font-semibold text-lg hover:bg-neutral-100 transition-colors">
-              Post a Job
-            </button>
           </div>
         </div>
 
@@ -56,8 +51,8 @@ export function Hero() {
                   <Briefcase className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm text-neutral-900">Junior Architect</p>
-                  <p className="text-xs text-[#006d43]">Dubai, UAE</p>
+                  <p className="font-semibold text-sm text-neutral-900">Intern</p>
+                  <p className="text-xs text-[#006d43]">Connected Motion · Amman, Jordan</p>
                 </div>
               </div>
             </div>

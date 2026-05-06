@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-04 | Phases 1–8 complete (Sprints 1–8)
+> Last updated: 2026-05-06 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete
 
 ---
 
@@ -112,14 +112,42 @@ Fixed three production bugs in the messaging system and rewrote the chat UI:
 
 ---
 
-## Phase 9 — Interview Simulator
+## Phase 9 — Email Notifications ❌ DROPPED (2026-05-06)
 
-- `OPENAI_API_KEY` configuration + end-to-end test
-- Plan: add to env, test all flows (setup → questions → answers → feedback), optionally persist session history to DB
+Resend integration removed. In-app notifications (Phase 4) are sufficient for the submission. DB trigger and edge function deleted.
 
 ---
 
-## Phase 8 — Post-MVP (After Submission)
+## Phase 10 — Notification Badge + Messaging Bug Fixes ✅ COMPLETE (2026-05-06)
+
+- **Notification badge bug:** sidebar badge persisted across sessions — unread count was only cleared in local React state (pathname `useEffect`), never written back to DB. Fixed: both notification clients now call `markAllNotificationsRead()` silently on mount.
+- **Messaging bug 1 (duplicate conversations):** `getOrCreateConversation` used `maybeSingle()` + separate `INSERT` — if the check missed the existing row, the INSERT hit the unique constraint and returned an error, silently killing the redirect from the applicant detail page. Fixed with check-then-insert + 23505 fallback.
+- **Messaging bug 2 (sort order):** Sending a message updated `last_message_at` in state but never re-sorted the conversation list. Fixed by sorting by `last_message_at` DESC after every `setConversations` call in `MessagesClient`.
+- **Messaging bug 3 (empty chats in list):** Clicking "Message" created a DB conversation before any message was sent, showing empty chats in the list permanently. Fixed by filtering out conversations with no messages from the left panel (`last_message !== ""`).
+- **Messaging bug 4 (second Message click regression):** The upsert approach required an UPDATE RLS policy that didn't exist — second click always failed silently. Reverted to check-then-insert.
+- **Auth page redesign:** All four auth pages (`login`, `sign-up`, `forgot-password`, `update-password`) updated from indigo/shadcn theme to match the system's green-on-warm-white design. Also fixed a stale redirect to `/protected` in `update-password-form`.
+- **Landing page polish:** Navbar "Sign Up as Talent" → "Sign Up" (→ `/auth/sign-up`), "Hire with JSOOR" → "Log In" (→ `/auth/login`), fixed invalid `<button>` inside `<Link>` HTML. Removed dead "Post a Job" button from Hero. Floating card updated to "Intern / Connected Motion · Amman, Jordan". Stats bar now fetches real counts from DB (active jobs, companies, applications).
+
+---
+
+## Phase 10.6 — Assessment Flow Fixes ✅ COMPLETE (2026-05-06)
+
+- **Score gating:** Job seeker no longer sees their score immediately after submission. `ConfirmationScreen` now shows "Results will be shared once the company reviews your submission." Score only appears in the list view when `results_released = true`.
+- **Accepted status added:** `accepted` added to DB CHECK constraint on `job_applications.status`. New final positive status distinct from `shortlisted`.
+- **Status transition fix:** `assessment_completed` had no entries in `ALLOWED_TRANSITIONS` — company was stuck with a static badge and no way to act after assessment. Fixed in both server-side guard (`lib/company/actions.ts`) and client dropdown (`ApplicantDetailClient.tsx`).
+- **Full status flow:** `applied → under_review → [assessment_sent → assessment_completed] → shortlisted → accepted` or `rejected` at any post-review stage.
+
+---
+
+## Phase 11 — Interview Simulator
+
+- `OPENAI_API_KEY` configuration + end-to-end test
+- Plan: add to env, test all flows (setup → questions → answers → feedback), optionally persist session history to DB
+- UI + API route fully built — just needs the key in `.env.local`
+
+---
+
+## Phase 11 — Post-MVP (After Submission)
 
 | Feature | Value | Effort |
 |---|---|---|
@@ -148,9 +176,9 @@ Fixed three production bugs in the messaging system and rewrote the chat UI:
 
 - [x] End-to-end hiring flow: post job → apply → manage → assess → decide
 - [x] All 3 roles (job_seeker, company, admin) access correct dashboards
-- [x] Assessments: send, take, auto-score, review, release results
+- [x] Assessments: send, take, auto-score, review, release results, accept/reject applicant
 - [ ] AI Interview Simulator working (end-to-end with real API key) — **blocked: OPENAI_API_KEY missing**
-- [ ] Email notifications fire on application status changes — **unknown: DB webhook trigger not verified in Supabase dashboard**
+- [x] Email notifications — dropped; in-app notifications cover this use case
 - [x] Profile publicly viewable without login
 - [x] CV upload and download works (signed URLs)
 - [x] Messaging works (real messages, Supabase Realtime)

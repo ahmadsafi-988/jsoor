@@ -179,7 +179,8 @@ export async function applyToJob(jobId: string, coverLetter?: string) {
       "new_application",
       "New Application",
       `A new candidate applied to "${job.title}"`,
-      `/company/jobs/${jobId}/applicants`
+      `/company/jobs/${jobId}/applicants`,
+      jobId
     );
   }
 
@@ -193,14 +194,17 @@ type ApplicationStatus =
   | "assessment_sent"
   | "assessment_completed"
   | "shortlisted"
+  | "accepted"
   | "rejected";
 
 const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]>> = {
-  applied:            ["under_review"],
-  under_review:       ["applied", "shortlisted", "rejected"],
-  shortlisted:        ["under_review"],
-  rejected:           ["under_review"],
-  assessment_sent:    ["under_review"],
+  applied:               ["under_review"],
+  under_review:          ["applied", "shortlisted", "rejected"],
+  shortlisted:           ["accepted", "rejected", "under_review"],
+  accepted:              ["rejected"],
+  rejected:              ["under_review"],
+  assessment_sent:       ["shortlisted", "accepted", "rejected", "under_review"],
+  assessment_completed:  ["shortlisted", "accepted", "rejected", "under_review"],
 };
 
 export async function updateApplicationStatus(
@@ -242,6 +246,7 @@ export async function updateApplicationStatus(
     assessment_sent: "Assessment Sent",
     assessment_completed: "Assessment Completed",
     shortlisted: "Shortlisted",
+    accepted: "Accepted",
     rejected: "Rejected",
   };
   await insertNotification(
@@ -249,7 +254,8 @@ export async function updateApplicationStatus(
     "application_status_changed",
     "Application Status Updated",
     `Your application status has changed to "${statusLabels[newStatus] ?? newStatus}"`,
-    "/job-seeker/job-applications"
+    "/job-seeker/job-applications",
+    job.id
   );
 
   revalidatePath(`/company/applicants/${applicationId}`);
@@ -294,7 +300,7 @@ export async function sendAssessment(formData: FormData) {
     .from("job_applications")
     .update({ status: "assessment_sent", updated_at: new Date().toISOString() })
     .eq("id", applicationId)
-    .select("applicant_id")
+    .select("applicant_id, job_id")
     .single();
 
   if (appRow) {
@@ -303,7 +309,8 @@ export async function sendAssessment(formData: FormData) {
       "assessment_sent",
       "New Assessment",
       `You have received a new assessment: "${payload.title}"`,
-      "/job-seeker/assessments"
+      "/job-seeker/assessments",
+      appRow.job_id
     );
   }
 
@@ -351,7 +358,7 @@ export async function submitAssessment(formData: FormData) {
 
   const { data: application } = await supabase
     .from("job_applications")
-    .select("applicant_id")
+    .select("applicant_id, job_id")
     .eq("id", assessment.application_id)
     .single();
 
@@ -398,7 +405,8 @@ export async function submitAssessment(formData: FormData) {
       "assessment_submitted",
       "Assessment Submitted",
       `A candidate has submitted their assessment: "${updatedAssessment.title}"`,
-      `/company/applicants/${assessment.application_id}`
+      `/company/applicants/${assessment.application_id}`,
+      application.job_id
     );
   }
 
@@ -425,7 +433,7 @@ export async function releaseAssessmentResults(assessmentId: string) {
   if (released) {
     const { data: appRow } = await supabase
       .from("job_applications")
-      .select("applicant_id")
+      .select("applicant_id, job_id")
       .eq("id", released.application_id)
       .single();
 
@@ -435,7 +443,8 @@ export async function releaseAssessmentResults(assessmentId: string) {
         "assessment_results_released",
         "Assessment Results Available",
         "Your assessment results have been released. Check your assessments page.",
-        "/job-seeker/assessments"
+        "/job-seeker/assessments",
+        appRow.job_id
       );
     }
   }
