@@ -63,7 +63,7 @@ export default function CompanyNotificationsClient({
   const groups = groupByDate(notifications);
 
   useEffect(() => {
-    if (notifications.some((n) => !n.is_read)) markAllNotificationsRead();
+    if (notifications.some((n) => !n.is_read)) markAllNotificationsRead().catch(() => {});
   }, []);
 
   const handleMarkAllRead = () => {

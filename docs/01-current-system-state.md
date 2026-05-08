@@ -1,6 +1,6 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass + job detail sheet + profile redesign + assessments bug fixes + logo rendering + profile avatar z-index fix)
+> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass + job detail sheet + profile redesign + assessments bug fixes + logo rendering + profile avatar z-index fix + notifications unhandled rejection fix)
 
 ---
 
@@ -107,6 +107,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Timestamps shown only at end of consecutive same-sender message blocks
 - [x] Error state with "Try again" link if message load fails
 - [x] Conversation list shows company name (not job title) as primary label; job title as subtitle
+- [x] **Job title shown permanently** in both the conversation list and chat header — intentional design; every conversation is tied to a job application (`conversations.application_id → job_applications.job_id → jobs.title`) and the context label helps users distinguish conversations when messaging across multiple roles
 
 ### Notifications (`/job-seeker/notifications`)
 - [x] Notifications fetched from DB on page load (`notifications` table)
@@ -116,6 +117,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] "Mark all as read" button — updates DB + refreshes page
 - [x] Empty state
 - [x] Unread notification count badge on Bell nav item in sidebar — clears immediately when user navigates to notifications page
+- [x] `markAllNotificationsRead()` on-mount call wrapped with `.catch(() => {})` — prevents unhandled Promise rejection when the server action receives a session-expiry redirect instead of JSON (same fix applied to company notifications client)
 - [x] Triggered automatically by 5 server actions:
   - `applyToJob` → notifies company (`new_application`)
   - `updateApplicationStatus` → notifies job seeker (`application_status_changed`)

@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-08 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete; Phase 13 UI polish pass complete; Phase 14 job detail slide-over sheet complete; Phase 15 job seeker profile redesign complete; Phase 16 company assessments data + navigation fix complete; Phase 17 UI bug fixes (logo rendering, profile avatar z-index, sheet accessibility) complete
+> Last updated: 2026-05-08 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete; Phase 13 UI polish pass complete; Phase 14 job detail slide-over sheet complete; Phase 15 job seeker profile redesign complete; Phase 16 company assessments data + navigation fix complete; Phase 17 UI bug fixes (logo rendering, profile avatar z-index, sheet accessibility, notifications unhandled rejection) complete
 
 ---
 
@@ -201,12 +201,12 @@ Fixed two bugs on `/company/assessments` and one on the applicant detail page:
 
 ## Phase 17 — UI Bug Fixes ✅ COMPLETE (2026-05-08)
 
-Three small but visible bugs fixed:
-
-- **Company logo rendering** — all `<img>` tags for company logos across 7 files (`/company/profile`, job feed cards, job detail sheet, My Applications, Saved Jobs, Assessments, Company Sidebar, Admin companies table) changed from `object-cover` (crops) to `object-contain` (fits); containers updated to `bg-white` + padding so transparent PNGs don't show tinted backgrounds.
+- **Company logo rendering** — all `<img>` tags for company logos across 7 files changed from `object-cover` (crops) to `object-contain` (fits); containers updated to `bg-white` + padding so transparent PNGs don't show tinted backgrounds.
 - **Company profile upload UX** — duplicate "Change Photo / Upload Photo" text button removed; single camera-icon button on the avatar remains as the only trigger.
-- **Profile avatar z-index** — avatar row at `/job-seeker/profile/[username]` was painted under the green banner because both elements shared the same stacking context. Fixed with `relative z-10` on the avatar row.
-- **Sheet accessibility warning** — `SheetContent` (Radix Dialog) requires a `DialogTitle` for screen readers. Job title `<h2>` replaced with `<SheetTitle>` in `JobDetailSheet`; removes the console warning without any visual change.
+- **Profile avatar z-index** — avatar row at `/job-seeker/profile/[username]` was painted under the green banner. Fixed with `relative z-10` on the avatar row.
+- **Sheet accessibility warning** — `SheetContent` requires a `DialogTitle` for screen readers. Job title `<h2>` replaced with `<SheetTitle>` in `JobDetailSheet`.
+- **Notifications unhandled rejection** — `markAllNotificationsRead()` on-mount call (both job seeker and company clients) wrapped with `.catch(() => {})` to suppress the `unhandledRejection` thrown when a session-expiry redirect is returned instead of a server action JSON response.
+- **Messaging job title label** — confirmed intentional design: job title shown permanently as subtitle in conversation list and chat header; every conversation is scoped to a job application and the label provides context when users have multiple active conversations.
 
 ---
 
