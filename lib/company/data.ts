@@ -248,20 +248,45 @@ export async function getCompanyAssessments(): Promise<AssessmentWithApplication
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = await supabase
+  // applicant_id FK → auth.users (not profiles) so PostgREST can't join profiles in one shot
+  const { data: rows } = await supabase
     .from("assessments")
     .select(`
       *,
       application:job_applications!assessments_application_id_fkey(
         id, job_id, applicant_id, status,
-        profile:profiles!job_applications_applicant_id_fkey(first_name, last_name, avatar_url, username),
         job:jobs!job_applications_job_id_fkey(title)
       )
     `)
     .eq("company_id", user.id)
     .order("created_at", { ascending: false });
 
-  return (data as any[]) ?? [];
+  if (!rows || rows.length === 0) return [];
+
+  const applicantIds = [
+    ...new Set(
+      (rows as any[]).map((r) => r.application?.applicant_id).filter(Boolean)
+    ),
+  ];
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, avatar_url, username")
+    .in("id", applicantIds);
+
+  const profileMap = Object.fromEntries(
+    (profiles ?? []).map((p) => [p.id, p])
+  );
+
+  return (rows as any[]).map((r) => ({
+    ...r,
+    application: r.application
+      ? {
+          ...r.application,
+          profile: profileMap[r.application.applicant_id] ?? null,
+        }
+      : null,
+  })) as AssessmentWithApplication[];
 }
 
 export async function getCompanyStats() {

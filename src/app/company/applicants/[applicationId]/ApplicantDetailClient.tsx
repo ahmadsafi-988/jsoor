@@ -275,7 +275,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
   const { application, applicant, projects, badges, skills } = result;
   const jsp = applicant.job_seeker_profile;
   const job = application.job;
-  const name = `${applicant.first_name} ${applicant.last_name}`.trim();
+  const name = `${applicant.first_name} ${applicant.last_name}`.trim() || "Applicant";
   const router = useRouter();
 
   const [currentStatus, setCurrentStatus] = useState<ApplicationStatus>(

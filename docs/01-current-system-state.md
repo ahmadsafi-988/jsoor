@@ -1,12 +1,12 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass)
+> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass + job detail sheet + profile redesign + assessments bug fixes)
 
 ---
 
 ## Summary
 
-The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are live with real DB backends and Supabase Realtime. Assessment templates are fully built (Sprint 6). Job reporting (Report button + server action), job feed pagination, and company profile have all been completed (Sprint 7). Three messaging system bugs were fixed and the chat UI fully rewritten in Sprint 8 (broken PostgREST join, empty name fallback, conversation sort order). A UI polish pass (2026-05-08) fixed dead buttons, missing status values, and a URL bug. The only remaining feature is the AI interview simulator (deferred to teammate — UI + API route fully built, needs `OPENAI_API_KEY`).
+The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are live with real DB backends and Supabase Realtime. Assessment templates are fully built (Sprint 6). Job reporting (Report button + server action), job feed pagination, and company profile have all been completed (Sprint 7). Three messaging system bugs were fixed and the chat UI fully rewritten in Sprint 8 (broken PostgREST join, empty name fallback, conversation sort order). A UI polish pass (2026-05-08) fixed dead buttons, missing status values, and a URL bug. A job detail slide-over sheet was added to the job feed — clicking a card body opens a full-detail panel with description, requirements, skills, and an apply form. The job seeker profile page was fully redesigned (2026-05-08) — green gradient banner, circular avatar overlap, icon-row education details, green skill pills, and clean card layout throughout. The only remaining feature is the AI interview simulator (deferred to teammate — UI + API route fully built, needs `OPENAI_API_KEY`).
 
 ---
 
@@ -32,11 +32,12 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 ### Job Seeker Profile (`/job-seeker/profile/[username]`)
 - [x] Public profile page (accessible without login)
-- [x] Header card: avatar, name, degree, location, edit button (own profile only)
-- [x] About/bio section — edit shortcut (Plus icon) visible to owner only, links to edit page
-- [x] Projects section with timeline layout — no edit buttons shown (editing is on the edit page)
-- [x] Skills section with tags — "Add Skill" link visible to owner only, links to edit page
-- [x] Badges/certifications section
+- [x] **Redesigned header** — green gradient banner, circular avatar overlapping the banner, name / degree / location below; "Edit Profile" button top-right (own profile only)
+- [x] About section — hidden from visitors when empty; Plus shortcut (owner only) links to edit page
+- [x] Projects section — card tiles with status badge and GitHub link (no timeline)
+- [x] Skills section — green-tinted pill tags; "Add" link (owner only); hidden from visitors when empty
+- [x] Education details card — icon-row layout (`GraduationCap`, `BookOpen`, `Star`, `Calendar`, `Globe`); CV download as ghost button; hidden when no fields are set
+- [x] Badges/certifications section — hover fade-in ExternalLink icon
 - [x] CV download via Supabase signed URL
 - [x] Website link — safe URL handling (`startsWith("http")` guard prevents double `https://`)
 - [x] Edit profile (`/job-seeker/profile/[username]/edit`) — cache properly invalidated after edits
@@ -49,10 +50,16 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Filter tabs: All, Best Match, Full-time, Remote, Hybrid, Internship
   - **Best Match** filter: shows only jobs where user has ≥50% of required skills (`matchCount / matchTotal >= 0.5`); jobs with no required skills are excluded
 - [x] Search by role or company name
-- [x] Apply to job with optional cover letter (inline form)
+- [x] Apply to job with optional cover letter (inline form on card, or via detail sheet)
 - [x] Save/unsave jobs (persisted to DB)
 - [x] "Show More" button — client-side pagination, 9 jobs per page; resets on filter/search change
 - [x] Report button (Flag icon) on every job card — inline form with reason textarea; `reportJob` server action inserts into `job_reports` with `status: 'pending'`
+- [x] **Job detail slide-over sheet** — clicking the card body (title / description / skills) opens a 560px right-side panel:
+  - Header: company logo, title, match badge, meta pills (location, type, salary, posted date)
+  - Full description and requirements (not truncated)
+  - All required skills with match counter ("X of Y matched")
+  - Sticky footer with Apply Now → inline cover letter form; submitting closes sheet and marks card Applied; already-applied state shown with green confirmation
+  - One shared Sheet instance — switching jobs swaps content without re-mounting
 
 ### Job Applications (`/job-seeker/job-applications`)
 - [x] List of applied jobs with status badge and date
@@ -162,10 +169,11 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
   - **Polished UI** — `max-w-5xl` layout, shadowed cards, uppercase section headers with border-b dividers, larger round avatar with ring, name+status in a dedicated header card
 
 ### Company Assessments (`/company/assessments`)
-- [x] List all assessments across all applications
-- [x] Filter by status (pending / submitted / reviewed)
-- [x] Status column properly sized (`col-span-2`) — badge text no longer clipped
-- [x] Review individual assessments
+- [x] List all assessments across all applications with live stat cards (pending / submitted / reviewed counts)
+- [x] **Data fix** — `getCompanyAssessments` previously failed silently: PostgREST rejected the nested `profiles!job_applications_applicant_id_fkey` join (FK → `auth.users`, not `profiles`). Fixed with a two-step query: fetch assessments + job titles, then fetch profiles separately by applicant ID and merge in JS.
+- [x] **Clickable rows** — entire card is now a `<Link>` to the applicant detail page; removed the separate "View →" Action column; columns rebalanced (Assessment 4, Applicant 3, Job 3, Status 2)
+- [x] Applicant name fallback: empty `first_name`/`last_name` renders as `"Applicant"` instead of blank
+- [x] Applicant detail page name fallback: same `|| "Applicant"` guard in `ApplicantDetailClient`
 
 ### Company Messages (`/company/messages`)
 - [x] Same two-panel layout as job seeker messages

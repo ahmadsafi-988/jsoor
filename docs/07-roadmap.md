@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-08 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete; Phase 13 UI polish pass complete
+> Last updated: 2026-05-08 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete; Phase 13 UI polish pass complete; Phase 14 job detail slide-over sheet complete; Phase 15 job seeker profile redesign complete; Phase 16 company assessments data + navigation fix complete
 
 ---
 
@@ -147,6 +147,18 @@ Resend integration removed. In-app notifications (Phase 4) are sufficient for th
 
 ---
 
+## Phase 14 — Job Detail Slide-Over Sheet ✅ COMPLETE (2026-05-08)
+
+Added a right-side slide-over panel for full job details on the job seeker feed (`JobSeekerHomeClient.tsx`):
+
+- Clicking the card body (title / description / skills area) slides in a 560px sheet from the right — Save, Report, and Apply buttons on the card are unaffected
+- **Sheet header:** company logo, job title, match badge, meta pills (location, type, salary, posted date)
+- **Sheet body:** full description (not truncated), requirements section (if set), all required skills with match counter ("X of Y matched")
+- **Sheet footer (sticky):** Apply Now button expands into an inline cover letter form; submitting closes the sheet and marks the card as Applied; already-applied state shown with a green confirmation
+- One shared Sheet instance at the parent level — switching cards just swaps the content with no re-mounting
+
+---
+
 ## Phase 13 — UI Polish Pass ✅ COMPLETE (2026-05-08)
 
 Fixed five bugs and dead-UI issues discovered during a systematic code review:
@@ -159,6 +171,31 @@ Fixed five bugs and dead-UI issues discovered during a systematic code review:
   - Skills section "Add Skill" button → converted to a `<Link>` to edit page, owner-only
 - **Website URL bug** (same file): `href={\`https://${website}\`}` would produce `https://https://...` if the user saved a full URL. Fixed with `startsWith("http")` guard.
 - **Status column too narrow** (`company/assessments/page.tsx`): Status column was `col-span-1` (~80px) — too narrow for badge text. Bumped to `col-span-2`; Job column reduced from 3→2 to keep grid at 12.
+
+---
+
+## Phase 15 — Job Seeker Profile Redesign ✅ COMPLETE (2026-05-08)
+
+Full visual overhaul of `job-seeker/profile/[username]/page.tsx`:
+
+- **Header** — replaced flat gray card with a green gradient banner; circular avatar overlaps the banner (LinkedIn-style); "Edit Profile" button moved to top-right corner
+- **Section titles** — shrunk from `1.75rem` to `text-xs uppercase tracking-wider` labels for a cleaner hierarchy
+- **About** — hidden from visitors when empty (no more "No bio added yet" shown publicly)
+- **Projects** — replaced vertical timeline with compact card tiles (name, status badge, description, GitHub link)
+- **Education details card** — icon-row layout per field (`GraduationCap`, `BookOpen`, `Star`, `Calendar`, `Globe`); CV download is a ghost button instead of heavy green CTA; entire section hidden when no fields are set
+- **Skills** — switched to green-tinted pills (`bg-[#f0f9f5] text-[#005232]`); hidden from visitors when empty; "Add" link replaces "Add Skill" button
+- **Certifications** — ExternalLink icon fades in on row hover
+- All cards unified to `rounded-2xl border border-[#e5e2e1] shadow-sm` style
+
+---
+
+## Phase 16 — Company Assessments: Data Fix + Navigation ✅ COMPLETE (2026-05-08)
+
+Fixed two bugs on `/company/assessments` and one on the applicant detail page:
+
+- **Data bug (`getCompanyAssessments`)** — query returned empty array because PostgREST rejected the nested `profiles!job_applications_applicant_id_fkey` join; that FK points to `auth.users`, not `profiles`. Fixed with two-step query: assessments + job titles first, then a separate `profiles` SELECT by applicant IDs, merged in JS. Same root cause as the messaging bug fixed in Sprint 8.
+- **Clickability bug** — applicant name was a `<span>` with no handler; entire card is now a `<Link>` to `/company/applicants/[applicationId]`. Removed the separate "Action / View →" column; columns rebalanced.
+- **Name fallback** — empty `first_name`/`last_name` (incomplete test profiles) now render as `"Applicant"` in both the assessments list and the applicant detail page header.
 
 ---
 

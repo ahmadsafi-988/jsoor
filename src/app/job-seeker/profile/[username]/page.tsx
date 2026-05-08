@@ -1,13 +1,14 @@
-// app/job-seeker/profile/[username]/page.tsx
 import { notFound } from "next/navigation";
 import React from "react";
-import { MapPin, Plus, Download, ExternalLink, Award, GitBranch } from "lucide-react";
+import {
+  MapPin, Plus, Download, ExternalLink, Award, GitBranch,
+  GraduationCap, BookOpen, Star, Globe, Calendar,
+} from "lucide-react";
 import Link from "next/link";
 
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
 import { getCvSignedUrl } from "@/lib/storage/cv";
-import type { project, badge } from "@/lib/global_types";
-import type { user } from "@/lib/global_types";
+import type { project, badge, user } from "@/lib/global_types";
 
 // ─── Profile Header Card ──────────────────────────────────────────────────────
 function ProfileHeaderCard({
@@ -20,49 +21,60 @@ function ProfileHeaderCard({
   username: string;
 }) {
   return (
-    <section className="bg-[#f6f3f2] rounded-xl p-8 relative overflow-hidden">
-      <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#78fbb6] rounded-full blur-[100px] opacity-20 pointer-events-none" />
-      <div className="flex flex-col sm:flex-row gap-8 items-start sm:items-center relative z-10">
-        <div className="w-32 h-32 rounded-xl bg-[#e5e2e1] overflow-hidden shrink-0 shadow-[0_20px_40px_rgba(0,109,67,0.08)] flex items-center justify-center">
-          {user.avatar_url ? (
-            <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
-          ) : (
-            <span className="font-headline font-bold text-4xl text-[#3d4a41]">
-              {user.first_name.slice(0, 2).toUpperCase()}
-            </span>
+    <section className="bg-white rounded-2xl overflow-hidden border border-[#e5e2e1] shadow-sm">
+      {/* Banner */}
+      <div className="h-28 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a] relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/10 rounded-full" />
+        <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-black/5 rounded-full" />
+        <div className="absolute right-1/3 top-1/4 w-16 h-16 bg-white/5 rounded-full" />
+      </div>
+
+      {/* Avatar + actions row */}
+      <div className="px-6 pb-6">
+        <div className="flex items-end justify-between -mt-12 mb-4">
+          <div className="w-24 h-24 rounded-full bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center shrink-0">
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="w-full h-full bg-[#e5e2e1] flex items-center justify-center font-headline font-bold text-2xl text-[#3d4a41]">
+                {user.first_name.slice(0, 2).toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          {isOwnProfile && (
+            <Link
+              href={`/job-seeker/profile/${username}/edit`}
+              className="px-4 py-2 rounded-lg border border-[#e5e2e1] text-sm font-medium text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
+            >
+              Edit Profile
+            </Link>
           )}
         </div>
 
-        <div className="flex-1">
-          <h1 className="font-headline text-[2.5rem] font-bold text-[#1c1b1b] leading-tight tracking-tight">
-            {user.first_name} {user.last_name}
-          </h1>
-          <p className="text-[#3d4a41] font-medium mt-1 text-lg">
-            {user.degree ?? "Graduate"} · {user.bio ? "Available for Work" : "Open to Opportunities"}
-          </p>
-          {user.location && (
-            <div className="flex items-center gap-2 mt-4 text-[#5f5e5e]">
-              <MapPin className="w-4 h-4" />
-              <span className="text-sm">{user.location}</span>
-            </div>
-          )}
-        </div>
-
-        {isOwnProfile && (
-          <Link
-            href={`/job-seeker/profile/${username}/edit`}
-            className="bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white px-6 py-3 rounded-lg font-semibold hover:brightness-110 hover:shadow-[0_0_20px_rgba(0,168,107,0.4)] transition-all shrink-0 text-sm"
-          >
-            Edit Profile
-          </Link>
+        {/* Name + headline */}
+        <h1 className="font-headline text-2xl font-bold text-[#1c1b1b] leading-tight">
+          {user.first_name} {user.last_name}
+        </h1>
+        {user.degree && (
+          <p className="text-sm text-[#3d4a41] mt-0.5">{user.degree}</p>
+        )}
+        {user.location && (
+          <div className="flex items-center gap-1.5 mt-2 text-[#5f5e5e]">
+            <MapPin className="w-3.5 h-3.5 shrink-0" />
+            <span className="text-sm">{user.location}</span>
+          </div>
+        )}
+        {user.bio && (
+          <p className="text-sm text-[#5f5e5e] mt-3 leading-relaxed line-clamp-2">{user.bio}</p>
         )}
       </div>
     </section>
   );
 }
 
-// ─── Experience / Bio Section ──────────────────────────────────────────────────
-function ExperienceSection({
+// ─── About Section ────────────────────────────────────────────────────────────
+function AboutSection({
   bio,
   isOwnProfile,
   username,
@@ -71,26 +83,25 @@ function ExperienceSection({
   isOwnProfile: boolean;
   username: string;
 }) {
+  if (!bio && !isOwnProfile) return null;
   return (
-    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
-          About
-        </h2>
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">About</h2>
         {isOwnProfile && (
           <Link
             href={`/job-seeker/profile/${username}/edit`}
-            className="text-[#006d43] hover:bg-[#f6f3f2] p-2 rounded-full transition-colors"
+            className="p-1.5 rounded-lg text-[#006d43] hover:bg-[#f6f3f2] transition-colors"
             title="Edit bio"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4" />
           </Link>
         )}
       </div>
       {bio ? (
-        <p className="text-[#3d4a41] leading-relaxed">{bio}</p>
+        <p className="text-sm text-[#3d4a41] leading-relaxed">{bio}</p>
       ) : (
-        <p className="text-[#5f5e5e] text-sm italic">No bio added yet.</p>
+        <p className="text-sm text-[#5f5e5e] italic">No bio added yet.</p>
       )}
     </section>
   );
@@ -100,39 +111,34 @@ function ExperienceSection({
 function ProjectsSection({ projects }: { projects: project[] }) {
   if (projects.length === 0) return null;
   return (
-    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
-          Projects
-        </h2>
-      </div>
-      <div className="space-y-8 relative before:absolute before:inset-y-0 before:left-[11px] before:w-[2px] before:bg-[#e5e2e1]">
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider mb-5">Projects</h2>
+      <div className="space-y-3">
         {projects.map((project) => (
-          <div key={project.id} className="relative pl-10">
-            <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-[#f6f3f2] border-2 border-[#006d43] flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-[#78fbb6] shadow-[0_0_10px_rgba(120,251,182,0.8)]" />
-            </div>
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="font-semibold text-[#1c1b1b]">{project.name}</h3>
-                <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${
+          <div key={project.id} className="p-4 rounded-xl bg-[#f6f3f2] border border-[#e5e2e1]">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-sm text-[#1c1b1b]">{project.name}</h3>
+              <span
+                className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
                   project.status === "Live"
                     ? "bg-[#78fbb6]/30 text-[#005232]"
                     : "bg-[#e5e2e1] text-[#5f5e5e]"
-                }`}>
-                  {project.status}
-                </span>
-              </div>
+                }`}
+              >
+                {project.status}
+              </span>
             </div>
-            <p className="text-sm text-[#3d4a41] mt-3 leading-relaxed">{project.description}</p>
+            {project.description && (
+              <p className="text-xs text-[#3d4a41] mt-2 leading-relaxed">{project.description}</p>
+            )}
             {project.url && (
               <a
                 href={project.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs text-[#006d43] hover:text-[#00a86b] transition-colors"
+                className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-[#006d43] hover:text-[#00a86b] transition-colors"
               >
-                <GitBranch className="w-3.5 h-3.5" />
+                <GitBranch className="w-3 h-3" />
                 View on GitHub
               </a>
             )}
@@ -145,58 +151,75 @@ function ProjectsSection({ projects }: { projects: project[] }) {
 
 // ─── Details Card ─────────────────────────────────────────────────────────────
 function DetailsCard({ user, cvSignedUrl }: { user: user; cvSignedUrl: string | null }) {
+  const hasAny =
+    user.institution || user.degree || user.gpa || user.edu_start || user.edu_end || user.website || cvSignedUrl;
+  if (!hasAny) return null;
+
   return (
-    <section className="bg-[#f6f3f2] rounded-xl p-8">
-      <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b] mb-6">
-        Details
-      </h2>
-      <div className="space-y-5">
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider mb-5">Education</h2>
+      <div className="space-y-4">
         {user.institution && (
-          <div>
-            <p className="text-sm text-[#5f5e5e] mb-1">Institution</p>
-            <p className="font-medium text-[#1c1b1b] text-sm">{user.institution}</p>
+          <div className="flex items-start gap-3">
+            <GraduationCap className="w-4 h-4 text-[#006d43] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] text-[#5f5e5e]">Institution</p>
+              <p className="text-sm font-medium text-[#1c1b1b]">{user.institution}</p>
+            </div>
           </div>
         )}
         {user.degree && (
-          <div>
-            <p className="text-sm text-[#5f5e5e] mb-1">Degree</p>
-            <p className="font-medium text-[#1c1b1b] text-sm">{user.degree}</p>
+          <div className="flex items-start gap-3">
+            <BookOpen className="w-4 h-4 text-[#006d43] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] text-[#5f5e5e]">Degree</p>
+              <p className="text-sm font-medium text-[#1c1b1b]">{user.degree}</p>
+            </div>
           </div>
         )}
         {user.gpa && (
-          <div>
-            <p className="text-sm text-[#5f5e5e] mb-1">GPA</p>
-            <p className="font-medium text-[#1c1b1b] text-sm">{user.gpa}</p>
+          <div className="flex items-start gap-3">
+            <Star className="w-4 h-4 text-[#006d43] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] text-[#5f5e5e]">GPA</p>
+              <p className="text-sm font-medium text-[#1c1b1b]">{user.gpa}</p>
+            </div>
           </div>
         )}
         {(user.edu_start || user.edu_end) && (
-          <div>
-            <p className="text-sm text-[#5f5e5e] mb-1">Period</p>
-            <p className="font-medium text-[#1c1b1b] text-sm">
-              {user.edu_start ?? "?"} — {user.edu_end ?? "Present"}
-            </p>
+          <div className="flex items-start gap-3">
+            <Calendar className="w-4 h-4 text-[#006d43] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] text-[#5f5e5e]">Period</p>
+              <p className="text-sm font-medium text-[#1c1b1b]">
+                {user.edu_start ?? "?"} — {user.edu_end ?? "Present"}
+              </p>
+            </div>
           </div>
         )}
         {user.website && (
-          <div>
-            <p className="text-sm text-[#5f5e5e] mb-1">Website</p>
-            <a
-              href={user.website.startsWith("http") ? user.website : `https://${user.website}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#006d43] text-sm hover:text-[#00a86b] transition-colors"
-            >
-              {user.website}
-            </a>
+          <div className="flex items-start gap-3">
+            <Globe className="w-4 h-4 text-[#006d43] mt-0.5 shrink-0" />
+            <div>
+              <p className="text-[11px] text-[#5f5e5e]">Website</p>
+              <a
+                href={user.website.startsWith("http") ? user.website : `https://${user.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-[#006d43] hover:underline break-all"
+              >
+                {user.website}
+              </a>
+            </div>
           </div>
         )}
         {cvSignedUrl && (
           <a
             href={cvSignedUrl}
             download
-            className="flex items-center gap-2 mt-2 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white px-4 py-2.5 rounded-lg text-sm font-semibold hover:brightness-110 transition-all shadow-[0_8px_16px_rgba(0,109,67,0.15)]"
+            className="flex items-center justify-center gap-2 mt-2 w-full bg-[#f6f3f2] border border-[#e5e2e1] text-[#1c1b1b] px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#e5e2e1] transition-colors"
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 text-[#006d43]" />
             Download CV
           </a>
         )}
@@ -215,32 +238,34 @@ function SkillsCard({
   isOwnProfile: boolean;
   username: string;
 }) {
+  if (skills.length === 0 && !isOwnProfile) return null;
   return (
-    <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
-          Skills
-        </h2>
-      </div>
-      <div className="flex flex-wrap gap-3">
-        {skills.map((skill) => (
-          <span
-            key={skill}
-            className="bg-[#ebe7e7] text-[#1c1b1b] px-4 py-2 rounded-full text-sm font-medium border border-[#bccabe]/20 hover:border-[#006d43]/50 transition-colors cursor-default"
-          >
-            {skill}
-          </span>
-        ))}
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">Skills</h2>
         {isOwnProfile && (
           <Link
             href={`/job-seeker/profile/${username}/edit`}
-            className="border border-[#6d7a70] text-[#006d43] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#006d43]/5 transition-colors flex items-center gap-1"
+            className="flex items-center gap-1 text-xs font-medium text-[#006d43] hover:underline"
           >
-            <Plus className="w-4 h-4" />
-            Add Skill
+            <Plus className="w-3.5 h-3.5" /> Add
           </Link>
         )}
       </div>
+      {skills.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {skills.map((skill) => (
+            <span
+              key={skill}
+              className="bg-[#f0f9f5] text-[#005232] text-xs px-3 py-1.5 rounded-full font-medium border border-[#78fbb6]/40"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-[#5f5e5e] italic">No skills added yet.</p>
+      )}
     </section>
   );
 }
@@ -249,30 +274,28 @@ function SkillsCard({
 function BadgesCard({ badges }: { badges: badge[] }) {
   if (badges.length === 0) return null;
   return (
-    <section className="bg-[#f6f3f2] rounded-xl p-8">
-      <div className="flex items-center gap-2 mb-6">
-        <Award className="w-5 h-5 text-[#006d43]" />
-        <h2 className="font-headline text-[1.25rem] font-medium text-[#1c1b1b]">
-          Certifications
-        </h2>
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <Award className="w-4 h-4 text-[#006d43]" />
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">Certifications</h2>
       </div>
-      <div className="space-y-3">
+      <div className="space-y-1">
         {badges.map((b) => (
           <a
             key={b.id}
             href={b.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#e5e2e1] transition-colors"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f6f3f2] transition-colors group"
           >
-            <div className="w-10 h-10 rounded-lg bg-[#e5e2e1] overflow-hidden shrink-0 flex items-center justify-center">
-              <img src={b.image} alt={b.name} className="w-10 h-10 object-contain" />
+            <div className="w-9 h-9 rounded-lg bg-[#f6f3f2] overflow-hidden shrink-0 flex items-center justify-center group-hover:bg-[#e5e2e1] transition-colors">
+              <img src={b.image} alt={b.name} className="w-8 h-8 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-[#1c1b1b] truncate">{b.name}</p>
-              <p className="text-xs text-[#5f5e5e] truncate">{b.issuer} · {b.date}</p>
+              <p className="text-xs font-semibold text-[#1c1b1b] truncate">{b.name}</p>
+              <p className="text-[11px] text-[#5f5e5e] truncate">{b.issuer} · {b.date}</p>
             </div>
-            <ExternalLink className="w-3.5 h-3.5 text-[#5f5e5e] shrink-0" />
+            <ExternalLink className="w-3.5 h-3.5 text-[#5f5e5e] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
         ))}
       </div>
@@ -304,17 +327,17 @@ export default async function ProfilePage({
     : null;
 
   return (
-    <div className="p-8 xl:p-12">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="p-6 xl:p-8">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left column */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 space-y-6">
           <ProfileHeaderCard user={flatUser} isOwnProfile={isOwnProfile} username={username} />
-          <ExperienceSection bio={job_seeker_profile.bio} isOwnProfile={isOwnProfile} username={username} />
+          <AboutSection bio={job_seeker_profile.bio} isOwnProfile={isOwnProfile} username={username} />
           <ProjectsSection projects={projects} />
         </div>
 
         {/* Right column */}
-        <div className="lg:col-span-4 space-y-8">
+        <div className="lg:col-span-4 space-y-6">
           <DetailsCard user={flatUser} cvSignedUrl={cvSignedUrl} />
           <SkillsCard skills={skills} isOwnProfile={isOwnProfile} username={username} />
           <BadgesCard badges={badges} />
