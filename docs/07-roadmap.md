@@ -1,6 +1,6 @@
 # 07 — Roadmap
 
-> Last updated: 2026-05-06 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete
+> Last updated: 2026-05-08 | Phases 1–9 complete (Sprints 1–9); Sprint 10 dropped (Resend removed — in-app notifications sufficient); Sprint 11 interview simulator blocked on API key; Sprint 12 assessment flow fixes complete; Phase 13 UI polish pass complete
 
 ---
 
@@ -144,6 +144,21 @@ Resend integration removed. In-app notifications (Phase 4) are sufficient for th
 - `OPENAI_API_KEY` configuration + end-to-end test
 - Plan: add to env, test all flows (setup → questions → answers → feedback), optionally persist session history to DB
 - UI + API route fully built — just needs the key in `.env.local`
+
+---
+
+## Phase 13 — UI Polish Pass ✅ COMPLETE (2026-05-08)
+
+Fixed five bugs and dead-UI issues discovered during a systematic code review:
+
+- **Missing `accepted` status** (`company/jobs/[jobId]/applicants/page.tsx`): The `accepted` status added in Phase 10.6 was never wired into the applicants list — no label, fallback gray badge, no filter. Fixed by adding `accepted` to `STATUS_STYLES`, `STATUS_LABELS`, and `FILTER_OPTIONS`.
+- **Dead ArrowRight button** (`job-seeker/job-applications/JobApplicationsClient.tsx`): Non-assessment rows showed an arrow button with no click handler. Removed and replaced with contextual actions: `assessment_sent` → "Take Assessment", `assessment_completed` → "View Submission", all other statuses → no button.
+- **Dead edit buttons on profile** (`job-seeker/profile/[username]/page.tsx`): Three sets of buttons were visible to all visitors (not just owners) with no handlers:
+  - About section Plus button → converted to a `<Link>` to edit page, owner-only
+  - Projects section Edit/Trash buttons → removed (editing is done on the edit page)
+  - Skills section "Add Skill" button → converted to a `<Link>` to edit page, owner-only
+- **Website URL bug** (same file): `href={\`https://${website}\`}` would produce `https://https://...` if the user saved a full URL. Fixed with `startsWith("http")` guard.
+- **Status column too narrow** (`company/assessments/page.tsx`): Status column was `col-span-1` (~80px) — too narrow for badge text. Bumped to `col-span-2`; Job column reduced from 3→2 to keep grid at 12.
 
 ---
 

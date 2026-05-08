@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building, ArrowRight, ClipboardList, X, CheckCircle } from "lucide-react";
+import { Building, ClipboardList, X, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
 type AppStatus =
@@ -115,6 +115,7 @@ export function JobApplicationsClient({ initialApplications }: { initialApplicat
           const job = app.job;
           const company = job?.company;
           const isAssessmentSent = app.status === "assessment_sent";
+          const isAssessmentCompleted = app.status === "assessment_completed";
 
           return (
             <div
@@ -169,13 +170,16 @@ export function JobApplicationsClient({ initialApplications }: { initialApplicat
                     href="/job-seeker/assessments"
                     className="px-4 py-2 rounded-lg bg-[#006d43] text-white text-xs font-semibold hover:bg-[#00a86b] transition-colors shadow-[0_8px_16px_rgba(0,109,67,0.1)]"
                   >
-                    View Task
+                    Take Assessment
                   </Link>
-                ) : (
-                  <button className="w-8 h-8 rounded-full flex items-center justify-center text-[#3d4a41] hover:bg-[#e5e2e1] hover:text-[#1c1b1b] transition-colors">
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                )}
+                ) : isAssessmentCompleted ? (
+                  <Link
+                    href="/job-seeker/assessments"
+                    className="px-4 py-2 rounded-lg border border-[#006d43]/30 text-[#006d43] text-xs font-semibold hover:bg-[#006d43]/5 transition-colors"
+                  >
+                    View Submission
+                  </Link>
+                ) : null}
               </div>
             </div>
           );

@@ -9,6 +9,7 @@ const STATUS_STYLES: Record<string, string> = {
   assessment_sent:       "bg-purple-50 text-purple-700",
   assessment_completed:  "bg-[#78fbb6]/20 text-[#005232]",
   shortlisted:           "bg-[#006d43]/10 text-[#006d43]",
+  accepted:              "bg-emerald-500/15 text-emerald-700",
   rejected:              "bg-red-50 text-red-600",
 };
 
@@ -18,6 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
   assessment_sent:       "Assessment Sent",
   assessment_completed:  "Assessment Done",
   shortlisted:           "Shortlisted",
+  accepted:              "Accepted",
   rejected:              "Rejected",
 };
 
@@ -28,6 +30,7 @@ const FILTER_OPTIONS = [
   { value: "shortlisted",        label: "Shortlisted" },
   { value: "assessment_sent",    label: "Assessment Sent" },
   { value: "assessment_completed", label: "Assessment Done" },
+  { value: "accepted",           label: "Accepted" },
   { value: "rejected",           label: "Rejected" },
 ];
 

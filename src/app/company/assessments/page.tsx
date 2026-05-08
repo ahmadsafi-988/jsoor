@@ -60,8 +60,8 @@ export default async function CompanyAssessmentsPage() {
           <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-semibold text-[#3d4a41] uppercase tracking-wider">
             <div className="col-span-3">Assessment</div>
             <div className="col-span-3">Applicant</div>
-            <div className="col-span-3">Job</div>
-            <div className="col-span-1">Status</div>
+            <div className="col-span-2">Job</div>
+            <div className="col-span-2">Status</div>
             <div className="col-span-2 text-right">Action</div>
           </div>
 
@@ -91,10 +91,10 @@ export default async function CompanyAssessmentsPage() {
                     </div>
                     <span className="text-sm font-medium text-[#1c1b1b] truncate">{name}</span>
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2">
                     <span className="text-sm text-[#3d4a41] truncate">{app?.job?.title ?? "—"}</span>
                   </div>
-                  <div className="col-span-1">
+                  <div className="col-span-2">
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${STATUS_STYLES[a.status] ?? "bg-gray-100 text-gray-600"}`}>
                       {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
                     </span>

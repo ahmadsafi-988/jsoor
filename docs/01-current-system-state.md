@@ -1,12 +1,12 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-04 | Source: Full codebase analysis + session work (Sprints 1–8)
+> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass)
 
 ---
 
 ## Summary
 
-The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are live with real DB backends and Supabase Realtime. Assessment templates are fully built (Sprint 6). Job reporting (Report button + server action), job feed pagination, and company profile have all been completed (Sprint 7). Three messaging system bugs were fixed and the chat UI fully rewritten in Sprint 8 (broken PostgREST join, empty name fallback, conversation sort order). The only remaining feature is the AI interview simulator (blocked on API key).
+The core hiring workflow (job → apply → assess → decide) is complete end-to-end. The admin panel is fully built. Messaging and notifications are live with real DB backends and Supabase Realtime. Assessment templates are fully built (Sprint 6). Job reporting (Report button + server action), job feed pagination, and company profile have all been completed (Sprint 7). Three messaging system bugs were fixed and the chat UI fully rewritten in Sprint 8 (broken PostgREST join, empty name fallback, conversation sort order). A UI polish pass (2026-05-08) fixed dead buttons, missing status values, and a URL bug. The only remaining feature is the AI interview simulator (deferred to teammate — UI + API route fully built, needs `OPENAI_API_KEY`).
 
 ---
 
@@ -33,11 +33,12 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Job Seeker Profile (`/job-seeker/profile/[username]`)
 - [x] Public profile page (accessible without login)
 - [x] Header card: avatar, name, degree, location, edit button (own profile only)
-- [x] About/bio section
-- [x] Projects section with timeline layout
-- [x] Skills section with tags
+- [x] About/bio section — edit shortcut (Plus icon) visible to owner only, links to edit page
+- [x] Projects section with timeline layout — no edit buttons shown (editing is on the edit page)
+- [x] Skills section with tags — "Add Skill" link visible to owner only, links to edit page
 - [x] Badges/certifications section
 - [x] CV download via Supabase signed URL
+- [x] Website link — safe URL handling (`startsWith("http")` guard prevents double `https://`)
 - [x] Edit profile (`/job-seeker/profile/[username]/edit`) — cache properly invalidated after edits
 
 ### Job Feed (`/job-seeker/home`)
@@ -56,8 +57,9 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Job Applications (`/job-seeker/job-applications`)
 - [x] List of applied jobs with status badge and date
 - [x] Filter tabs by status
-- [x] Application status: applied, under_review, assessment_sent, assessment_completed, shortlisted, rejected
-- [x] "View Task" shortcut for assessment_sent applications
+- [x] Application status: applied, under_review, assessment_sent, assessment_completed, shortlisted, accepted, rejected
+- [x] "Take Assessment" action button for `assessment_sent` applications
+- [x] "View Submission" action button for `assessment_completed` applications
 
 ### Saved Jobs (`/job-seeker/saved-jobs`)
 - [x] View saved jobs
@@ -147,7 +149,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 - [x] Skill picker component for attaching required skills
 
 ### Company Applicants
-- [x] Applicants per job (`/company/jobs/[jobId]/applicants`)
+- [x] Applicants per job (`/company/jobs/[jobId]/applicants`) — all 7 statuses covered including `accepted`
 - [x] Applicant detail (`/company/applicants/[applicationId]`):
   - Full applicant profile (bio, education, skills, projects, badges)
   - CV download (signed URL)
@@ -162,6 +164,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Company Assessments (`/company/assessments`)
 - [x] List all assessments across all applications
 - [x] Filter by status (pending / submitted / reviewed)
+- [x] Status column properly sized (`col-span-2`) — badge text no longer clipped
 - [x] Review individual assessments
 
 ### Company Messages (`/company/messages`)
@@ -323,6 +326,6 @@ All structural debt from the previous state has been cleaned:
 
 ## Remaining Known Issues
 
-- `OPENAI_API_KEY` missing — interview simulator blocked at runtime
+- `OPENAI_API_KEY` missing — interview simulator deferred to teammate; UI + API route are fully built
 - Supabase types file is manually maintained — regenerate with CLI when access token is available
 - "Recent Setups" in interview simulator — still hardcoded, not wired to DB history

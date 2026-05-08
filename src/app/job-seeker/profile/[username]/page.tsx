@@ -1,7 +1,7 @@
 // app/job-seeker/profile/[username]/page.tsx
 import { notFound } from "next/navigation";
 import React from "react";
-import { MapPin, Plus, Edit2, Trash2, Download, ExternalLink, Award, GitBranch } from "lucide-react";
+import { MapPin, Plus, Download, ExternalLink, Award, GitBranch } from "lucide-react";
 import Link from "next/link";
 
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
@@ -62,16 +62,30 @@ function ProfileHeaderCard({
 }
 
 // ─── Experience / Bio Section ──────────────────────────────────────────────────
-function ExperienceSection({ bio }: { bio: string | null }) {
+function ExperienceSection({
+  bio,
+  isOwnProfile,
+  username,
+}: {
+  bio: string | null;
+  isOwnProfile: boolean;
+  username: string;
+}) {
   return (
     <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
       <div className="flex justify-between items-center mb-6">
         <h2 className="font-headline text-[1.75rem] font-medium text-[#1c1b1b]">
           About
         </h2>
-        <button className="text-[#006d43] hover:bg-[#f6f3f2] p-2 rounded-full transition-colors">
-          <Plus className="w-5 h-5" />
-        </button>
+        {isOwnProfile && (
+          <Link
+            href={`/job-seeker/profile/${username}/edit`}
+            className="text-[#006d43] hover:bg-[#f6f3f2] p-2 rounded-full transition-colors"
+            title="Edit bio"
+          >
+            <Plus className="w-5 h-5" />
+          </Link>
+        )}
       </div>
       {bio ? (
         <p className="text-[#3d4a41] leading-relaxed">{bio}</p>
@@ -108,14 +122,6 @@ function ProjectsSection({ projects }: { projects: project[] }) {
                 }`}>
                   {project.status}
                 </span>
-              </div>
-              <div className="flex gap-2">
-                <button className="text-[#5f5e5e] hover:text-[#006d43] transition-colors">
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button className="text-[#5f5e5e] hover:text-red-500 transition-colors">
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
             </div>
             <p className="text-sm text-[#3d4a41] mt-3 leading-relaxed">{project.description}</p>
@@ -175,7 +181,7 @@ function DetailsCard({ user, cvSignedUrl }: { user: user; cvSignedUrl: string | 
           <div>
             <p className="text-sm text-[#5f5e5e] mb-1">Website</p>
             <a
-              href={`https://${user.website}`}
+              href={user.website.startsWith("http") ? user.website : `https://${user.website}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#006d43] text-sm hover:text-[#00a86b] transition-colors"
@@ -200,7 +206,15 @@ function DetailsCard({ user, cvSignedUrl }: { user: user; cvSignedUrl: string | 
 }
 
 // ─── Skills Card ──────────────────────────────────────────────────────────────
-function SkillsCard({ skills }: { skills: string[] }) {
+function SkillsCard({
+  skills,
+  isOwnProfile,
+  username,
+}: {
+  skills: string[];
+  isOwnProfile: boolean;
+  username: string;
+}) {
   return (
     <section className="bg-white rounded-xl p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
       <div className="flex justify-between items-center mb-6">
@@ -217,10 +231,15 @@ function SkillsCard({ skills }: { skills: string[] }) {
             {skill}
           </span>
         ))}
-        <button className="border border-[#6d7a70] text-[#006d43] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#006d43]/5 transition-colors flex items-center gap-1">
-          <Plus className="w-4 h-4" />
-          Add Skill
-        </button>
+        {isOwnProfile && (
+          <Link
+            href={`/job-seeker/profile/${username}/edit`}
+            className="border border-[#6d7a70] text-[#006d43] px-4 py-2 rounded-full text-sm font-medium hover:bg-[#006d43]/5 transition-colors flex items-center gap-1"
+          >
+            <Plus className="w-4 h-4" />
+            Add Skill
+          </Link>
+        )}
       </div>
     </section>
   );
@@ -290,14 +309,14 @@ export default async function ProfilePage({
         {/* Left column */}
         <div className="lg:col-span-8 space-y-8">
           <ProfileHeaderCard user={flatUser} isOwnProfile={isOwnProfile} username={username} />
-          <ExperienceSection bio={job_seeker_profile.bio} />
+          <ExperienceSection bio={job_seeker_profile.bio} isOwnProfile={isOwnProfile} username={username} />
           <ProjectsSection projects={projects} />
         </div>
 
         {/* Right column */}
         <div className="lg:col-span-4 space-y-8">
           <DetailsCard user={flatUser} cvSignedUrl={cvSignedUrl} />
-          <SkillsCard skills={skills} />
+          <SkillsCard skills={skills} isOwnProfile={isOwnProfile} username={username} />
           <BadgesCard badges={badges} />
         </div>
       </div>
