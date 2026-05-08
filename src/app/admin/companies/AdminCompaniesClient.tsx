@@ -41,7 +41,7 @@ export function AdminCompaniesClient({ companies }: { companies: AdminCompany[] 
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
                   {company.logo_url ? (
-                    <img src={company.logo_url} alt={company.name} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                    <img src={company.logo_url} alt={company.name} className="w-8 h-8 rounded-lg object-contain shrink-0 bg-white p-0.5 border border-[#e5e2e1]" />
                   ) : (
                     <div className="w-8 h-8 rounded-lg bg-neutral-100 shrink-0" />
                   )}

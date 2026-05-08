@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building, Flag, Calendar, Banknote, CheckCircle2 } from "lucide-react";
 import { applyToJob, saveJob, unsaveJob, reportJob } from "@/lib/company/actions";
 import type { JobWithSkillsAndMatch } from "@/lib/company/data";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 const TYPE_COLORS: Record<string, string> = {
   "Full-time":  "bg-[#78fbb6]/20 text-[#005232]",
@@ -89,18 +89,18 @@ function JobDetailSheet({
               {/* Header */}
               <div className="p-8 border-b border-[#e5e2e1]">
                 <div className="flex items-start gap-4 mb-5">
-                  <div className="w-14 h-14 rounded-xl bg-[#f6f3f2] overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1]">
+                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1] p-1.5">
                     {job.company?.logo_url ? (
-                      <img src={job.company.logo_url} alt={job.company.name ?? ""} className="w-full h-full object-cover" />
+                      <img src={job.company.logo_url} alt={job.company.name ?? ""} className="w-full h-full object-contain" />
                     ) : (
                       <Building className="w-6 h-6 text-[#3d4a41]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <h2 className="font-headline text-xl font-bold text-[#1c1b1b] leading-tight">
+                      <SheetTitle className="font-headline text-xl font-bold text-[#1c1b1b] leading-tight">
                         {job.title}
-                      </h2>
+                      </SheetTitle>
                       <MatchBadge matchCount={job.matchCount} matchTotal={job.matchTotal} />
                     </div>
                     <p className="text-sm text-[#5f5e5e]">{job.company?.name ?? "Company"}</p>
@@ -304,9 +304,9 @@ function JobCard({
       <div className="relative z-10 flex flex-col gap-4">
         {/* Top row — save / report (not part of clickable zone) */}
         <div className="flex items-start justify-between gap-3">
-          <div className="w-12 h-12 rounded-xl bg-[#f6f3f2] overflow-hidden shrink-0 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-white overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1] p-1.5">
             {job.company?.logo_url ? (
-              <img src={job.company.logo_url} alt={job.company.name} className="w-full h-full object-cover" />
+              <img src={job.company.logo_url} alt={job.company.name} className="w-full h-full object-contain" />
             ) : (
               <Building className="w-6 h-6 text-[#3d4a41]" />
             )}

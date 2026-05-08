@@ -31,7 +31,7 @@ function ProfileHeaderCard({
 
       {/* Avatar + actions row */}
       <div className="px-6 pb-6">
-        <div className="flex items-end justify-between -mt-12 mb-4">
+        <div className="flex items-end justify-between -mt-12 mb-4 relative z-10">
           <div className="w-24 h-24 rounded-full bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center shrink-0">
             {user.avatar_url ? (
               <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />

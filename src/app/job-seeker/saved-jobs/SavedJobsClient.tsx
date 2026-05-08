@@ -80,9 +80,9 @@ export function SavedJobsClient({ initialJobs, appliedJobIds }: Props) {
           >
             <div className="flex items-start gap-4">
               {/* Logo */}
-              <div className="w-12 h-12 rounded-xl bg-[#f6f3f2] overflow-hidden shrink-0 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-white border border-[#e5e2e1] overflow-hidden shrink-0 flex items-center justify-center p-1.5">
                 {job.company?.logo_url ? (
-                  <img src={job.company.logo_url} alt={job.company.name} className="w-full h-full object-cover" />
+                  <img src={job.company.logo_url} alt={job.company.name} className="w-full h-full object-contain" />
                 ) : (
                   <Building className="w-6 h-6 text-[#3d4a41]" />
                 )}

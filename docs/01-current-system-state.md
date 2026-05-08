@@ -1,6 +1,6 @@
 # 01 — Current System State
 
-> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass + job detail sheet + profile redesign + assessments bug fixes)
+> Last updated: 2026-05-08 | Source: Full codebase analysis + session work (Sprints 1–8 + UI polish pass + job detail sheet + profile redesign + assessments bug fixes + logo rendering + profile avatar z-index fix)
 
 ---
 
@@ -32,7 +32,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 
 ### Job Seeker Profile (`/job-seeker/profile/[username]`)
 - [x] Public profile page (accessible without login)
-- [x] **Redesigned header** — green gradient banner, circular avatar overlapping the banner, name / degree / location below; "Edit Profile" button top-right (own profile only)
+- [x] **Redesigned header** — green gradient banner, circular avatar overlapping the banner (`relative z-10` ensures avatar always renders above the banner), name / degree / location below; "Edit Profile" button top-right (own profile only)
 - [x] About section — hidden from visitors when empty; Plus shortcut (owner only) links to edit page
 - [x] Projects section — card tiles with status badge and GitHub link (no timeline)
 - [x] Skills section — green-tinted pill tags; "Add" link (owner only); hidden from visitors when empty
@@ -60,6 +60,7 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
   - All required skills with match counter ("X of Y matched")
   - Sticky footer with Apply Now → inline cover letter form; submitting closes sheet and marks card Applied; already-applied state shown with green confirmation
   - One shared Sheet instance — switching jobs swaps content without re-mounting
+  - Job title rendered as `<SheetTitle>` (Radix accessibility requirement — fixes console warning)
 
 ### Job Applications (`/job-seeker/job-applications`)
 - [x] List of applied jobs with status badge and date
@@ -189,7 +190,8 @@ The core hiring workflow (job → apply → assess → decide) is complete end-t
 ### Company Profile (`/company/profile`)
 - [x] Full form for editing company name, username, description, industry, size, location, founded year, website
 - [x] Data loaded client-side from `companies` + `profiles` tables; `upsertCompany` server action writes both
-- [x] **Company logo upload** — separate card above the form; uploads to `avatars/company-logos/{userId}.{ext}` (upsert); saves public URL directly to `companies.logo_url`; preview updates immediately without saving the form
+- [x] **Company logo upload** — separate card above the form; uploads to `avatars/company-logos/{userId}.{ext}` (upsert); saves public URL directly to `companies.logo_url`; preview updates immediately without saving the form; single camera-button trigger (duplicate "Change Photo" text button removed)
+- [x] **Logo rendering** — all company logo `<img>` tags across 7 pages use `object-contain` + white background + padding so logos are never cropped; previously all used `object-cover`
 
 ### Email Notifications (Supabase Edge Function)
 - [x] Edge function `email-notification` exists in `supabase/functions/`

@@ -25,9 +25,9 @@ function InstructionsScreen({
   return (
     <div className="bg-white rounded-2xl border border-[#e5e2e1] overflow-hidden">
       <div className="p-8 flex flex-col items-center text-center gap-6">
-        <div className="w-14 h-14 rounded-2xl bg-[#f0edec] flex items-center justify-center shrink-0 overflow-hidden">
+        <div className="w-14 h-14 rounded-2xl bg-white border border-[#e5e2e1] flex items-center justify-center shrink-0 overflow-hidden p-2">
           {company?.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+            <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain" />
           ) : (
             <Building className="w-6 h-6 text-[#006d43]" />
           )}
@@ -345,9 +345,9 @@ function AssessmentSummaryCard({
     <div className="bg-white rounded-2xl border border-[#e5e2e1] overflow-hidden">
       <div className="flex items-start justify-between p-6">
         <div className="flex items-start gap-4">
-          <div className="w-11 h-11 rounded-xl bg-[#f0edec] flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-11 h-11 rounded-xl bg-white border border-[#e5e2e1] flex items-center justify-center shrink-0 overflow-hidden p-1">
             {company?.logo_url ? (
-              <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+              <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain" />
             ) : (
               <Building className="w-5 h-5 text-[#006d43]" />
             )}

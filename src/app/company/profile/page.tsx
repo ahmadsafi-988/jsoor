@@ -119,9 +119,9 @@ export default function CompanyProfilePage() {
       {/* Company photo */}
       <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 mb-5 flex items-center gap-6">
         <div className="relative shrink-0">
-          <div className="w-24 h-24 rounded-2xl bg-[#f6f3f2] border border-[#e5e2e1] overflow-hidden flex items-center justify-center">
+          <div className="w-24 h-24 rounded-2xl bg-white border border-[#e5e2e1] overflow-hidden flex items-center justify-center p-2">
             {logoUrl ? (
-              <img src={logoUrl} alt="Company logo" className="w-full h-full object-cover" />
+              <img src={logoUrl} alt="Company logo" className="w-full h-full object-contain" />
             ) : (
               <Building2 className="w-10 h-10 text-[#3d4a41]" />
             )}
@@ -143,15 +143,6 @@ export default function CompanyProfilePage() {
         <div>
           <p className="font-semibold text-[#1c1b1b] text-sm">Company Logo</p>
           <p className="text-[#5f5e5e] text-xs mt-0.5">Shown on job cards seen by applicants. JPG, PNG or WebP, max 2 MB.</p>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#006d43] border border-[#006d43]/30 px-3 py-1.5 rounded-lg hover:bg-[#006d43]/5 transition-colors disabled:opacity-60"
-          >
-            <Camera className="w-3.5 h-3.5" />
-            {uploading ? "Uploading..." : logoUrl ? "Change Photo" : "Upload Photo"}
-          </button>
         </div>
         <input
           ref={fileRef}

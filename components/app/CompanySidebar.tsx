@@ -114,9 +114,9 @@ export function CompanySidebar() {
 
         {company && (
           <div className="mt-4 pt-4 border-t border-neutral-800 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-neutral-800 overflow-hidden shrink-0 ring-2 ring-[#006d43]/30 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-full bg-white overflow-hidden shrink-0 ring-2 ring-[#006d43]/30 flex items-center justify-center p-0.5">
               {company.logoUrl ? (
-                <img src={company.logoUrl} alt={company.name} className="w-full h-full object-cover" />
+                <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain rounded-full" />
               ) : (
                 <Building2 className="w-4 h-4 text-neutral-400" />
               )}

@@ -130,9 +130,9 @@ export function JobApplicationsClient({ initialApplications }: { initialApplicat
 
               {/* Role & Company */}
               <div className="col-span-5 flex items-center gap-4 relative z-10">
-                <div className="w-11 h-11 rounded-lg bg-[#f0edec] flex items-center justify-center shrink-0 overflow-hidden">
+                <div className="w-11 h-11 rounded-lg bg-white border border-[#e5e2e1] flex items-center justify-center shrink-0 overflow-hidden p-1">
                   {company?.logo_url ? (
-                    <img src={company.logo_url} alt={company.name} className="w-full h-full object-cover" />
+                    <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain" />
                   ) : (
                     <Building className="w-5 h-5 text-[#006d43]" />
                   )}
