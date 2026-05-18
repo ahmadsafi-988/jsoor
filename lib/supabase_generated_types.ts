@@ -783,6 +783,106 @@ export type Database = {
         }
         Relationships: []
       }
+      interview_questions: {
+        Row: {
+          id: string
+          session_id: string
+          question_index: number
+          question_text: string
+          answer_text: string
+          score: number | null
+          strengths: Json | null
+          improvements: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          question_index: number
+          question_text: string
+          answer_text: string
+          score?: number | null
+          strengths?: Json | null
+          improvements?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          question_index?: number
+          question_text?: string
+          answer_text?: string
+          score?: number | null
+          strengths?: Json | null
+          improvements?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      interview_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          job_title: string
+          job_description: string
+          interview_type: string
+          level: string
+          question_count: number
+          status: string
+          overall_score: number | null
+          overall_summary: string | null
+          config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          job_title: string
+          job_description: string
+          interview_type: string
+          level: string
+          question_count: number
+          status?: string
+          overall_score?: number | null
+          overall_summary?: string | null
+          config: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          job_title?: string
+          job_description?: string
+          interview_type?: string
+          level?: string
+          question_count?: number
+          status?: string
+          overall_score?: number | null
+          overall_summary?: string | null
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never
