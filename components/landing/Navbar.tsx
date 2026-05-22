@@ -2,6 +2,7 @@
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { JsoorLogo } from "@/components/JsoorLogo";
 
 const navLinks = [
   { name: "Find Jobs", href: "#features" },
@@ -19,8 +20,8 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-6 flex justify-between items-center py-4">
 
         {/* Logo */}
-        <Link href="/" className="text-2xl font-bold tracking-tight text-neutral-900 font-headline">
-          JSOOR
+        <Link href="/" className="inline-flex items-center">
+          <JsoorLogo className="h-10 w-auto" priority />
         </Link>
 
         {/* Desktop nav links */}

@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Briefcase, ClipboardCheck,
   Building2, LogOut, Bell, MessageSquare,
 } from "lucide-react";
+import { JsoorLogo } from "@/components/JsoorLogo";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -71,7 +72,9 @@ export function CompanySidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-neutral-950 z-50 flex flex-col p-6 shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#00a86b] tracking-tight font-headline">JSOOR</h1>
+        <Link href="/company/home" className="inline-flex items-center">
+          <JsoorLogo variant="white" className="h-10 w-auto" priority />
+        </Link>
         <p className="text-neutral-500 text-xs mt-0.5">Company Portal</p>
       </div>
 

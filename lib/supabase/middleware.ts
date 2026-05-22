@@ -1,33 +1,35 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
-  })
+  });
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    "https://hmisspubbdfjrofycmgc.supabase.co",
+    "sb_publishable_3n1j_ly36hE5MqeqYwAlWw_9XVWQBI-",
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value),
+          );
           supabaseResponse = NextResponse.next({
             request,
-          })
+          });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+            supabaseResponse.cookies.set(name, value, options),
+          );
         },
       },
-    }
-  )
+    },
+  );
 
   // Do not run code between createServerClient and
   // supabase.auth.getClaims(). A simple mistake could make it very hard to debug
@@ -35,51 +37,54 @@ export async function updateSession(request: NextRequest) {
 
   // IMPORTANT: If you remove getClaims() and you use server-side rendering
   // with the Supabase client, your users may be randomly logged out.
-  const { data } = await supabase.auth.getClaims()
-  const user = data?.claims
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims;
 
-
-  const { pathname } = request.nextUrl 
+  const { pathname } = request.nextUrl;
 
   const isPublicRoute =
-    pathname === '/' ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/job-seeker/profile/') ||
-    pathname === '/company/onboarding'
- 
+    pathname === "/" ||
+    pathname.startsWith("/blog") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/job-seeker/profile/") ||
+    pathname === "/company/onboarding";
+
   if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/login";
+    return NextResponse.redirect(url);
   }
 
   // Guard dashboard routes against wrong roles, blocked, or suspended users.
   // Only runs when an authenticated user hits /job-seeker/* or /company/*.
-  if (user && (pathname.startsWith('/job-seeker') || pathname.startsWith('/company'))) {
+  if (
+    user &&
+    (pathname.startsWith("/job-seeker") || pathname.startsWith("/company"))
+  ) {
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, is_blocked, is_suspended')
-      .eq('id', user.sub)
-      .single()
+      .from("profiles")
+      .select("role, is_blocked, is_suspended")
+      .eq("id", user.sub)
+      .single();
 
-    if (profile?.role === 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/admin'
-      return NextResponse.redirect(url)
+    if (profile?.role === "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
     }
 
     if (profile?.is_blocked) {
-      await supabase.auth.signOut()
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/login'
-      url.searchParams.set('error', 'account_blocked')
-      return NextResponse.redirect(url)
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/login";
+      url.searchParams.set("error", "account_blocked");
+      return NextResponse.redirect(url);
     }
 
     if (profile?.is_suspended) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/suspended'
-      return NextResponse.redirect(url)
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/suspended";
+      return NextResponse.redirect(url);
     }
   }
 
@@ -96,5 +101,5 @@ export async function updateSession(request: NextRequest) {
   // If this is not done, you may be causing the browser and server to go out
   // of sync and terminate the user's session prematurely!
 
-  return supabaseResponse
+  return supabaseResponse;
 }

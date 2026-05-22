@@ -1,5 +1,6 @@
 import { ForgotPasswordForm } from "@/components/supabase/forgot-password-form";
 import Link from "next/link";
+import { JsoorLogo } from "@/components/JsoorLogo";
 
 export default function Page() {
   return (
@@ -7,8 +8,8 @@ export default function Page() {
       <div className="w-full max-w-md">
         {/* Brand */}
         <div className="text-center mb-8">
-          <Link href="/">
-            <h1 className="font-headline text-4xl font-black text-[#006d43] tracking-tight">JSOOR</h1>
+          <Link href="/" className="inline-flex justify-center">
+            <JsoorLogo className="h-12 w-auto" priority />
           </Link>
           <p className="text-sm text-[#5f5e5e] mt-1">Smart Career Matching</p>
         </div>

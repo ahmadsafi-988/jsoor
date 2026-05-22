@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, Building2, Users,
-  Flag, ScrollText, LogOut, ShieldCheck,
+  Flag, ScrollText, LogOut, ShieldCheck, BookOpen,
 } from "lucide-react";
+import { JsoorLogo } from "@/components/JsoorLogo";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
   { label: "Dashboard",  href: "/admin",            icon: LayoutDashboard },
   { label: "Jobs",       href: "/admin/jobs",        icon: Briefcase },
+  { label: "Blogs",      href: "/admin/blogs",       icon: BookOpen },
   { label: "Companies",  href: "/admin/companies",   icon: Building2 },
   { label: "Users",      href: "/admin/users",       icon: Users },
   { label: "Reports",    href: "/admin/reports",     icon: Flag },
@@ -30,7 +32,9 @@ export function AdminSidebar() {
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-neutral-950 z-50 flex flex-col p-6 shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex">
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-[#00a86b] tracking-tight font-headline">JSOOR</h1>
+        <Link href="/admin" className="inline-flex items-center">
+          <JsoorLogo variant="white" className="h-10 w-auto" priority />
+        </Link>
         <p className="text-neutral-500 text-xs mt-0.5">Admin Panel</p>
       </div>
 
