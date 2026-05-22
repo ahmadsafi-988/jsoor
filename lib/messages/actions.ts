@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { insertNotification } from "@/lib/notifications/actions";
 
 export type MessageRow = {
   id: string;
@@ -248,6 +249,17 @@ export async function sendMessage(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("job_seeker_id, company_id, application_id")
+    .eq("id", conversationId)
+    .single();
+
+  if (!conv) return { error: "Conversation not found." };
+  if (conv.job_seeker_id !== user.id && conv.company_id !== user.id) {
+    return { error: "Not authorized." };
+  }
+
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -261,6 +273,57 @@ export async function sendMessage(
     .single();
 
   if (error) return { error: error.message };
+
+  const recipientId = conv.job_seeker_id === user.id ? conv.company_id : conv.job_seeker_id;
+  const recipientRoute = recipientId === conv.company_id ? "company" : "job-seeker";
+
+  const [{ data: application }, { data: company }, { data: profile }] = await Promise.all([
+    supabase
+      .from("job_applications")
+      .select("job_id")
+      .eq("id", conv.application_id)
+      .maybeSingle(),
+    supabase
+      .from("companies")
+      .select("name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("first_name, last_name, username")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const { data: job } = application?.job_id
+    ? await supabase
+        .from("jobs")
+        .select("title")
+        .eq("id", application.job_id)
+        .maybeSingle()
+    : { data: null };
+
+  const fullName = `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim();
+  const senderName = company?.name || fullName || profile?.username || "Someone";
+  const jobTitle = job?.title;
+
+  await insertNotification({
+    userId: recipientId,
+    type: "new_message",
+    title: "New Message",
+    body: `${senderName} sent you a message${jobTitle ? ` about "${jobTitle}"` : ""}.`,
+    link: `/${recipientRoute}/messages?conv=${conversationId}`,
+    actorId: user.id,
+    jobId: application?.job_id ?? null,
+    entityType: "conversation",
+    entityId: conversationId,
+    metadata: {
+      conversation_id: conversationId,
+      application_id: conv.application_id,
+      attachment_name: attachmentName ?? null,
+    },
+  });
+
   return { message: data as MessageRow };
 }
 

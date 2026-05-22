@@ -164,9 +164,9 @@ export function TemplateFormClient({ template }: Props) {
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-semibold text-[#1c1b1b]">Template Name *</label>
           <input
-            name="name"
+            name="title"
             required
-            defaultValue={template?.name ?? ""}
+            defaultValue={template?.title ?? ""}
             placeholder="e.g. Frontend Technical Screen"
             className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
           />

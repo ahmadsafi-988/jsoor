@@ -942,7 +942,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-[#1c1b1b] truncate">{t.name}</p>
+                        <p className="font-semibold text-sm text-[#1c1b1b] truncate">{t.title}</p>
                         {t.description && (
                           <p className="text-xs text-[#5f5e5e] mt-0.5 line-clamp-2">{t.description}</p>
                         )}
@@ -974,7 +974,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                       <button
                         type="button"
                         onClick={() => {
-                          if (titleRef.current) titleRef.current.value = t.name;
+                          if (titleRef.current) titleRef.current.value = t.title;
                           if (descRef.current) descRef.current.value = t.description ?? "";
                           if (timeLimitRef.current) timeLimitRef.current.value = t.time_limit ? String(t.time_limit) : "";
                           setDraftQuestions((t.questions as QuestionDraft[] | null) ?? []);

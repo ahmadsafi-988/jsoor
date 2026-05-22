@@ -3,7 +3,24 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { insertNotification } from "@/lib/notifications/actions";
+import { insertNotification, insertNotificationsForAdmins } from "@/lib/notifications/actions";
+
+async function requireVerifiedCompany(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+) {
+  const { data: company } = await supabase
+    .from("companies")
+    .select("is_verified")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!company?.is_verified) {
+    return { error: "Your company must be verified by an admin before using this feature." };
+  }
+
+  return null;
+}
 
 // ─── Company profile ──────────────────────────────────────────────────────────
 
@@ -11,6 +28,12 @@ export async function upsertCompany(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+
+  const { data: existingCompany } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("id", user.id)
+    .maybeSingle();
 
   const payload = {
     id: user.id,
@@ -40,6 +63,18 @@ export async function upsertCompany(formData: FormData) {
     if (profileError) return { error: profileError.message };
   }
 
+  if (!existingCompany) {
+    await insertNotificationsForAdmins({
+      type: "company_approval_requested",
+      title: "Company Approval Requested",
+      body: `${payload.name} submitted company details and is awaiting verification.`,
+      link: "/admin/companies",
+      actorId: user.id,
+      entityType: "company",
+      entityId: user.id,
+    });
+  }
+
   revalidatePath("/company/profile");
   return { success: true };
 }
@@ -65,6 +100,8 @@ export async function createJob(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   type JobType = "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship";
   const payload = {
@@ -96,6 +133,8 @@ export async function updateJob(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   const jobId = formData.get("jobId") as string;
   type JobType = "Full-time" | "Part-time" | "Remote" | "Hybrid" | "Contract" | "Internship";
@@ -135,6 +174,8 @@ export async function deleteJob(jobId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   const { error } = await supabase
     .from("jobs")
@@ -214,6 +255,8 @@ export async function updateApplicationStatus(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   // Fetch current application + owning company in one query
   const { data: application, error: fetchError } = await supabase
@@ -269,6 +312,8 @@ export async function sendAssessment(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   const applicationId = formData.get("application_id") as string;
   const questionsRaw = formData.get("questions") as string;
@@ -419,6 +464,8 @@ export async function releaseAssessmentResults(assessmentId: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   const { data: released, error } = await supabase
     .from("assessments")
@@ -457,6 +504,8 @@ export async function reviewAssessment(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
 
   const assessmentId = formData.get("assessment_id") as string;
   const score = formData.get("score") ? Number(formData.get("score")) : null;
@@ -501,17 +550,39 @@ export async function reportJob(jobId: string, reason: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  const { error } = await supabase.from("job_reports").insert({
-    job_id: jobId,
-    reported_by: user.id,
-    reason,
-    status: "pending",
-  });
+  const { data: report, error } = await supabase
+    .from("job_reports")
+    .insert({
+      job_id: jobId,
+      reported_by: user.id,
+      reason,
+      status: "pending",
+    })
+    .select("id")
+    .single();
 
   if (error) {
     if (error.code === "23505") return { error: "You have already reported this job." };
     return { error: error.message };
   }
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("title")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  await insertNotificationsForAdmins({
+    type: "job_report_submitted",
+    title: "Job Report Submitted",
+    body: `A job seeker reported "${job?.title ?? "a job"}".`,
+    link: "/admin/reports",
+    jobId,
+    actorId: user.id,
+    entityType: "job_report",
+    entityId: report?.id ?? null,
+    metadata: { reason },
+  });
 
   return { success: true };
 }

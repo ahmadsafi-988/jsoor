@@ -283,7 +283,7 @@ Extension table for admin users.
 **How to promote a user to admin:**
 ```sql
 -- Option 1: Use the DB function
-SELECT promote_to_admin('Admin Name', 'admin_username', 'user-uuid');
+SELECT promote_to_admin('user-uuid', 'admin_username', 'Admin Name');
 
 -- Option 2: Direct insert (triggers profile.role update)
 INSERT INTO admins (id) VALUES ('<user-uuid>');
@@ -343,7 +343,7 @@ Allows companies to save reusable assessment templates. **Fully built (Sprint 6)
 
 | Function | Args | Description |
 |---|---|---|
-| `promote_to_admin` | `admin_name, admin_username, user_id` | Sets profile role to admin; inserts into admins table |
+| `promote_to_admin` | `user_id, admin_username, admin_name` | Sets profile role to admin; inserts into admins table |
 
 ---
 

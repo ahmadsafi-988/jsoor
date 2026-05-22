@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation'
 
-import { LogoutButton } from '@/components/supabase/logout-button'
 import { createClient } from '@/lib/supabase/server'
+
+type ClaimsWithRoleMetadata = {
+  user_metadata?: {
+    role?: string
+  }
+}
 
 export default async function ProtectedPage() {
   const supabase = await createClient()
@@ -11,12 +16,28 @@ export default async function ProtectedPage() {
     redirect('/auth/login')
   }
 
-  return (
-    <div className="flex h-svh w-full items-center justify-center gap-2">
-      <p>
-        Hello <span>{data.claims.email}</span>
-      </p>
-      <LogoutButton />
-    </div>
-  )
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', data.claims.sub)
+    .maybeSingle()
+
+  const claimsWithMetadata = data.claims as unknown as ClaimsWithRoleMetadata
+  const role = profile?.role ?? claimsWithMetadata.user_metadata?.role
+
+  if (role === 'admin') {
+    redirect('/admin')
+  }
+
+  if (role === 'company') {
+    const { data: company } = await supabase
+      .from('companies')
+      .select('is_verified')
+      .eq('id', data.claims.sub)
+      .maybeSingle()
+
+    redirect(company?.is_verified ? '/company/home' : '/company/onboarding')
+  }
+
+  redirect('/job-seeker/home')
 }

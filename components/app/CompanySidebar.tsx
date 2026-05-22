@@ -17,6 +17,10 @@ const NAV_ITEMS = [
   { label: "Notifications", href: "/company/notifications",  icon: Bell },
 ];
 
+function isRouteActive(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 type SidebarCompany = { name: string; logoUrl: string | null };
 
 export function CompanySidebar() {
@@ -57,16 +61,14 @@ export function CompanySidebar() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (pathname.startsWith("/company/messages"))      setUnreadMsgs(0);
-    if (pathname.startsWith("/company/notifications")) setUnreadNotifs(0);
-  }, [pathname]);
-
   const handleLogout = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/auth/login");
   };
+
+  const visibleUnreadMsgs = pathname.startsWith("/company/messages") ? 0 : unreadMsgs;
+  const visibleUnreadNotifs = pathname.startsWith("/company/notifications") ? 0 : unreadNotifs;
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-neutral-950 z-50 flex flex-col p-6 shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex">
@@ -77,10 +79,10 @@ export function CompanySidebar() {
 
       <nav className="flex-1 flex flex-col gap-1">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href + "/");
+          const isActive = isRouteActive(pathname, href);
           const badge =
-            label === "Notifications" ? unreadNotifs :
-            label === "Messages"      ? unreadMsgs   : 0;
+            label === "Notifications" ? visibleUnreadNotifs :
+            label === "Messages"      ? visibleUnreadMsgs   : 0;
           return (
             <Link key={href} href={href}>
               <div className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${

@@ -4,7 +4,7 @@ import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  CheckCircle, Bell, ClipboardCheck, FileText, Award,
+  CheckCircle, Bell, ClipboardCheck, FileText, Award, MessageSquare,
 } from "lucide-react";
 import { markAllNotificationsRead } from "@/lib/notifications/actions";
 
@@ -24,6 +24,7 @@ const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   assessment_results_released:{ icon: Award,          color: "text-amber-500" },
   new_application:            { icon: FileText,       color: "text-[#006d43]" },
   assessment_submitted:       { icon: ClipboardCheck, color: "text-blue-500" },
+  new_message:                { icon: MessageSquare,  color: "text-blue-500" },
 };
 
 function groupByDate(notifications: Notification[]) {
@@ -69,7 +70,7 @@ export default function NotificationsClient({
 
   useEffect(() => {
     if (notifications.some((n) => !n.is_read)) markAllNotificationsRead().catch(() => {});
-  }, []);
+  }, [notifications]);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

@@ -1,6 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+type ClaimsWithRoleMetadata = {
+  user_metadata?: {
+    role?: string
+  }
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,47 +45,104 @@ export async function updateSession(request: NextRequest) {
   const user = data?.claims
 
 
-  const { pathname } = request.nextUrl 
+  const { pathname } = request.nextUrl
+
+  const redirectTo = (pathname: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname
+    url.search = ''
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+    return response
+  }
+
+  const redirectWithParam = (pathname: string, key: string, value: string) => {
+    const url = request.nextUrl.clone()
+    url.pathname = pathname
+    url.search = ''
+    url.searchParams.set(key, value)
+    const response = NextResponse.redirect(url)
+    supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+    return response
+  }
+
+  const isPublicJobSeekerProfile = (() => {
+    const segments = pathname.split('/').filter(Boolean)
+    return segments.length === 3 && segments[0] === 'job-seeker' && segments[1] === 'profile'
+  })()
 
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/auth') ||
-    pathname.startsWith('/job-seeker/profile/') ||
-    pathname === '/company/onboarding'
+    isPublicJobSeekerProfile
  
   if (!user && !isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/auth/login'
-    return NextResponse.redirect(url)
+    return redirectTo('/auth/login')
   }
 
   // Guard dashboard routes against wrong roles, blocked, or suspended users.
-  // Only runs when an authenticated user hits /job-seeker/* or /company/*.
-  if (user && (pathname.startsWith('/job-seeker') || pathname.startsWith('/company'))) {
+  // Only runs when an authenticated user hits role-specific app areas.
+  if (user && (
+    (pathname.startsWith('/job-seeker') && !isPublicJobSeekerProfile) ||
+    pathname.startsWith('/company') ||
+    pathname.startsWith('/admin')
+  )) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role, is_blocked, is_suspended')
       .eq('id', user.sub)
-      .single()
-
-    if (profile?.role === 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/admin'
-      return NextResponse.redirect(url)
-    }
+      .maybeSingle()
 
     if (profile?.is_blocked) {
       await supabase.auth.signOut()
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/login'
-      url.searchParams.set('error', 'account_blocked')
-      return NextResponse.redirect(url)
+      return redirectWithParam('/auth/login', 'error', 'account_blocked')
     }
 
     if (profile?.is_suspended) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/auth/suspended'
-      return NextResponse.redirect(url)
+      return redirectTo('/auth/suspended')
+    }
+
+    const claimsWithMetadata = user as unknown as ClaimsWithRoleMetadata
+    const role = profile?.role ?? claimsWithMetadata.user_metadata?.role
+
+    if (role === 'admin' && !pathname.startsWith('/admin')) {
+      return redirectTo('/admin')
+    }
+
+    if (pathname.startsWith('/admin') && role !== 'admin') {
+      return redirectTo(role === 'company' ? '/company/home' : '/job-seeker/home')
+    }
+
+    if (pathname.startsWith('/job-seeker') && role === 'company') {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('is_verified')
+        .eq('id', user.sub)
+        .maybeSingle()
+
+      return redirectTo(company?.is_verified ? '/company/home' : '/company/onboarding')
+    }
+
+    if (pathname.startsWith('/company')) {
+      const isCompanyOnboarding = pathname === '/company/onboarding'
+
+      if (role === 'job_seeker') {
+        return redirectTo('/job-seeker/home')
+      }
+
+      const { data: company } = await supabase
+        .from('companies')
+        .select('is_verified')
+        .eq('id', user.sub)
+        .maybeSingle()
+
+      if (company?.is_verified && isCompanyOnboarding) {
+        return redirectTo('/company/home')
+      }
+
+      if (!isCompanyOnboarding && !company?.is_verified) {
+        return redirectTo('/company/onboarding')
+      }
     }
   }
 

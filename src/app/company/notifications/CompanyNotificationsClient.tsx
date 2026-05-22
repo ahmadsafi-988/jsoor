@@ -3,7 +3,7 @@
 import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Bell, ClipboardCheck, FileText } from "lucide-react";
+import { CheckCircle, Bell, ClipboardCheck, FileText, MessageSquare } from "lucide-react";
 import { markAllNotificationsRead } from "@/lib/notifications/actions";
 
 type Notification = {
@@ -19,6 +19,7 @@ type Notification = {
 const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   new_application:      { icon: FileText,       color: "text-[#006d43]" },
   assessment_submitted: { icon: ClipboardCheck, color: "text-blue-500" },
+  new_message:          { icon: MessageSquare,  color: "text-blue-500" },
 };
 
 function groupByDate(notifications: Notification[]) {
@@ -64,7 +65,7 @@ export default function CompanyNotificationsClient({
 
   useEffect(() => {
     if (notifications.some((n) => !n.is_read)) markAllNotificationsRead().catch(() => {});
-  }, []);
+  }, [notifications]);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {

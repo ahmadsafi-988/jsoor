@@ -1,5 +1,6 @@
 "use client";
 import { Bell, Search } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -9,6 +10,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/company/assessments": "Assessments",
   "/company/profile": "Company Profile",
   "/company/onboarding": "Setup",
+  "/company/messages": "Messages",
+  "/company/notifications": "Notifications",
 };
 
 export function CompanyTopBar() {
@@ -37,9 +40,11 @@ export function CompanyTopBar() {
         />
       </div>
       <div className="flex items-center gap-1">
-        <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-100 hover:text-[#006d43] transition-colors">
-          <Bell className="w-5 h-5" />
-        </button>
+        <Link href="/company/notifications">
+          <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-100 hover:text-[#006d43] transition-colors">
+            <Bell className="w-5 h-5" />
+          </button>
+        </Link>
       </div>
     </header>
   );

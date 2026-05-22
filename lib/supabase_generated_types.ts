@@ -12,8 +12,74 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string
+          id: string
+          reason: string | null
+          target_id: string
+          target_label: string
+          target_type: string
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_id: string
+          target_label: string
+          target_type: string
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+          target_id?: string
+          target_label?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admins: {
         Row: {
           added_at: string
@@ -33,6 +99,53 @@ export type Database = {
             columns: ["id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_templates: {
+        Row: {
+          company_id: string
+          created_at: string
+          description: string
+          id: string
+          questions: Json
+          tags: string[]
+          time_limit: number | null
+          title: string
+          updated_at: string
+          use_count: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          description?: string
+          id?: string
+          questions?: Json
+          tags?: string[]
+          time_limit?: number | null
+          title: string
+          updated_at?: string
+          use_count?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          questions?: Json
+          tags?: string[]
+          time_limit?: number | null
+          title?: string
+          updated_at?: string
+          use_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -139,78 +252,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_audit_logs: {
-        Row: {
-          id: string
-          admin_id: string
-          action: string
-          target_type: string
-          target_id: string
-          target_label: string
-          reason: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          admin_id: string
-          action: string
-          target_type: string
-          target_id: string
-          target_label: string
-          reason?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          admin_id?: string
-          action?: string
-          target_type?: string
-          target_id?: string
-          target_label?: string
-          reason?: string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
-      assessment_templates: {
-        Row: {
-          id: string
-          company_id: string
-          name: string
-          description: string | null
-          questions: Json | null
-          time_limit: number | null
-          tags: string[] | null
-          use_count: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          company_id: string
-          name: string
-          description?: string | null
-          questions?: Json | null
-          time_limit?: number | null
-          tags?: string[] | null
-          use_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          company_id?: string
-          name?: string
-          description?: string | null
-          questions?: Json | null
-          time_limit?: number | null
-          tags?: string[] | null
-          use_count?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       companies: {
         Row: {
           created_at: string
@@ -253,6 +294,144 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          application_id: string
+          company_id: string
+          created_at: string | null
+          id: string
+          job_seeker_id: string
+        }
+        Insert: {
+          application_id: string
+          company_id: string
+          created_at?: string | null
+          id?: string
+          job_seeker_id: string
+        }
+        Update: {
+          application_id?: string
+          company_id?: string
+          created_at?: string | null
+          id?: string
+          job_seeker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_job_seeker_id_fkey"
+            columns: ["job_seeker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_questions: {
+        Row: {
+          answer_text: string
+          created_at: string | null
+          id: string
+          improvements: string | null
+          question_index: number
+          question_text: string
+          score: number | null
+          session_id: string
+          strengths: string | null
+        }
+        Insert: {
+          answer_text: string
+          created_at?: string | null
+          id?: string
+          improvements?: string | null
+          question_index: number
+          question_text: string
+          score?: number | null
+          session_id: string
+          strengths?: string | null
+        }
+        Update: {
+          answer_text?: string
+          created_at?: string | null
+          id?: string
+          improvements?: string | null
+          question_index?: number
+          question_text?: string
+          score?: number | null
+          session_id?: string
+          strengths?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interview_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "interview_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interview_sessions: {
+        Row: {
+          config: Json
+          created_at: string | null
+          id: string
+          interview_type: string
+          job_description: string
+          job_title: string
+          level: string
+          overall_score: number | null
+          overall_summary: string | null
+          question_count: number
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          config: Json
+          created_at?: string | null
+          id?: string
+          interview_type: string
+          job_description: string
+          job_title: string
+          level: string
+          overall_score?: number | null
+          overall_summary?: string | null
+          question_count: number
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string | null
+          id?: string
+          interview_type?: string
+          job_description?: string
+          job_title?: string
+          level?: string
+          overall_score?: number | null
+          overall_summary?: string | null
+          question_count?: number
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       job_applications: {
         Row: {
           applicant_id: string
@@ -287,6 +466,48 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_reports: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          reason: string
+          reported_by: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          reason: string
+          reported_by: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          reason?: string
+          reported_by?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_reports_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_reports_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -374,168 +595,6 @@ export type Database = {
           },
         ]
       }
-      conversations: {
-        Row: {
-          id: string
-          application_id: string
-          job_seeker_id: string
-          company_id: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          application_id: string
-          job_seeker_id: string
-          company_id: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          application_id?: string
-          job_seeker_id?: string
-          company_id?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversations_application_id_fkey"
-            columns: ["application_id"]
-            isOneToOne: true
-            referencedRelation: "job_applications"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_job_seeker_id_fkey"
-            columns: ["job_seeker_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          id: string
-          conversation_id: string
-          sender_id: string
-          content: string
-          attachment_url: string | null
-          attachment_name: string | null
-          is_read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          conversation_id: string
-          sender_id: string
-          content?: string
-          attachment_url?: string | null
-          attachment_name?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          conversation_id?: string
-          sender_id?: string
-          content?: string
-          attachment_url?: string | null
-          attachment_name?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_conversation_id_fkey"
-            columns: ["conversation_id"]
-            isOneToOne: false
-            referencedRelation: "conversations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      notifications: {
-        Row: {
-          id: string
-          user_id: string
-          type: string
-          title: string
-          body: string
-          link: string | null
-          is_read: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          type: string
-          title: string
-          body: string
-          link?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          type?: string
-          title?: string
-          body?: string
-          link?: string | null
-          is_read?: boolean
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      job_reports: {
-        Row: {
-          id: string
-          job_id: string
-          reporter_id: string
-          reason: string
-          status: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          job_id: string
-          reporter_id: string
-          reason: string
-          status?: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          job_id?: string
-          reporter_id?: string
-          reason?: string
-          status?: string
-          created_at?: string
-        }
-        Relationships: []
-      }
       jobs: {
         Row: {
           admin_locked: boolean
@@ -585,6 +644,127 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          attachment_name: string | null
+          attachment_url: string | null
+          content: string
+          conversation_id: string
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          sender_id: string
+        }
+        Insert: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          content?: string
+          conversation_id: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id: string
+        }
+        Update: {
+          attachment_name?: string | null
+          attachment_url?: string | null
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          body: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean | null
+          job_id: string | null
+          link: string | null
+          metadata: Json
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          job_id?: string | null
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          job_id?: string | null
+          link?: string | null
+          metadata?: Json
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -783,106 +963,6 @@ export type Database = {
         }
         Relationships: []
       }
-      interview_questions: {
-        Row: {
-          id: string
-          session_id: string
-          question_index: number
-          question_text: string
-          answer_text: string
-          score: number | null
-          strengths: Json | null
-          improvements: Json | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          session_id: string
-          question_index: number
-          question_text: string
-          answer_text: string
-          score?: number | null
-          strengths?: Json | null
-          improvements?: Json | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          session_id?: string
-          question_index?: number
-          question_text?: string
-          answer_text?: string
-          score?: number | null
-          strengths?: Json | null
-          improvements?: Json | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "interview_questions_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "interview_sessions"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      interview_sessions: {
-        Row: {
-          id: string
-          user_id: string
-          job_title: string
-          job_description: string
-          interview_type: string
-          level: string
-          question_count: number
-          status: string
-          overall_score: number | null
-          overall_summary: string | null
-          config: Json
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          job_title: string
-          job_description: string
-          interview_type: string
-          level: string
-          question_count: number
-          status?: string
-          overall_score?: number | null
-          overall_summary?: string | null
-          config: Json
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          job_title?: string
-          job_description?: string
-          interview_type?: string
-          level?: string
-          question_count?: number
-          status?: string
-          overall_score?: number | null
-          overall_summary?: string | null
-          config?: Json
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "interview_sessions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -1020,6 +1100,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

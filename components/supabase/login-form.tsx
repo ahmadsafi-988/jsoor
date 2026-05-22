@@ -29,10 +29,31 @@ export function LoginForm() {
         .from("profiles")
         .select("role")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
       const role = profile?.role ?? user.user_metadata?.role;
-      router.push(role === "company" ? "/company/home" : "/job-seeker/home");
+      if (role === "company") {
+        const { data: company } = await supabase
+          .from("companies")
+          .select("is_verified")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        router.replace(company?.is_verified ? "/company/home" : "/company/onboarding");
+        return;
+      }
+
+      if (role === "admin") {
+        router.replace("/admin");
+        return;
+      }
+
+      if (role === "job_seeker") {
+        router.replace("/job-seeker/home");
+        return;
+      }
+
+      setError("We could not find a role for this account.");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {

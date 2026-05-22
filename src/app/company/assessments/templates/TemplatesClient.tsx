@@ -28,7 +28,7 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
         <LayoutTemplate className="w-12 h-12 text-[#3d4a41] mx-auto mb-4 opacity-40" />
         <h3 className="font-semibold text-[#1c1b1b] mb-2">No templates yet</h3>
         <p className="text-[#3d4a41] text-sm mb-6">
-          Save reusable assessment blueprints so you don't have to rebuild from scratch each time.
+          Save reusable assessment blueprints so you do not have to rebuild from scratch each time.
         </p>
         <Link
           href="/company/assessments/templates/new"
@@ -52,7 +52,7 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
       </div>
 
       {templates.map((t) => {
-        const questions = (t.questions as any[]) ?? [];
+        const questions = Array.isArray(t.questions) ? t.questions : [];
         const isDeleting = deletingId === t.id && isPending;
 
         return (
@@ -63,7 +63,7 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
             <div className="grid grid-cols-12 gap-4 items-center px-6 py-5">
               {/* Name + meta */}
               <div className="col-span-4">
-                <p className="font-semibold text-[#1c1b1b] text-sm">{t.name}</p>
+                <p className="font-semibold text-[#1c1b1b] text-sm">{t.title}</p>
                 {t.description && (
                   <p className="text-xs text-[#5f5e5e] mt-0.5 line-clamp-1">{t.description}</p>
                 )}
