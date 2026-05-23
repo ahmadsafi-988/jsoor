@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, ClipboardCheck,
-  Building2, LogOut, Bell, MessageSquare,
+  Building2, Bell, MessageSquare,
 } from "lucide-react";
 import { JsoorLogo } from "@/components/JsoorLogo";
+import { LogoutConfirmationButton } from "@/components/app/LogoutConfirmationButton";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -22,7 +23,6 @@ type SidebarCompany = { name: string; logoUrl: string | null };
 
 export function CompanySidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const [company, setCompany] = useState<SidebarCompany | null>(null);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [unreadMsgs, setUnreadMsgs] = useState(0);
@@ -63,12 +63,6 @@ export function CompanySidebar() {
     if (pathname.startsWith("/company/notifications")) setUnreadNotifs(0);
   }, [pathname]);
 
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/auth/login");
-  };
-
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 bg-neutral-950 z-50 flex flex-col p-6 shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex">
       <div className="mb-8">
@@ -107,13 +101,7 @@ export function CompanySidebar() {
       </nav>
 
       <div className="mt-auto flex flex-col gap-1">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors w-full text-left"
-        >
-          <LogOut className="w-4 h-4 shrink-0" />
-          <span className="text-sm font-medium">Logout</span>
-        </button>
+        <LogoutConfirmationButton />
 
         {company && (
           <div className="mt-4 pt-4 border-t border-neutral-800 flex items-center gap-3">
