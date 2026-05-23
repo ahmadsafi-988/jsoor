@@ -20,6 +20,14 @@ export function AdminTopBar() {
   let title = PAGE_TITLES[pathname] ?? "Admin";
   if (pathname.startsWith("/admin/blogs/") && pathname !== "/admin/blogs/new") {
     title = "Edit Blog";
+  } else if (pathname.startsWith("/admin/jobs/")) {
+    title = "Job Details";
+  } else if (pathname.startsWith("/admin/companies/")) {
+    title = "Company Details";
+  } else if (pathname.startsWith("/admin/users/")) {
+    title = "User Details";
+  } else if (pathname.startsWith("/admin/applications/")) {
+    title = "Application Details";
   }
 
   return <DashboardTopBar title={title} role="admin" />;

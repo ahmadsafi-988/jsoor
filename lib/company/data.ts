@@ -2,6 +2,7 @@
 // Server-side data fetching for the company role.
 
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase_generated_types";
 
 export type JobRow = Tables<"jobs">;
@@ -26,6 +27,29 @@ export type ApplicantProfileResult = {
 
 export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url"> | null };
 
+export type CanonicalJob = JobRow & {
+  company: CompanyRow | null;
+  requiredSkills: string[];
+};
+
+export type PublicCompanyProfile = {
+  company: CompanyRow;
+  profile: Pick<Tables<"profiles">, "id" | "username" | "first_name" | "last_name" | "avatar_url"> | null;
+  jobs: Pick<JobRow, "id" | "title" | "type" | "location" | "salary_range" | "created_at">[];
+};
+
+export type CanonicalApplicationDetail = {
+  application: ApplicationRow;
+  job: JobRow | null;
+  company: CompanyRow | null;
+  applicant: Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "username" | "avatar_url"> | null;
+  applicantProfile: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website"> | null;
+  viewerRole: string;
+  isOwnApplication: boolean;
+  companyOwnsApplication: boolean;
+  isAdmin: boolean;
+};
+
 export type ApplicationWithProfile = ApplicationRow & {
   profile: (Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "avatar_url" | "username"> & {
     job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "github" | "website" | "cv_url"> | null;
@@ -39,6 +63,15 @@ export type AssessmentWithApplication = AssessmentRow & {
     job: Pick<JobRow, "title"> | null;
   }) | null;
 };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function getServiceClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createServiceClient(url, key);
+}
 
 // ─── Company queries ──────────────────────────────────────────────────────────
 
@@ -54,6 +87,55 @@ export async function getMyCompany(): Promise<CompanyRow | null> {
     .single();
 
   return data ?? null;
+}
+
+export async function getPublicCompanyByIdentifier(
+  identifier: string
+): Promise<PublicCompanyProfile | null> {
+  const supabase = await createClient();
+
+  const { data: profileByUsername } = await supabase
+    .from("profiles")
+    .select("id, username, first_name, last_name, avatar_url, role")
+    .eq("username", identifier)
+    .maybeSingle();
+
+  if (profileByUsername && profileByUsername.role !== "company") return null;
+
+  const companyId = profileByUsername?.id ?? (UUID_RE.test(identifier) ? identifier : null);
+  if (!companyId) return null;
+
+  const [{ data: company }, { data: profileById }, { data: jobs }] = await Promise.all([
+    supabase.from("companies").select("*").eq("id", companyId).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("id, username, first_name, last_name, avatar_url")
+      .eq("id", companyId)
+      .maybeSingle(),
+    supabase
+      .from("jobs")
+      .select("id, title, type, location, salary_range, created_at")
+      .eq("company_id", companyId)
+      .eq("is_active", true)
+      .eq("admin_locked", false)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (!company) return null;
+
+  return {
+    company,
+    profile: profileByUsername
+      ? {
+          id: profileByUsername.id,
+          username: profileByUsername.username,
+          first_name: profileByUsername.first_name,
+          last_name: profileByUsername.last_name,
+          avatar_url: profileByUsername.avatar_url,
+        }
+      : profileById,
+    jobs: jobs ?? [],
+  };
 }
 
 export async function getCompanyJobs(): Promise<JobRow[]> {
@@ -83,6 +165,46 @@ export async function getJobById(jobId: string): Promise<JobRow | null> {
     .single();
 
   return data ?? null;
+}
+
+export async function getCanonicalJobById(jobId: string): Promise<CanonicalJob | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = user
+    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
+    : { data: null };
+
+  const { data } = await supabase
+    .from("jobs")
+    .select(`
+      *,
+      company:companies!jobs_company_id_fkey(*),
+      job_to_skills(skill:skills(name))
+    `)
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (!data) return null;
+
+  const job = data as JobRow & {
+    company: CompanyRow | null;
+    job_to_skills?: { skill: { name: string } | null }[];
+  };
+
+  const isOwner = user?.id === job.company_id;
+  const isAdmin = profile?.role === "admin";
+  const isPublic = job.is_active && !job.admin_locked;
+  if (!isPublic && !isOwner && !isAdmin) return null;
+
+  return {
+    ...job,
+    requiredSkills: (job.job_to_skills ?? [])
+      .map((entry) => entry.skill?.name)
+      .filter(Boolean) as string[],
+  };
 }
 
 export async function getJobApplicants(jobId: string): Promise<ApplicationWithProfile[]> {
@@ -154,6 +276,68 @@ export async function getApplicationById(applicationId: string): Promise<Applica
       ? { ...profile, job_seeker_profiles: jsProfile ?? null }
       : null,
   } as any;
+}
+
+export async function getCanonicalApplicationDetail(
+  applicationId: string
+): Promise<CanonicalApplicationDetail | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: viewerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const isAdmin = viewerProfile?.role === "admin";
+  const queryClient = isAdmin ? getServiceClient() ?? supabase : supabase;
+
+  const { data: applicationData } = await queryClient
+    .from("job_applications")
+    .select("*, job:jobs!job_applications_job_id_fkey(*)")
+    .eq("id", applicationId)
+    .maybeSingle();
+
+  if (!applicationData) return null;
+
+  const application = applicationData as ApplicationRow & { job: JobRow | null };
+  const job = application.job;
+  const isOwnApplication = application.applicant_id === user.id;
+  const companyOwnsApplication = viewerProfile?.role === "company" && job?.company_id === user.id;
+
+  if (!isAdmin && !isOwnApplication && !companyOwnsApplication) return null;
+
+  const [{ data: company }, { data: applicant }, { data: applicantProfile }] = await Promise.all([
+    job
+      ? queryClient.from("companies").select("*").eq("id", job.company_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    queryClient
+      .from("profiles")
+      .select("id, first_name, last_name, username, avatar_url")
+      .eq("id", application.applicant_id)
+      .maybeSingle(),
+    queryClient
+      .from("job_seeker_profiles")
+      .select("bio, degree, institution, location, website")
+      .eq("id", application.applicant_id)
+      .maybeSingle(),
+  ]);
+
+  return {
+    application,
+    job,
+    company,
+    applicant,
+    applicantProfile,
+    viewerRole: viewerProfile?.role ?? "unknown",
+    isOwnApplication,
+    companyOwnsApplication,
+    isAdmin,
+  };
 }
 
 export async function getApplicationWithApplicantProfile(

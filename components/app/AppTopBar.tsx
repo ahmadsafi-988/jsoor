@@ -17,7 +17,14 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function AppTopBar() {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? "JSOOR";
+  let title = PAGE_TITLES[pathname] ?? "JSOOR";
+  if (pathname.startsWith("/job-seeker/companies/")) {
+    title = "Company Profile";
+  } else if (pathname.startsWith("/job-seeker/jobs/")) {
+    title = "Job Details";
+  } else if (pathname.startsWith("/job-seeker/applications/")) {
+    title = "Application Details";
+  }
 
   return (
     <DashboardTopBar

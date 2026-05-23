@@ -22,6 +22,12 @@ export function CompanyTopBar() {
     title = "Applicants";
   } else if (pathname.startsWith("/company/applicants/")) {
     title = "Applicant Profile";
+  } else if (pathname.startsWith("/company/profiles/")) {
+    title = "Job Seeker Profile";
+  } else if (pathname.startsWith("/company/companies/")) {
+    title = "Company Profile";
+  } else if (pathname.startsWith("/company/opportunities/")) {
+    title = "Job Details";
   } else if (pathname.startsWith("/company/jobs/") && !pathname.includes("/new")) {
     title = "Job Details";
   }

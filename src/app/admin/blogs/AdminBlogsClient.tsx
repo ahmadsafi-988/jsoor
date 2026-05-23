@@ -51,7 +51,12 @@ export function AdminBlogsClient({ blogs }: { blogs: BlogRow[] }) {
             return (
               <tr key={blog.id}>
                 <td className="px-5 py-3.5">
-                  <p className="font-medium text-neutral-900 max-w-md truncate">{blog.title}</p>
+                  <Link
+                    href={`/admin/blogs/${blog.id}`}
+                    className="block max-w-md truncate font-medium text-neutral-900 hover:text-[#006d43] hover:underline"
+                  >
+                    {blog.title}
+                  </Link>
                   <p className="text-xs text-neutral-400 max-w-md truncate">/{blog.slug}</p>
                 </td>
                 <td className="px-5 py-3.5 text-neutral-600">{blog.category}</td>

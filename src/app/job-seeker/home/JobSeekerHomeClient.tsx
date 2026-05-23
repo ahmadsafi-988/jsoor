@@ -5,6 +5,7 @@ import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building, Flag, Cale
 import { applyToJob, saveJob, unsaveJob, reportJob } from "@/lib/company/actions";
 import type { JobWithSkillsAndMatch } from "@/lib/company/data";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import Link from "next/link";
 
 const TYPE_COLORS: Record<string, string> = {
   "Full-time":  "bg-[#78fbb6]/20 text-[#005232]",
@@ -89,13 +90,16 @@ function JobDetailSheet({
               {/* Header */}
               <div className="p-8 border-b border-[#e5e2e1]">
                 <div className="flex items-start gap-4 mb-5">
-                  <div className="w-14 h-14 rounded-xl bg-white overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1] p-1.5">
+                  <Link
+                    href={`/job-seeker/companies/${job.company_id}`}
+                    className="w-14 h-14 rounded-xl bg-white overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1] p-1.5 transition-colors hover:border-[#006d43]/40"
+                  >
                     {job.company?.logo_url ? (
                       <img src={job.company.logo_url} alt={job.company.name ?? ""} className="w-full h-full object-contain" />
                     ) : (
                       <Building className="w-6 h-6 text-[#3d4a41]" />
                     )}
-                  </div>
+                  </Link>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <SheetTitle className="font-headline text-xl font-bold text-[#1c1b1b] leading-tight">
@@ -103,7 +107,12 @@ function JobDetailSheet({
                       </SheetTitle>
                       <MatchBadge matchCount={job.matchCount} matchTotal={job.matchTotal} />
                     </div>
-                    <p className="text-sm text-[#5f5e5e]">{job.company?.name ?? "Company"}</p>
+                    <Link
+                      href={`/job-seeker/companies/${job.company_id}`}
+                      className="text-sm font-medium text-[#006d43] hover:underline"
+                    >
+                      {job.company?.name ?? "Company"}
+                    </Link>
                   </div>
                 </div>
 
@@ -383,22 +392,31 @@ function JobCard({
         </div>
 
         {/* Salary + CTA (not part of clickable zone) */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#f0edec]">
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#f0edec]">
           <span className="text-sm font-semibold text-[#1c1b1b]">
             {job.salary_range ?? "Salary not specified"}
           </span>
-          {applied ? (
-            <span className="text-xs font-semibold text-[#005232] bg-[#78fbb6]/20 px-3 py-1.5 rounded-lg">
-              Applied
-            </span>
-          ) : (
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowApply((s) => !s); setShowReport(false); }}
-              className="bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white text-sm font-semibold px-5 py-2 rounded-lg hover:brightness-110 transition-all shadow-[0_8px_16px_rgba(0,109,67,0.15)] flex items-center gap-1.5"
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/job-seeker/jobs/${job.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="px-3 py-2 rounded-lg border border-[#006d43]/30 text-[#006d43] text-xs font-semibold hover:bg-[#006d43]/5 transition-colors"
             >
-              Apply <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          )}
+              Details
+            </Link>
+            {applied ? (
+              <span className="text-xs font-semibold text-[#005232] bg-[#78fbb6]/20 px-3 py-1.5 rounded-lg">
+                Applied
+              </span>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowApply((s) => !s); setShowReport(false); }}
+                className="bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white text-sm font-semibold px-5 py-2 rounded-lg hover:brightness-110 transition-all shadow-[0_8px_16px_rgba(0,109,67,0.15)] flex items-center gap-1.5"
+              >
+                Apply <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Inline apply form */}

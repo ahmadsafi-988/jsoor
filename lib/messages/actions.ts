@@ -16,6 +16,10 @@ export type MessageRow = {
 export type ConversationSummary = {
   id: string;
   application_id: string;
+  other_id: string;
+  other_role: "job_seeker" | "company";
+  other_username: string | null;
+  other_profile_href: string | null;
   other_name: string;
   other_avatar: string | null;
   job_title: string;
@@ -23,6 +27,10 @@ export type ConversationSummary = {
   last_message_at: string;
   unread_count: number;
 };
+
+type ConversationActionResult =
+  | { conversationId: string }
+  | { error: string };
 
 // ─── Conversation bootstrap ───────────────────────────────────────────────────
 
@@ -77,6 +85,138 @@ export async function getOrCreateConversation(applicationId: string) {
 
   if (error) return { error: error.message };
   return { conversationId: created.id };
+}
+
+export async function openConversationWithCompany(
+  companyId: string,
+  applicationId?: string,
+): Promise<ConversationActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please log in before starting a conversation." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "job_seeker") {
+    return { error: "Only job seekers can message companies from this page." };
+  }
+
+  if (applicationId) {
+    const { data: application } = await supabase
+      .from("job_applications")
+      .select("id, applicant_id, job:jobs!job_applications_job_id_fkey(company_id)")
+      .eq("id", applicationId)
+      .maybeSingle();
+
+    const job = application?.job as { company_id: string } | null | undefined;
+    if (
+      application?.applicant_id === user.id &&
+      job?.company_id === companyId
+    ) {
+      return getOrCreateConversation(application.id);
+    }
+  }
+
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("company_id", companyId);
+
+  const jobIds = (jobs ?? []).map((job) => job.id);
+  if (jobIds.length === 0) {
+    return {
+      error: "You need to apply to one of this company's jobs before starting a conversation.",
+    };
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("id")
+    .eq("applicant_id", user.id)
+    .in("job_id", jobIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!application) {
+    return {
+      error: "You need to apply to one of this company's jobs before starting a conversation.",
+    };
+  }
+
+  return getOrCreateConversation(application.id);
+}
+
+export async function openConversationWithJobSeeker(
+  jobSeekerId: string,
+  applicationId?: string,
+): Promise<ConversationActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please log in before starting a conversation." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "company") {
+    return { error: "Only companies can message job seekers from this page." };
+  }
+
+  if (applicationId) {
+    const { data: application } = await supabase
+      .from("job_applications")
+      .select("id, applicant_id, job:jobs!job_applications_job_id_fkey(company_id)")
+      .eq("id", applicationId)
+      .maybeSingle();
+
+    const job = application?.job as { company_id: string } | null | undefined;
+    if (
+      application?.applicant_id === jobSeekerId &&
+      job?.company_id === user.id
+    ) {
+      return getOrCreateConversation(application.id);
+    }
+  }
+
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("company_id", user.id);
+
+  const jobIds = (jobs ?? []).map((job) => job.id);
+  if (jobIds.length === 0) {
+    return {
+      error: "You can message a job seeker only when they have applied to one of your jobs.",
+    };
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("id")
+    .eq("applicant_id", jobSeekerId)
+    .in("job_id", jobIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!application) {
+    return {
+      error: "You can message a job seeker only when they have applied to one of your jobs.",
+    };
+  }
+
+  return getOrCreateConversation(application.id);
 }
 
 // ─── Conversation lists ───────────────────────────────────────────────────────
@@ -139,7 +279,7 @@ export async function getCompanyConversations(): Promise<ConversationSummary[]> 
       application:job_applications!conversations_application_id_fkey(
         job:jobs!job_applications_job_id_fkey(title)
       ),
-      seeker:profiles!conversations_job_seeker_id_fkey(first_name, last_name, avatar_url)
+      seeker:profiles!conversations_job_seeker_id_fkey(first_name, last_name, avatar_url, username)
     `)
     .eq("company_id", user.id)
     .order("created_at", { ascending: false });
@@ -176,21 +316,38 @@ function buildSummaries(
 
     let otherName: string;
     let otherAvatar: string | null = null;
+    let otherId: string;
+    let otherRole: "job_seeker" | "company";
+    let otherUsername: string | null = null;
+    let otherProfileHref: string | null = null;
 
     if (perspective === "job_seeker") {
       const co = companyMap?.[conv.company_id];
+      otherId = conv.company_id;
+      otherRole = "company";
       otherName = co?.name ?? "Unknown Company";
       otherAvatar = co?.logo_url ?? null;
+      otherProfileHref = `/job-seeker/companies/${conv.company_id}?applicationId=${conv.application_id}`;
     } else {
       const s = conv.seeker;
       const fullName = `${s?.first_name ?? ""} ${s?.last_name ?? ""}`.trim();
+      otherId = conv.job_seeker_id;
+      otherRole = "job_seeker";
+      otherUsername = s?.username ?? null;
       otherName = fullName || "Applicant";
       otherAvatar = s?.avatar_url ?? null;
+      otherProfileHref = otherUsername
+        ? `/company/profiles/${otherUsername}?applicationId=${conv.application_id}`
+        : null;
     }
 
     return {
       id: conv.id,
       application_id: conv.application_id,
+      other_id: otherId,
+      other_role: otherRole,
+      other_username: otherUsername,
+      other_profile_href: otherProfileHref,
       other_name: otherName,
       other_avatar: otherAvatar,
       job_title: (conv.application?.job?.title as string | undefined) ?? "Unknown Job",

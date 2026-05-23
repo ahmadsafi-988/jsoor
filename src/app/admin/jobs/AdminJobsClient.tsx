@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { lockJob, unlockJob } from "@/lib/admin/actions";
 import type { AdminJob } from "@/lib/admin/data";
 import { Lock, Unlock, AlertTriangle } from "lucide-react";
@@ -41,14 +42,20 @@ export function AdminJobsClient({ jobs }: { jobs: AdminJob[] }) {
           {jobs.map((job) => (
             <tr key={job.id} className={job.admin_locked ? "bg-red-50/50" : ""}>
               <td className="px-5 py-3.5 font-medium text-neutral-900 max-w-xs truncate">
-                {job.title}
+                <Link href={`/admin/jobs/${job.id}`} className="hover:text-[#006d43] hover:underline">
+                  {job.title}
+                </Link>
                 {job.admin_locked && (
                   <span className="ml-2 inline-flex items-center gap-1 text-xs text-red-600 font-normal">
                     <Lock className="w-3 h-3" /> Locked
                   </span>
                 )}
               </td>
-              <td className="px-5 py-3.5 text-neutral-600">{job.company_name}</td>
+              <td className="px-5 py-3.5 text-neutral-600">
+                <Link href={`/admin/companies/${job.company_id}`} className="hover:text-[#006d43] hover:underline">
+                  {job.company_name}
+                </Link>
+              </td>
               <td className="px-5 py-3.5 text-neutral-500">{job.type}</td>
               <td className="px-5 py-3.5">
                 <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${

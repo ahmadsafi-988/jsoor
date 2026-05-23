@@ -46,7 +46,6 @@ export async function updateSession(request: NextRequest) {
     pathname === "/" ||
     pathname.startsWith("/blog") ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/job-seeker/profile/") ||
     pathname === "/company/onboarding";
 
   if (!user && !isPublicRoute) {
@@ -66,6 +65,34 @@ export async function updateSession(request: NextRequest) {
       .select("role, is_blocked, is_suspended")
       .eq("id", user.sub)
       .single();
+
+    if (profile?.role === "admin" && pathname.startsWith("/job-seeker/profile/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = pathname.replace("/job-seeker/profile/", "/admin/users/");
+      return NextResponse.redirect(url);
+    }
+
+    if (profile?.role === "company" && pathname.startsWith("/job-seeker/profile/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = pathname.replace("/job-seeker/profile/", "/company/profiles/");
+      return NextResponse.redirect(url);
+    }
+
+    if (profile?.role === "company" && pathname.startsWith("/job-seeker")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/company/home";
+      return NextResponse.redirect(url);
+    }
+
+    if (
+      profile?.role === "job_seeker" &&
+      pathname.startsWith("/company") &&
+      pathname !== "/company/onboarding"
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/job-seeker/home";
+      return NextResponse.redirect(url);
+    }
 
     if (profile?.role === "admin") {
       const url = request.nextUrl.clone();

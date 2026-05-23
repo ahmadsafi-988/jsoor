@@ -322,7 +322,7 @@ export default async function ProfilePage({
   const isOwnProfile = currentUserId === profile_base.id;
   const flatUser = { ...profile_base, ...job_seeker_profile };
 
-  const cvSignedUrl = job_seeker_profile.cv_url
+  const cvSignedUrl = isOwnProfile && job_seeker_profile.cv_url
     ? await getCvSignedUrl(job_seeker_profile.cv_url)
     : null;
 
