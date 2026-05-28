@@ -43,6 +43,36 @@ function titleFromHtml(html: string) {
   return match?.[1] ? decodeHtml(match[1]) : "";
 }
 
+function headingFromHtml(html: string) {
+  const match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (!match?.[1]) return "";
+  return decodeHtml(match[1].replace(/<[^>]+>/g, " "));
+}
+
+function plainTextFromHtml(html: string) {
+  return decodeHtml(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, "\n")
+      .replace(/\n{2,}/g, "\n")
+      .replace(/[ \t]{2,}/g, " ")
+  );
+}
+
+function normalizedDate(value: string) {
+  const iso = value.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
+  if (iso) return iso;
+
+  const longDate = value.match(
+    /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2},\s+\d{4}\b/i
+  )?.[0];
+  if (!longDate) return "";
+
+  const date = new Date(longDate);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+}
+
 function publicHttpUrl(rawUrl: string) {
   const normalized = normalizeOptionalUrl(rawUrl);
   if (!normalized) throw new Error("Badge URL is required.");
@@ -65,6 +95,80 @@ function publicHttpUrl(rawUrl: string) {
 
   if (blocked) throw new Error("Badge URL must be public.");
   return url.toString();
+}
+
+function credlyBadgeIdFromUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    if (!url.hostname.toLowerCase().endsWith("credly.com")) return null;
+
+    return (
+      url.pathname.match(/\/badges\/([0-9a-f-]{36})(?:\/|$)/i)?.[1] ??
+      url.pathname.match(/\/earner\/earned\/badge\/([0-9a-f-]{36})(?:\/|$)/i)?.[1] ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+type CredlyEntity = {
+  entity?: {
+    name?: string;
+  };
+};
+
+type CredlyPublicBadge = {
+  data?: {
+    issued_at_date?: string | null;
+    issued_at?: string | null;
+    image_url?: string | null;
+    issuer?: {
+      entities?: CredlyEntity[];
+    } | null;
+    badge_template?: {
+      name?: string | null;
+      image_url?: string | null;
+      issuer?: {
+        entities?: CredlyEntity[];
+      } | null;
+    } | null;
+  };
+};
+
+function credlyIssuerName(issuer?: { entities?: CredlyEntity[] } | null) {
+  const primary = issuer?.entities?.find((entry) => entry.entity?.name);
+  return primary?.entity?.name ?? "";
+}
+
+async function fetchCredlyBadgeMetadata(publicUrl: string) {
+  const badgeId = credlyBadgeIdFromUrl(publicUrl);
+  if (!badgeId) return null;
+
+  const response = await fetch(
+    `https://www.credly.com/api/v1/public_badges/${badgeId}?fields=related_badges:basic`,
+    {
+      headers: {
+        "user-agent": "Jsoor badge importer",
+        accept: "application/json",
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json()) as CredlyPublicBadge;
+  const data = payload.data;
+  if (!data) return null;
+
+  return {
+    name: data.badge_template?.name?.trim() || "Badge",
+    issuer: credlyIssuerName(data.issuer) || credlyIssuerName(data.badge_template?.issuer),
+    image: data.image_url || data.badge_template?.image_url || "",
+    url: publicUrl,
+    date: (data.issued_at_date || data.issued_at || "").slice(0, 10),
+  };
 }
 
 function firstJsonLdObject(html: string) {
@@ -95,6 +199,16 @@ function cleanBadgeTitle(value: string) {
     .trim();
 }
 
+function credlyTitleParts(value: string) {
+  const match = value.match(/^(.+?)\s+was issued by\s+(.+?)\s+to\s+.+?\.?$/i);
+  if (!match) return null;
+
+  return {
+    name: cleanBadgeTitle(match[1] ?? ""),
+    issuer: (match[2] ?? "").trim(),
+  };
+}
+
 function namedObjectValue(source: Record<string, unknown> | null, key: string) {
   const value = source?.[key];
   if (!value || typeof value !== "object") return "";
@@ -106,6 +220,9 @@ function namedObjectValue(source: Record<string, unknown> | null, key: string) {
 export async function fetchBadgeMetadata(url: string) {
   try {
     const publicUrl = publicHttpUrl(url);
+    const credlyBadge = await fetchCredlyBadgeMetadata(publicUrl);
+    if (credlyBadge) return { badge: credlyBadge };
+
     const response = await fetch(publicUrl, {
       headers: {
         "user-agent": "Jsoor badge importer",
@@ -118,28 +235,34 @@ export async function fetchBadgeMetadata(url: string) {
 
     const html = (await response.text()).slice(0, 750_000);
     const jsonLd = firstJsonLdObject(html) as Record<string, unknown> | null;
+    const plainText = plainTextFromHtml(html);
     const description = textFromMeta(html, "description") || textFromMeta(html, "og:description");
     const rawTitle =
       (typeof jsonLd?.name === "string" ? jsonLd.name : "") ||
       textFromMeta(html, "og:title") ||
       textFromMeta(html, "twitter:title") ||
+      headingFromHtml(html) ||
       titleFromHtml(html);
+    const credlyTitle = credlyTitleParts(rawTitle);
     const image =
       (typeof jsonLd?.image === "string" ? jsonLd.image : "") ||
       textFromMeta(html, "og:image") ||
       textFromMeta(html, "twitter:image");
     const issuer =
+      credlyTitle?.issuer ||
       namedObjectValue(jsonLd, "issuer") ||
       namedObjectValue(jsonLd, "provider") ||
-      (description.match(/issued by ([^.]+)/i)?.[1] ?? "");
+      (description.match(/issued by ([^.]+)/i)?.[1] ?? "") ||
+      (plainText.match(/Issued by\s+([^\n]+)/i)?.[1] ?? "");
     const date =
       (typeof jsonLd?.dateIssued === "string" ? jsonLd.dateIssued : "") ||
       (typeof jsonLd?.validFrom === "string" ? jsonLd.validFrom : "") ||
-      (html.match(/\d{4}-\d{2}-\d{2}/)?.[0] ?? "");
+      normalizedDate(plainText) ||
+      normalizedDate(html);
 
     return {
       badge: {
-        name: cleanBadgeTitle(rawTitle) || "Badge",
+        name: credlyTitle?.name || cleanBadgeTitle(rawTitle) || "Badge",
         issuer: issuer.trim(),
         image,
         url: publicUrl,

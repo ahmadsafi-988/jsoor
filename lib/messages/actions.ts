@@ -25,6 +25,34 @@ export type ConversationSummary = {
   unread_count: number;
 };
 
+type ConversationSummaryRow = {
+  id: string;
+  application_id: string;
+  company_id?: string;
+  job_seeker_id?: string;
+  created_at: string | null;
+  application?: {
+    job?: {
+      title?: string | null;
+    } | null;
+  } | null;
+  seeker?: {
+    first_name?: string | null;
+    last_name?: string | null;
+    avatar_url?: string | null;
+  } | null;
+};
+
+type MessageSummaryRow = {
+  id: string;
+  conversation_id: string;
+  content: string;
+  sender_id: string;
+  is_read: boolean | null;
+  created_at: string | null;
+  attachment_name: string | null;
+};
+
 // ─── Conversation bootstrap ───────────────────────────────────────────────────
 
 export async function getOrCreateConversation(applicationId: string) {
@@ -137,8 +165,9 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
 
   if (!convRows?.length) return [];
 
-  const convIds = (convRows as any[]).map((c) => c.id);
-  const companyIds = [...new Set((convRows as any[]).map((c) => c.company_id))] as string[];
+  const typedConvRows = convRows as ConversationSummaryRow[];
+  const convIds = typedConvRows.map((c) => c.id);
+  const companyIds = [...new Set(typedConvRows.map((c) => c.company_id).filter(Boolean))] as string[];
 
   const [{ data: msgRows }, { data: companies }] = await Promise.all([
     supabase
@@ -153,9 +182,9 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
   ]);
 
   const companyMap: Record<string, { name: string; logo_url: string | null }> =
-    Object.fromEntries(((companies ?? []) as any[]).map((c) => [c.id, c]));
+    Object.fromEntries(((companies ?? []) as Array<{ id: string; name: string; logo_url: string | null }>).map((c) => [c.id, c]));
 
-  return buildSummaries(convRows as any[], msgRows ?? [], user.id, "job_seeker", companyMap);
+  return buildSummaries(typedConvRows, msgRows ?? [], user.id, "job_seeker", companyMap);
 }
 
 export async function getCompanyConversations(): Promise<ConversationSummary[]> {
@@ -180,24 +209,25 @@ export async function getCompanyConversations(): Promise<ConversationSummary[]> 
 
   if (!convRows?.length) return [];
 
-  const convIds = (convRows as any[]).map((c) => c.id);
+  const typedConvRows = convRows as ConversationSummaryRow[];
+  const convIds = typedConvRows.map((c) => c.id);
   const { data: msgRows } = await supabase
     .from("messages")
     .select("id, conversation_id, content, sender_id, is_read, created_at, attachment_name")
     .in("conversation_id", convIds)
     .order("created_at", { ascending: false });
 
-  return buildSummaries(convRows as any[], msgRows ?? [], user.id, "company");
+  return buildSummaries(typedConvRows, msgRows ?? [], user.id, "company");
 }
 
 function buildSummaries(
-  convRows: any[],
-  msgRows: any[],
+  convRows: ConversationSummaryRow[],
+  msgRows: MessageSummaryRow[],
   userId: string,
   perspective: "job_seeker" | "company",
   companyMap?: Record<string, { name: string; logo_url: string | null }>
 ): ConversationSummary[] {
-  const msgsByConv = new Map<string, any[]>();
+  const msgsByConv = new Map<string, MessageSummaryRow[]>();
   for (const msg of msgRows) {
     if (!msgsByConv.has(msg.conversation_id)) msgsByConv.set(msg.conversation_id, []);
     msgsByConv.get(msg.conversation_id)!.push(msg);
@@ -212,7 +242,7 @@ function buildSummaries(
     let otherAvatar: string | null = null;
 
     if (perspective === "job_seeker") {
-      const co = companyMap?.[conv.company_id];
+      const co = conv.company_id ? companyMap?.[conv.company_id] : undefined;
       otherName = co?.name ?? "Unknown Company";
       otherAvatar = co?.logo_url ?? null;
     } else {
@@ -231,7 +261,7 @@ function buildSummaries(
       last_message: lastMsg
         ? lastMsg.content || `📎 ${lastMsg.attachment_name ?? "attachment"}`
         : "",
-      last_message_at: lastMsg?.created_at ?? conv.created_at,
+      last_message_at: lastMsg?.created_at ?? conv.created_at ?? new Date(0).toISOString(),
       unread_count: unreadCount,
     };
   });

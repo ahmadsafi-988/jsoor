@@ -648,7 +648,7 @@ function BadgeForm({
     setLookupPending(false);
 
     if ("error" in result) {
-      setLookupError(result.error);
+      setLookupError(result.error ?? "Could not read badge metadata.");
       setDetailsOpen(true);
       return;
     }
