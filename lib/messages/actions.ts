@@ -82,6 +82,39 @@ export async function getOrCreateConversation(applicationId: string) {
 
 // ─── Conversation lists ───────────────────────────────────────────────────────
 
+export async function getOrCreateConversationWithProfile(profileUserId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+  if (user.id === profileUserId) return { error: "You cannot message yourself." };
+
+  const { data: companyJobs, error: jobsError } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("company_id", user.id);
+
+  if (jobsError) return { error: jobsError.message };
+  if (!companyJobs?.length) {
+    return { error: "Messages can only be opened from a company account with a shared application." };
+  }
+
+  const { data: applications, error: applicationsError } = await supabase
+    .from("job_applications")
+    .select("id, created_at")
+    .eq("applicant_id", profileUserId)
+    .in("job_id", companyJobs.map((job) => job.id))
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (applicationsError) return { error: applicationsError.message };
+  const application = applications?.[0];
+  if (!application) {
+    return { error: "No shared job application found for this profile." };
+  }
+
+  return getOrCreateConversation(application.id);
+}
+
 export async function getJobSeekerConversations(): Promise<ConversationSummary[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

@@ -30,6 +30,7 @@ import {
   deleteProject,
   upsertBadge,
   deleteBadge,
+  fetchBadgeMetadata,
   updateEmail,
   updatePassword,
   updateAvatarUrl,
@@ -38,7 +39,7 @@ import {
   removeProfileSkill,
 } from "@/lib/profile/actions";
 import { uploadAvatar, uploadCV } from "@/lib/storage/upload";
-import type { user, project, badge } from "@/lib/global_types";
+import type { user, project, badge, ProjectSkill } from "@/lib/global_types";
 
 
 import {
@@ -67,11 +68,30 @@ type Tab = "profile" | "projects" | "badges" | "account" | "skills"
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "Profile", icon: User },
+  { id: "skills", label: "Skills", icon: Wrench },
   { id: "projects", label: "Projects", icon: FolderGit2 },
   { id: "badges", label: "Badges", icon: Award },
   { id: "account", label: "Account", icon: Lock },
-  { id: "skills", label: "Skills", icon: Wrench },
 ];
+
+const HASH_TARGETS: Record<string, Tab> = {
+  profile: "profile",
+  bio: "profile",
+  education: "profile",
+  cv: "profile",
+  projects: "projects",
+  badges: "badges",
+  account: "account",
+  skills: "skills",
+};
+
+function targetFromHash() {
+  const id = window.location.hash.replace("#", "").toLowerCase();
+  if (!id) return null;
+
+  const tab = HASH_TARGETS[id];
+  return tab ? { id, tab } : null;
+}
 
 // ─── Feedback helper ─────────────────────────────────────────────────────────
 function Feedback({ state }: { state: { error?: string; message?: string } | null }) {
@@ -153,19 +173,19 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form id="profile" onSubmit={handleSubmit} className="space-y-6 scroll-mt-24">
       {/* Avatar */}
       <div className="space-y-2">
-        <Label>Profile photo</Label>
+        <Label className="text-sm font-semibold text-[#1c1b1b]">Profile photo</Label>
         <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20 border-2 border-border">
+          <Avatar className="h-20 w-20 border-4 border-[#f6f3f2] shadow-sm">
             <AvatarImage src={avatarPreview ?? undefined} />
-            <AvatarFallback><ImageIcon className="h-7 w-7 text-muted-foreground" /></AvatarFallback>
+            <AvatarFallback className="bg-[#e5e2e1]"><ImageIcon className="h-7 w-7 text-[#5f5e5e]" /></AvatarFallback>
           </Avatar>
           <div className="space-y-1">
             <Label
               htmlFor="avatar_edit"
-              className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+              className="cursor-pointer rounded-lg border border-[#e5e2e1] bg-white px-3 py-1.5 text-sm text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
             >
               Change photo
             </Label>
@@ -186,7 +206,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* Basic fields */}
       <div className="grid grid-cols-2 gap-4">
@@ -203,14 +223,14 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
       <div className="space-y-1.5">
         <Label htmlFor="username">Username</Label>
         <div className="flex items-center">
-          <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">@</span>
+          <span className="flex h-10 items-center rounded-l-lg border border-r-0 border-[#e5e2e1] bg-[#f6f3f2] px-3 text-sm text-[#5f5e5e]">@</span>
           <Input id="username" name="username" defaultValue={profile.username ?? ""} required className="rounded-l-none" />
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="bio">Bio</Label>
-        <Textarea id="bio" name="bio" defaultValue={profile.bio} rows={3} />
+      <div id="bio" className="space-y-1.5 scroll-mt-36">
+        <Label htmlFor="bio_input">Bio</Label>
+        <Textarea id="bio_input" name="bio" defaultValue={profile.bio} rows={3} />
       </div>
 
       <div className="space-y-1.5">
@@ -225,19 +245,19 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="github">GitHub</Label>
-          <Input id="github" name="github" defaultValue={profile.github ?? ""} />
+          <Input id="github" name="github" defaultValue={profile.github ?? ""} placeholder="https://github.com/username" />
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* Education */}
-      <div className="space-y-3">
-        <h3 className="text-sm font-semibold">Education</h3>
+      <div id="education" className="space-y-3 scroll-mt-24">
+        <h3 className="text-sm font-semibold text-[#1c1b1b]">Education</h3>
         <div className="space-y-1.5">
           <Label>Institution</Label>
           <div className="relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#5f5e5e]" />
             <Input
               className="pl-9"
               value={query}
@@ -246,13 +266,13 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
             />
           </div>
           {uniResults.length > 0 && !selectedUni && (
-            <div className="rounded-md border bg-popover shadow-md">
+            <div className="rounded-xl border border-[#e5e2e1] bg-white shadow-sm overflow-hidden">
               {uniResults.map((u) => (
                 <button
                   key={u.id}
                   type="button"
                   onClick={() => { setSelectedUni(u); setQuery(u.name); setUniResults([]); }}
-                  className="flex w-full items-center gap-3 px-3 py-2 text-sm hover:bg-muted"
+                  className="flex w-full items-center gap-3 px-3 py-2 text-sm text-[#3d4a41] hover:bg-[#f6f3f2]"
                 >
                   <img src={u.logo_url} alt={u.name} className="h-6 w-6 rounded object-contain" />
                   {u.name}
@@ -284,10 +304,10 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* CV */}
-      <div className="space-y-2">
+      <div id="cv" className="space-y-2 scroll-mt-24">
         <Label>CV / Résumé</Label>
         <div className="flex items-center gap-3">
           {profile.cv_url && !cvFile && (
@@ -302,7 +322,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
           )}
           <Label
             htmlFor="cv_edit"
-            className="cursor-pointer rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+            className="cursor-pointer rounded-lg border border-[#e5e2e1] bg-white px-3 py-1.5 text-sm text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
           >
             {profile.cv_url ? "Replace CV" : "Upload CV"}
           </Label>
@@ -322,7 +342,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       <Feedback state={feedback} />
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending} className="bg-[#006d43] text-white hover:bg-[#005232]">
         <Save className="mr-1.5 h-4 w-4" />
         {pending ? "Saving…" : "Save profile"}
       </Button>
@@ -331,21 +351,44 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 }
 
 // ─── ProjectForm (hoisted — defining inside TabProjects caused remount on every keystroke) ──
-type ProjectDraft = { name: string; description: string; status: string; url: string };
+type ProjectDraft = {
+  name: string;
+  description: string;
+  status: string;
+  url: string;
+  skillEntries: ProjectSkill[];
+};
 
 function ProjectForm({
   src,
+  availableSkills,
   onChange,
   onSave,
   onCancel,
 }: {
   src: ProjectDraft;
-  onChange: (k: string, v: string) => void;
+  availableSkills: ProjectSkill[];
+  onChange: (k: string, v: string | ProjectSkill[]) => void;
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const [skillQuery, setSkillQuery] = React.useState("");
+  const selectedSkillIds = new Set(src.skillEntries.map((skill) => skill.id));
+  const filteredSkills = availableSkills.filter((skill) =>
+    skill.name.toLowerCase().includes(skillQuery.trim().toLowerCase())
+  );
+
+  function addSkill(skill: ProjectSkill) {
+    if (selectedSkillIds.has(skill.id)) return;
+    onChange("skillEntries", [...src.skillEntries, skill]);
+  }
+
+  function removeSkill(skillId: number) {
+    onChange("skillEntries", src.skillEntries.filter((skill) => skill.id !== skillId));
+  }
+
   return (
-    <div className="rounded-md border bg-card p-4 space-y-3">
+    <div className="space-y-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] p-4">
       <div className="space-y-1.5">
         <Label>Name *</Label>
         <Input value={src.name} onChange={(e) => onChange("name", e.target.value)} placeholder="My Project" />
@@ -358,7 +401,7 @@ function ProjectForm({
         <div className="space-y-1.5">
           <Label>Status</Label>
           <select
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="flex h-10 w-full rounded-lg border border-[#e5e2e1] bg-white px-3 py-2 text-sm text-[#1c1b1b]"
             value={src.status}
             onChange={(e) => onChange("status", e.target.value)}
           >
@@ -372,9 +415,69 @@ function ProjectForm({
           <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://github.com/…" />
         </div>
       </div>
+      <div className="space-y-2">
+        <Label>Skills used</Label>
+        <div className="flex min-h-9 flex-wrap items-center gap-2">
+          {src.skillEntries.length === 0 ? (
+            <p className="text-xs italic text-[#5f5e5e]">No project skills selected yet.</p>
+          ) : (
+            src.skillEntries.map((skill) => (
+              <Badge
+                key={skill.id}
+                variant="secondary"
+                className="gap-1.5 rounded-full border border-[#78fbb6]/40 bg-[#f0f9f5] px-3 py-1 text-xs text-[#005232]"
+              >
+                <span>{skill.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeSkill(skill.id)}
+                  className="text-[#5f5e5e] hover:text-destructive"
+                  aria-label={`Remove ${skill.name}`}
+                >
+                  <XCircle className="h-3.5 w-3.5" />
+                </button>
+              </Badge>
+            ))
+          )}
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f5e5e]" />
+          <Input
+            className="pl-9"
+            value={skillQuery}
+            onChange={(event) => setSkillQuery(event.target.value)}
+            placeholder="Search skills for this project..."
+          />
+        </div>
+        <div className="max-h-40 overflow-y-auto rounded-xl border border-[#e5e2e1] bg-white p-1.5">
+          {filteredSkills.length === 0 ? (
+            <p className="px-3 py-4 text-center text-xs text-[#5f5e5e]">No matching skills found.</p>
+          ) : (
+            filteredSkills.map((skill) => {
+              const isSelected = selectedSkillIds.has(skill.id);
+              return (
+                <button
+                  key={skill.id}
+                  type="button"
+                  disabled={isSelected}
+                  onClick={() => addSkill(skill)}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-[#1c1b1b] transition-colors hover:bg-[#f6f3f2] disabled:cursor-default disabled:text-[#5f5e5e] disabled:opacity-60"
+                >
+                  {isSelected ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <PlusCircle className="h-4 w-4 text-[#5f5e5e]" />
+                  )}
+                  {skill.name}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button type="button" className="flex-1" onClick={onSave} disabled={!src.name.trim()}>
+        <Button type="button" variant="outline" className="flex-1 border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#e5e2e1]" onClick={onCancel}>Cancel</Button>
+        <Button type="button" className="flex-1 bg-[#006d43] text-white hover:bg-[#005232]" onClick={onSave} disabled={!src.name.trim()}>
           <Save className="mr-1.5 h-4 w-4" /> Save
         </Button>
       </div>
@@ -383,6 +486,24 @@ function ProjectForm({
 }
 
 // ─── Tab: Projects ────────────────────────────────────────────
+type ProjectWithSkillRelation = project & {
+  project_to_skills?: Array<{ skill: ProjectSkill | null }>;
+};
+
+function normalizeProjectRows(rows: ProjectWithSkillRelation[] = []): project[] {
+  return rows.map(({ project_to_skills, ...projectRow }) => {
+    const skillEntries = (project_to_skills ?? [])
+      .map((row) => row.skill)
+      .filter((skill): skill is ProjectSkill => Boolean(skill));
+
+    return {
+      ...projectRow,
+      skillEntries,
+      skills: skillEntries.map((skill) => skill.name),
+    };
+  });
+}
+
 function TabProjects({ projects, onProjectsChange, username }: {
   projects: project[];
   onProjectsChange: (p: project[]) => void;
@@ -391,9 +512,33 @@ function TabProjects({ projects, onProjectsChange, username }: {
   const [editing, setEditing] = React.useState<project | null>(null);
   const [adding, setAdding] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
+  const [availableSkills, setAvailableSkills] = React.useState<ProjectSkill[]>([]);
 
-  const blank: ProjectDraft = { name: "", description: "", status: "In Progress", url: "" };
+  const blank: ProjectDraft = { name: "", description: "", status: "In Progress", url: "", skillEntries: [] };
   const [draft, setDraft] = React.useState<ProjectDraft>(blank);
+
+  React.useEffect(() => {
+    async function loadSkills() {
+      const supabase = createClient();
+      const { data } = await supabase.from("skills").select("id, name").order("name", { ascending: true });
+      setAvailableSkills(data ?? []);
+    }
+
+    loadSkills();
+  }, []);
+
+  async function refreshProjects() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("projects")
+      .select("*, project_to_skills(skill:skills(id, name))")
+      .eq("user_id", user.id);
+
+    onProjectsChange(normalizeProjectRows((data ?? []) as ProjectWithSkillRelation[]));
+  }
 
   async function handleSave(isNew: boolean) {
     const fd = new FormData();
@@ -403,18 +548,14 @@ function TabProjects({ projects, onProjectsChange, username }: {
     fd.set("description", src.description);
     fd.set("status", src.status);
     fd.set("url", src.url);
+    (src.skillEntries ?? []).forEach((skill) => fd.append("skill_ids", String(skill.id)));
     const result = await upsertProject(fd, username);
     if (result?.error) { setFeedback({ error: result.error }); return; }
     setFeedback({ message: isNew ? "Project added." : "Project updated." });
     setAdding(false);
     setEditing(null);
-    // Refresh list from server is handled by revalidatePath; re-fetch locally:
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data } = await supabase.from("projects").select("*").eq("user_id", user.id);
-      onProjectsChange(data ?? []);
-    }
+    if (isNew) setDraft(blank);
+    await refreshProjects();
   }
 
   async function handleDelete(id: number) {
@@ -425,40 +566,54 @@ function TabProjects({ projects, onProjectsChange, username }: {
   }
 
   return (
-    <div className="space-y-4">
+    <div id="projects" className="space-y-4 scroll-mt-24">
       <Feedback state={feedback} />
       {projects.map((p) =>
         editing?.id === p.id ? (
           <ProjectForm
             key={p.id}
-            src={editing}
+            src={{ ...editing, skillEntries: editing.skillEntries ?? [] }}
+            availableSkills={availableSkills}
             onChange={(k, v) => setEditing((e) => e ? { ...e, [k]: v } : e)}
             onSave={() => handleSave(false)}
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <div key={p.id} className="rounded-md border bg-card px-4 py-3 space-y-1">
+          <div key={p.id} className="space-y-1 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3">
             <div className="flex items-center justify-between">
-              <span className="font-medium">{p.name}</span>
+              <span className="font-medium text-[#1c1b1b]">{p.name}</span>
               <div className="flex items-center gap-2">
                 <Badge variant={p.status === "Live" ? "default" : "secondary"} className="text-xs">{p.status}</Badge>
-                <button type="button" onClick={() => { setEditing(p); setAdding(false); }} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                <button type="button" onClick={() => { setEditing(p); setAdding(false); }} className="text-[#5f5e5e] hover:text-[#006d43]"><Pencil className="h-4 w-4" /></button>
                 <button type="button" onClick={() => handleDelete(p.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">{p.description}</p>
+            <p className="line-clamp-2 text-sm text-[#5f5e5e]">{p.description}</p>
+            {p.skillEntries && p.skillEntries.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {p.skillEntries.map((skill) => (
+                  <span
+                    key={skill.id}
+                    className="rounded-full border border-[#78fbb6]/40 bg-white px-2.5 py-1 text-[11px] font-medium text-[#005232]"
+                  >
+                    {skill.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         )
       )}
       {adding ? (
         <ProjectForm
           src={draft}
+          availableSkills={availableSkills}
           onChange={(k, v) => setDraft((d) => ({ ...d, [k]: v }))}
           onSave={() => handleSave(true)}
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <Button type="button" variant="outline" className="w-full" onClick={() => { setAdding(true); setEditing(null); }}>
+        <Button type="button" variant="outline" className="w-full border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]" onClick={() => { setAdding(true); setEditing(null); }}>
           <Plus className="mr-1.5 h-4 w-4" /> Add project
         </Button>
       )}
@@ -480,12 +635,61 @@ function BadgeForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const [detailsOpen, setDetailsOpen] = React.useState(Boolean(src.name || src.issuer || src.image || src.date));
+  const [lookupPending, setLookupPending] = React.useState(false);
+  const [lookupError, setLookupError] = React.useState<string | null>(null);
+
+  async function handleFetchDetails() {
+    if (!src.url.trim()) return;
+
+    setLookupPending(true);
+    setLookupError(null);
+    const result = await fetchBadgeMetadata(src.url);
+    setLookupPending(false);
+
+    if ("error" in result) {
+      setLookupError(result.error);
+      setDetailsOpen(true);
+      return;
+    }
+
+    Object.entries(result.badge).forEach(([key, value]) => onChange(key, value));
+    setDetailsOpen(true);
+  }
+
   return (
-    <div className="rounded-md border bg-card p-4 space-y-3">
+    <div className="space-y-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] p-4">
       <div className="space-y-1.5">
-        <Label>Badge name *</Label>
-        <Input value={src.name} onChange={(e) => onChange("name", e.target.value)} placeholder="AWS Certified Developer" />
+        <Label>Public badge link *</Label>
+        <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://www.credly.com/badges/..." />
       </div>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#e5e2e1]"
+          onClick={handleFetchDetails}
+          disabled={!src.url.trim() || lookupPending}
+        >
+          {lookupPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+          Fetch details
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          className="text-[#3d4a41] hover:bg-[#e5e2e1]"
+          onClick={() => setDetailsOpen((value) => !value)}
+        >
+          {detailsOpen ? "Hide details" : "Edit details"}
+        </Button>
+      </div>
+      {lookupError && <p className="text-xs text-destructive">{lookupError}</p>}
+      {detailsOpen && (
+        <div className="space-y-3 rounded-xl border border-[#e5e2e1] bg-white p-3">
+          <div className="space-y-1.5">
+            <Label>Badge name</Label>
+            <Input value={src.name} onChange={(e) => onChange("name", e.target.value)} placeholder="AWS Certified Developer" />
+          </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label>Issuer</Label>
@@ -500,13 +704,24 @@ function BadgeForm({
         <Label>Image URL</Label>
         <Input value={src.image} onChange={(e) => onChange("image", e.target.value)} placeholder="https://images.credly.com/…" />
       </div>
-      <div className="space-y-1.5">
+        </div>
+      )}
+      {(src.name || src.issuer || src.image) && !detailsOpen && (
+        <div className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-white px-3 py-2">
+          {src.image && <img src={src.image} alt={src.name || "Badge"} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-[#1c1b1b]">{src.name || "Badge"}</p>
+            <p className="truncate text-xs text-[#5f5e5e]">{src.issuer}</p>
+          </div>
+        </div>
+      )}
+      <div className="space-y-1.5 hidden">
         <Label>Badge URL</Label>
         <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://www.credly.com/badges/…" />
       </div>
       <div className="flex gap-2">
-        <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
-        <Button type="button" className="flex-1" onClick={onSave} disabled={!src.name.trim()}>
+        <Button type="button" variant="outline" className="flex-1 border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#e5e2e1]" onClick={onCancel}>Cancel</Button>
+        <Button type="button" className="flex-1 bg-[#006d43] text-white hover:bg-[#005232]" onClick={onSave} disabled={!src.url.trim()}>
           <Save className="mr-1.5 h-4 w-4" /> Save
         </Button>
       </div>
@@ -545,7 +760,8 @@ function TabBadges({ badges, onBadgesChange, username }: {
     setFeedback({ message: isNew ? "Badge added." : "Badge updated." });
     setAdding(false);
     setEditing(null);
-    refreshBadges();
+    if (isNew) setDraft(blank);
+    await refreshBadges();
   }
 
   async function handleDelete(id: number) {
@@ -556,7 +772,7 @@ function TabBadges({ badges, onBadgesChange, username }: {
   }
 
   return (
-    <div className="space-y-4">
+    <div id="badges" className="space-y-4 scroll-mt-24">
       <Feedback state={feedback} />
       {badges.map((b) =>
         editing?.id === b.id ? (
@@ -568,14 +784,14 @@ function TabBadges({ badges, onBadgesChange, username }: {
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <div key={b.id} className="flex items-center gap-3 rounded-md border bg-card px-3 py-2.5">
-            {b.image && <img src={b.image} alt={b.name} className="h-10 w-10 rounded object-contain border bg-muted shrink-0" />}
+          <div key={b.id} className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5">
+            {b.image && <img src={b.image} alt={b.name} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{b.name}</p>
+              <p className="truncate text-sm font-medium text-[#1c1b1b]">{b.name}</p>
               <p className="text-xs text-muted-foreground truncate">{b.issuer} · {b.date}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button type="button" onClick={() => { setEditing(b); setAdding(false); }} className="text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+              <button type="button" onClick={() => { setEditing(b); setAdding(false); }} className="text-[#5f5e5e] hover:text-[#006d43]"><Pencil className="h-4 w-4" /></button>
               <button type="button" onClick={() => handleDelete(b.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
             </div>
           </div>
@@ -589,7 +805,7 @@ function TabBadges({ badges, onBadgesChange, username }: {
           onCancel={() => setAdding(false)}
         />
       ) : (
-        <Button type="button" variant="outline" className="w-full" onClick={() => { setAdding(true); setEditing(null); }}>
+        <Button type="button" variant="outline" className="w-full border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]" onClick={() => { setAdding(true); setEditing(null); }}>
           <Plus className="mr-1.5 h-4 w-4" /> Add badge
         </Button>
       )}
@@ -634,19 +850,19 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
   }
 
   return (
-    <div className="space-y-8">
+    <div id="account" className="space-y-8 scroll-mt-24">
       {/* Email */}
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold">Email address</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Current: <span className="font-medium text-foreground">{currentEmail}</span>
+          <p className="mt-0.5 text-xs text-[#5f5e5e]">
+            Current: <span className="font-medium text-[#1c1b1b]">{currentEmail}</span>
           </p>
         </div>
-        <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-4 py-3 flex items-start gap-2 text-sm">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-amber-800 dark:text-amber-300">
-            Changing your email requires confirmation. A verification link will be sent to your <strong>new</strong> address — your email won't change until you click it.
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <p className="text-amber-800">
+            Changing your email requires confirmation. A verification link will be sent to your <strong>new</strong> address — your email won&apos;t change until you click it.
           </p>
         </div>
         <form onSubmit={handleEmailSubmit} className="space-y-3">
@@ -655,20 +871,20 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
             <Input id="email" name="email" type="email" placeholder="new@example.com" required />
           </div>
           <Feedback state={emailFeedback} />
-          <Button type="submit" variant="outline" disabled={emailPending}>
+          <Button type="submit" variant="outline" disabled={emailPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
             {emailPending ? "Sending…" : "Send confirmation email"}
           </Button>
         </form>
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* Password */}
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold">Change password</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            You'll need to enter your current password to confirm.
+          <p className="mt-0.5 text-xs text-[#5f5e5e]">
+            You&apos;ll need to enter your current password to confirm.
           </p>
         </div>
         <form onSubmit={handlePasswordSubmit} className="space-y-3">
@@ -685,7 +901,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
             <Input id="confirmPassword" name="confirmPassword" type="password" required autoComplete="new-password" />
           </div>
           <Feedback state={passwordFeedback} />
-          <Button type="submit" variant="outline" disabled={passwordPending}>
+          <Button type="submit" variant="outline" disabled={passwordPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
             {passwordPending ? "Updating…" : "Update password"}
           </Button>
         </form>
@@ -759,23 +975,23 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
   }
 
   return (
-    <div className="space-y-6 relative pb-20 min-h-[500px]">
+    <div id="skills" className="relative min-h-[500px] space-y-6 pb-20 scroll-mt-24">
       {/* 1. Selected Skills Area */}
-<div className="flex flex-wrap items-center gap-3 min-h-[2.25rem] mb-2">
+<div className="mb-2 flex min-h-[2.25rem] flex-wrap items-center gap-3">
   {profileSkills.length === 0 && (
-    <p className="text-sm text-muted-foreground italic py-1">No skills selected yet.</p>
+    <p className="py-1 text-sm italic text-[#5f5e5e]">No skills selected yet.</p>
   )}
   {profileSkills.map((s) => (
     <Badge 
       key={s.skill_id} 
       variant="secondary" 
-      className="text-sm py-1.5 px-4 gap-2 rounded-lg border-2 border-primary/10 bg-secondary/50 hover:bg-secondary transition-all animate-in fade-in zoom-in duration-200"
+      className="gap-2 rounded-full border border-[#78fbb6]/40 bg-[#f0f9f5] px-4 py-1.5 text-sm text-[#005232] transition-colors hover:bg-[#e5f7ee]"
     >
-      <span className="font-semibold text-foreground">{s.skills?.name}</span>
+      <span className="font-semibold">{s.skills?.name}</span>
       <button
         type="button"
         onClick={() => handleRemove(s.skill_id)}
-        className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+        className="ml-1 text-[#5f5e5e] transition-colors hover:text-destructive"
       >
         <XCircle className="h-4 w-4" /> 
       </button>
@@ -783,19 +999,19 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
   ))}
 </div>
 
-      <Separator className="opacity-50" />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* 2. Search & Scrollable List Area */}
       <div className="space-y-4">
         <div className="flex flex-col gap-1">
-          <Label className="text-lg font-bold tracking-tight">Skills & Expertise</Label>
-          <p className="text-xs text-muted-foreground">Select from the list or search for specific skills.</p>
+          <Label className="text-lg font-bold tracking-tight text-[#1c1b1b]">Skills & Expertise</Label>
+          <p className="text-xs text-[#5f5e5e]">Select from the list or search for specific skills.</p>
         </div>
         
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#5f5e5e]" />
           <Input
-            className="pl-11 h-12 text-base shadow-sm focus-visible:ring-primary"
+            className="h-12 pl-11 text-base shadow-sm focus-visible:ring-[#006d43]"
             placeholder="Search skills..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -803,10 +1019,10 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
         </div>
 
         {/* 3. SCROLLABLE Result List */}
-        <div className="rounded-xl border bg-muted/5 shadow-inner overflow-hidden">
+        <div className="overflow-hidden rounded-xl border border-[#e5e2e1] bg-[#f6f3f2]">
           <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
             {results.length === 0 && query && (
-               <p className="text-center py-10 text-sm text-muted-foreground">No matching skills found.</p>
+               <p className="py-10 text-center text-sm text-[#5f5e5e]">No matching skills found.</p>
             )}
             <div className="grid grid-cols-1 gap-1">
               {results.map((s) => {
@@ -816,18 +1032,18 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
                     key={s.id}
                     disabled={isAdded || isPending === s.id}
                     onClick={() => handleAdd(s)}
-                    className="group flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg hover:bg-white hover:shadow-sm transition-all border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-default"
+                    className="group flex items-center justify-between rounded-lg border border-transparent px-4 py-3 text-sm font-medium text-[#1c1b1b] transition-all hover:border-[#e5e2e1] hover:bg-white hover:shadow-sm disabled:cursor-default disabled:opacity-50"
                   >
                     <span className="flex items-center gap-3">
                       {isAdded ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
                       ) : (
-                        <PlusCircle className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <PlusCircle className="h-5 w-5 text-[#5f5e5e] transition-colors group-hover:text-[#006d43]" />
                       )}
                       {s.name}
                     </span>
                     {isPending === s.id && (
-                       <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                       <Loader2 className="h-4 w-4 animate-spin text-[#006d43]" />
                     )}
                   </button>
                 );
@@ -862,6 +1078,43 @@ export default function EditProfilePage() {
   const [badges, setBadges] = React.useState<badge[]>([]);
   const [email, setEmail] = React.useState("");
   const [profileSkills, setProfileSkills] = React.useState<SkillEntry[]>([])
+  const [pendingTarget, setPendingTarget] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    function applyHashTarget() {
+      const target = targetFromHash();
+      if (!target) return;
+
+      setActiveTab(target.tab);
+      setPendingTarget(target.id);
+    }
+
+    applyHashTarget();
+    window.addEventListener("hashchange", applyHashTarget);
+    return () => window.removeEventListener("hashchange", applyHashTarget);
+  }, []);
+
+  React.useEffect(() => {
+    if (loading || !pendingTarget) return;
+
+    const timer = window.setTimeout(() => {
+      const element = document.getElementById(pendingTarget);
+      element?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      const focusableSelector = "textarea, input:not([type='file']):not([type='hidden']), button, select";
+
+      if (element instanceof HTMLElement && element.matches(focusableSelector)) {
+        element.focus({ preventScroll: true });
+      } else {
+        const focusTarget = element?.querySelector<HTMLElement>(focusableSelector);
+        focusTarget?.focus({ preventScroll: true });
+      }
+
+      setPendingTarget(null);
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, [activeTab, loading, pendingTarget]);
   
   React.useEffect(() => {
     async function load() {
@@ -879,7 +1132,7 @@ export default function EditProfilePage() {
 
       const [{ data: jsProf }, { data: projs }, { data: bdgs }, { data: profSkills }] = await Promise.all([
         supabase.from("job_seeker_profiles").select("*").eq("id", user.id).single(),
-        supabase.from("projects").select("*").eq("user_id", user.id),
+        supabase.from("projects").select("*, project_to_skills(skill:skills(id, name))").eq("user_id", user.id),
         supabase.from("badges").select("*").eq("user_id", user.id),
         supabase.from("profile_to_skills").select("skill_id, skills(id, name)").eq("user_id", user.id),
       ]);
@@ -897,7 +1150,7 @@ export default function EditProfilePage() {
         location:    jsProf?.location     ?? null,
         website:     jsProf?.website      ?? null,
       });
-      setProjects(projs ?? []);
+      setProjects(normalizeProjectRows((projs ?? []) as ProjectWithSkillRelation[]));
       setBadges(bdgs ?? []);
       setEmail(user.email ?? "");
       setProfileSkills(
@@ -913,8 +1166,8 @@ export default function EditProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-svh items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <div className="flex min-h-svh items-center justify-center bg-[#f6f3f2]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[#78fbb6] border-t-[#006d43]" />
       </div>
     );
   }
@@ -922,23 +1175,31 @@ export default function EditProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Edit Profile</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your public profile and account settings
-          </p>
-        </div>
-        <Button variant="outline" asChild>
+    <div className="min-h-screen bg-[#f6f3f2] p-6 xl:p-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+      <section className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-white shadow-sm">
+        <div className="h-2 bg-gradient-to-r from-[#006d43] via-[#008a55] to-[#00c47a]" />
+        <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1c1b1b]">Edit Profile</h1>
+            <p className="mt-1 text-sm text-[#5f5e5e]">
+              Manage your public profile and account settings
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            asChild
+            className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]"
+          >
             <Link href={`/job-seeker/profile/${profile.username}`}>
-                View profile
+              View profile
             </Link>
-        </Button>
-      </div>
+          </Button>
+        </div>
+      </section>
 
       {/* Tab nav */}
-      <div className="flex border-b gap-1">
+      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-[#e5e2e1] bg-white p-2 shadow-sm">
         {TABS.map((t) => {
           const Icon = t.icon;
           return (
@@ -946,10 +1207,10 @@ export default function EditProfilePage() {
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === t.id
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground"
+                  ? "border-[#78fbb6]/50 bg-[#f0f9f5] text-[#005232]"
+                  : "border-transparent text-[#5f5e5e] hover:bg-[#f6f3f2] hover:text-[#1c1b1b]"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -960,12 +1221,13 @@ export default function EditProfilePage() {
       </div>
 
       {/* Tab content */}
-      <div>
+      <section className="rounded-2xl border border-[#e5e2e1] bg-white p-6 shadow-sm">
         {activeTab === "profile" && <TabProfile profile={profile} onSaved={setProfile} />}
         {activeTab === "projects" && <TabProjects projects={projects} onProjectsChange={setProjects} username={params.username as string} />}
         {activeTab === "badges" && <TabBadges badges={badges} onBadgesChange={setBadges} username={params.username as string} />}
         {activeTab === "account" && <TabAccount currentEmail={email} />}
         {activeTab === "skills" && <TabSkills profileSkills={profileSkills} username={params.username as string} />}
+      </section>
       </div>
     </div>
   );

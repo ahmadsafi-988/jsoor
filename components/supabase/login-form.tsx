@@ -31,7 +31,21 @@ export function LoginForm() {
         .eq("id", user.id)
         .maybeSingle();
 
-      const role = profile?.role ?? user.user_metadata?.role;
+      const metadataRole = user.user_metadata?.role;
+      const role =
+        profile?.role === "admin"
+          ? "admin"
+          : metadataRole === "company"
+            ? "company"
+            : profile?.role ?? metadataRole;
+
+      if (metadataRole === "company" && profile?.role !== "company" && profile?.role !== "admin") {
+        await supabase
+          .from("profiles")
+          .update({ role: "company" })
+          .eq("id", user.id);
+      }
+
       if (role === "company") {
         const { data: company } = await supabase
           .from("companies")

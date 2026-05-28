@@ -103,7 +103,20 @@ export async function updateSession(request: NextRequest) {
     }
 
     const claimsWithMetadata = user as unknown as ClaimsWithRoleMetadata
-    const role = profile?.role ?? claimsWithMetadata.user_metadata?.role
+    const metadataRole = claimsWithMetadata.user_metadata?.role
+    const role =
+      profile?.role === 'admin'
+        ? 'admin'
+        : metadataRole === 'company'
+          ? 'company'
+          : profile?.role ?? metadataRole
+
+    if (metadataRole === 'company' && profile?.role !== 'company' && profile?.role !== 'admin') {
+      await supabase
+        .from('profiles')
+        .update({ role: 'company' })
+        .eq('id', user.sub)
+    }
 
     if (role === 'admin' && !pathname.startsWith('/admin')) {
       return redirectTo('/admin')

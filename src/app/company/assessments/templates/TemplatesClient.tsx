@@ -2,15 +2,27 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { LayoutTemplate, Plus, Pencil, Trash2, Tag, Timer, ClipboardCheck } from "lucide-react";
 import { deleteTemplate } from "@/lib/company/templates";
 import type { TemplateRow } from "@/lib/company/templates";
+import { AssessmentCreatorModal } from "../AssessmentCreatorModal";
 
 export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<TemplateRow | null>(null);
+
+  function openCreator(template: TemplateRow | null = null) {
+    setEditingTemplate(template);
+    setCreatorOpen(true);
+  }
+
+  function closeCreator() {
+    setCreatorOpen(false);
+    setEditingTemplate(null);
+  }
 
   function handleDelete(id: string) {
     if (!confirm("Delete this template? This cannot be undone.")) return;
@@ -24,24 +36,44 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
 
   if (templates.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-[#e5e2e1] p-16 text-center">
-        <LayoutTemplate className="w-12 h-12 text-[#3d4a41] mx-auto mb-4 opacity-40" />
-        <h3 className="font-semibold text-[#1c1b1b] mb-2">No templates yet</h3>
-        <p className="text-[#3d4a41] text-sm mb-6">
-          Save reusable assessment blueprints so you do not have to rebuild from scratch each time.
-        </p>
-        <Link
-          href="/company/assessments/templates/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white text-sm font-semibold rounded-xl hover:brightness-110 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Create Template
-        </Link>
-      </div>
+      <>
+        <div className="bg-white rounded-2xl border border-[#e5e2e1] p-16 text-center">
+          <LayoutTemplate className="w-12 h-12 text-[#3d4a41] mx-auto mb-4 opacity-40" />
+          <h3 className="font-semibold text-[#1c1b1b] mb-2">No templates yet</h3>
+          <p className="text-[#3d4a41] text-sm mb-6">
+            Save reusable assessment blueprints so you do not have to rebuild from scratch each time.
+          </p>
+          <button
+            type="button"
+            onClick={() => openCreator()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white text-sm font-semibold rounded-xl hover:brightness-110 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Create Template
+          </button>
+        </div>
+        {creatorOpen && (
+          <AssessmentCreatorModal
+            key="new-template"
+            mode="template"
+            onClose={closeCreator}
+          />
+        )}
+      </>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => openCreator()}
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white text-sm font-semibold rounded-xl hover:brightness-110 transition-all"
+        >
+          <Plus className="w-4 h-4" /> New Template
+        </button>
+      </div>
+
       {/* Header */}
       <div className="grid grid-cols-12 gap-4 px-6 py-3 text-xs font-semibold text-[#3d4a41] uppercase tracking-wider">
         <div className="col-span-4">Template</div>
@@ -115,13 +147,14 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
 
               {/* Actions */}
               <div className="col-span-2 flex items-center justify-end gap-2">
-                <Link
-                  href={`/company/assessments/templates/${t.id}`}
+                <button
+                  type="button"
+                  onClick={() => openCreator(t)}
                   className="p-2 rounded-lg text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43] transition-colors"
                   title="Edit"
                 >
                   <Pencil className="w-4 h-4" />
-                </Link>
+                </button>
                 <button
                   onClick={() => handleDelete(t.id)}
                   disabled={isDeleting}
@@ -135,6 +168,14 @@ export function TemplatesClient({ templates }: { templates: TemplateRow[] }) {
           </div>
         );
       })}
+      {creatorOpen && (
+        <AssessmentCreatorModal
+          key={editingTemplate?.id ?? "new-template"}
+          mode="template"
+          initialTemplate={editingTemplate}
+          onClose={closeCreator}
+        />
+      )}
     </div>
   );
 }

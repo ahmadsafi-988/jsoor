@@ -1,5 +1,5 @@
-import { TemplateFormClient } from "../TemplateFormClient";
+import { redirect } from "next/navigation";
 
 export default function NewTemplatePage() {
-  return <TemplateFormClient />;
+  redirect("/company/assessments/templates");
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { insertNotification, insertNotificationsForAdmins } from "@/lib/notifications/actions";
+import type { Json } from "@/lib/supabase_generated_types";
 
 async function requireVerifiedCompany(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -248,6 +249,18 @@ const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]
   assessment_completed:  ["shortlisted", "accepted", "rejected", "under_review"],
 };
 
+type AssessmentTargetApplication = {
+  id: string;
+  applicant_id: string;
+  job_id: string;
+  job: { company_id?: string } | null;
+};
+
+type AssessmentQuestion = {
+  type?: string;
+  correct?: number | boolean;
+};
+
 export async function updateApplicationStatus(
   applicationId: string,
   newStatus: ApplicationStatus
@@ -316,6 +329,21 @@ export async function sendAssessment(formData: FormData) {
   if (verificationError) return verificationError;
 
   const applicationId = formData.get("application_id") as string;
+  const applicationIdsRaw = formData.get("application_ids") as string | null;
+  let applicationIds = applicationId ? [applicationId] : [];
+  if (applicationIdsRaw) {
+    try {
+      const parsed = JSON.parse(applicationIdsRaw);
+      if (Array.isArray(parsed)) {
+        applicationIds = parsed.filter((id): id is string => typeof id === "string" && id.length > 0);
+      }
+    } catch {
+      applicationIds = [];
+    }
+  }
+  applicationIds = [...new Set(applicationIds)];
+  if (applicationIds.length === 0) return { error: "Application is missing." };
+
   const questionsRaw = formData.get("questions") as string;
 
   let questions = null;
@@ -327,10 +355,10 @@ export async function sendAssessment(formData: FormData) {
   const timeLimitRaw = formData.get("time_limit") as string;
   const timeLimit = timeLimitRaw ? parseInt(timeLimitRaw) : null;
 
-  const payload = {
+  const title = formData.get("title") as string;
+  const payloadBase = {
     company_id: user.id,
-    application_id: applicationId,
-    title: formData.get("title") as string,
+    title,
     description: formData.get("description") as string,
     deadline: deadline ? new Date(deadline).toISOString() : null,
     questions,
@@ -338,22 +366,59 @@ export async function sendAssessment(formData: FormData) {
     status: "pending" as const,
   };
 
+  const { data: existingAssessments } = await supabase
+    .from("assessments")
+    .select("application_id")
+    .in("application_id", applicationIds);
+
+  const existingIds = new Set((existingAssessments ?? []).map((row) => row.application_id));
+  const candidateIds = applicationIds.filter((id) => !existingIds.has(id));
+
+  if (candidateIds.length === 0) {
+    return { success: true, sentCount: 0, skippedCount: applicationIds.length };
+  }
+
+  const { data: applications, error: applicationsError } = await supabase
+    .from("job_applications")
+    .select("id, applicant_id, job_id, job:jobs!job_applications_job_id_fkey(company_id)")
+    .in("id", candidateIds);
+
+  if (applicationsError) return { error: applicationsError.message };
+
+  const ownedApplications = ((applications ?? []) as AssessmentTargetApplication[]).filter(
+    (app) => app.job?.company_id === user.id
+  );
+
+  if (ownedApplications.length === 0) {
+    if (applicationIds.length === 1 && existingIds.has(applicationIds[0])) {
+      return { error: "This application already has an assessment." };
+    }
+    return { error: "No eligible applications found." };
+  }
+
+  const payload = ownedApplications.map((app) => ({
+    ...payloadBase,
+    application_id: app.id,
+  }));
+
   const { error } = await supabase.from("assessments").insert(payload);
   if (error) return { error: error.message };
 
-  const { data: appRow } = await supabase
+  const ownedApplicationIds = ownedApplications.map((app) => app.id as string);
+
+  const { error: updateError } = await supabase
     .from("job_applications")
     .update({ status: "assessment_sent", updated_at: new Date().toISOString() })
-    .eq("id", applicationId)
-    .select("applicant_id, job_id")
-    .single();
+    .in("id", ownedApplicationIds);
 
-  if (appRow) {
+  if (updateError) return { error: updateError.message };
+
+  for (const appRow of ownedApplications) {
     await insertNotification(
       appRow.applicant_id,
       "assessment_sent",
       "New Assessment",
-      `You have received a new assessment: "${payload.title}"`,
+      `You have received a new assessment: "${title}"`,
       "/job-seeker/assessments",
       appRow.job_id
     );
@@ -370,15 +435,25 @@ export async function sendAssessment(formData: FormData) {
     if (tpl) {
       await supabase
         .from("assessment_templates")
-        .update({ use_count: tpl.use_count + 1 })
+        .update({ use_count: tpl.use_count + ownedApplications.length })
         .eq("id", templateId);
     }
   }
 
   revalidatePath("/company/assessments");
   revalidatePath("/company/assessments/templates");
-  revalidatePath(`/company/applicants/${applicationId}`);
-  return { success: true };
+  for (const id of ownedApplicationIds) {
+    revalidatePath(`/company/applicants/${id}`);
+  }
+  for (const jobId of [...new Set(ownedApplications.map((app) => app.job_id as string))]) {
+    revalidatePath(`/company/jobs/${jobId}/applicants`);
+  }
+
+  return {
+    success: true,
+    sentCount: ownedApplications.length,
+    skippedCount: applicationIds.length - ownedApplications.length,
+  };
 }
 
 export async function submitAssessment(formData: FormData) {
@@ -389,7 +464,7 @@ export async function submitAssessment(formData: FormData) {
   const assessmentId = formData.get("assessment_id") as string;
   const submissionRaw = formData.get("submission") as string;
 
-  let submission: any = null;
+  let submission: Json = null;
   try { submission = JSON.parse(submissionRaw); } catch { submission = null; }
 
   const { data: assessment, error: fetchError } = await supabase
@@ -412,8 +487,17 @@ export async function submitAssessment(formData: FormData) {
   }
 
   // Auto-score MCQ and True/False questions
-  const questions = (assessment.questions as any[]) ?? [];
-  const answers = submission?.answers ?? {};
+  const questions = (assessment.questions as AssessmentQuestion[] | null) ?? [];
+  const answers =
+    submission &&
+    typeof submission === "object" &&
+    !Array.isArray(submission) &&
+    "answers" in submission &&
+    submission.answers &&
+    typeof submission.answers === "object" &&
+    !Array.isArray(submission.answers)
+      ? (submission.answers as Record<string, Json>)
+      : {};
   let correct = 0;
   let scorable = 0;
   for (let i = 0; i < questions.length; i++) {

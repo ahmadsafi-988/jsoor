@@ -23,7 +23,20 @@ export default async function ProtectedPage() {
     .maybeSingle()
 
   const claimsWithMetadata = data.claims as unknown as ClaimsWithRoleMetadata
-  const role = profile?.role ?? claimsWithMetadata.user_metadata?.role
+  const metadataRole = claimsWithMetadata.user_metadata?.role
+  const role =
+    profile?.role === 'admin'
+      ? 'admin'
+      : metadataRole === 'company'
+        ? 'company'
+        : profile?.role ?? metadataRole
+
+  if (metadataRole === 'company' && profile?.role !== 'company' && profile?.role !== 'admin') {
+    await supabase
+      .from('profiles')
+      .update({ role: 'company' })
+      .eq('id', data.claims.sub)
+  }
 
   if (role === 'admin') {
     redirect('/admin')

@@ -64,7 +64,7 @@ export async function getTemplate(id: string): Promise<TemplateRow | null> {
   return data ?? null;
 }
 
-export async function createTemplate(formData: FormData) {
+export async function createTemplateRecord(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
@@ -82,22 +82,33 @@ export async function createTemplate(formData: FormData) {
   const questionsRaw = formData.get("questions") as string;
   const questions = parseQuestions(questionsRaw);
 
-  const { error } = await supabase.from("assessment_templates").insert({
-    company_id: user.id,
-    title,
-    description,
-    time_limit: time_limit && !isNaN(time_limit) ? time_limit : null,
-    tags,
-    questions,
-  });
+  const { data, error } = await supabase
+    .from("assessment_templates")
+    .insert({
+      company_id: user.id,
+      title,
+      description,
+      time_limit: time_limit && !isNaN(time_limit) ? time_limit : null,
+      tags,
+      questions,
+    })
+    .select("id")
+    .single();
 
   if (error) return { error: error.message };
 
   revalidatePath("/company/assessments/templates");
+  return { success: true, templateId: data.id };
+}
+
+export async function createTemplate(formData: FormData) {
+  const result = await createTemplateRecord(formData);
+  if ("error" in result) return result;
+
   redirect("/company/assessments/templates");
 }
 
-export async function updateTemplate(id: string, formData: FormData) {
+export async function updateTemplateRecord(id: string, formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
@@ -131,6 +142,13 @@ export async function updateTemplate(id: string, formData: FormData) {
   if (error) return { error: error.message };
 
   revalidatePath("/company/assessments/templates");
+  return { success: true };
+}
+
+export async function updateTemplate(id: string, formData: FormData) {
+  const result = await updateTemplateRecord(id, formData);
+  if ("error" in result) return result;
+
   redirect("/company/assessments/templates");
 }
 

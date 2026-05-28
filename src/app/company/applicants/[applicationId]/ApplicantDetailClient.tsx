@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  sendAssessment,
   updateApplicationStatus,
   reviewAssessment,
   releaseAssessmentResults,
@@ -12,13 +11,14 @@ import type { ApplicantProfileResult } from "@/lib/company/data";
 import type { Tables } from "@/lib/supabase_generated_types";
 import {
   ArrowLeft, User, MapPin, Globe, GraduationCap,
-  FileText, ClipboardCheck, ChevronDown, ChevronUp, Star, Code2, ExternalLink,
-  Plus, Trash2, Check, X, Timer, MessageSquare, LayoutTemplate,
+  FileText, ClipboardCheck, Star, Code2, ExternalLink,
+  Check, X, Timer, MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getOrCreateConversation } from "@/lib/messages/actions";
 import type { TemplateRow } from "@/lib/company/templates";
+import { AssessmentCreatorModal } from "../../assessments/AssessmentCreatorModal";
 
 type ApplicationStatus =
   | "applied"
@@ -61,30 +61,7 @@ const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]
 
 // ─── Question types ───────────────────────────────────────────────────────────
 
-type QuestionType = "open" | "mcq" | "truefalse";
-
-type QuestionDraft =
-  | { type: "open"; question: string }
-  | { type: "mcq"; question: string; options: string[]; correct: number }
-  | { type: "truefalse"; question: string; correct: boolean };
-
-function QuestionDraftCard({
-  q,
-  idx,
-  onChange,
-  onDelete,
-}: {
-  q: QuestionDraft;
-  idx: number;
-  onChange: (updated: QuestionDraft) => void;
-  onDelete: () => void;
-}) {
-  const typeLabel = q.type === "open" ? "Open Text" : q.type === "mcq" ? "Multiple Choice" : "True / False";
-
-  return (
-    <div className="bg-[#f6f3f2] rounded-xl p-4 flex flex-col gap-3 border border-[#e5e2e1]">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-[#3d4a41] uppercase tracking-wide">
+/*
           Q{idx + 1} · {typeLabel}
         </span>
         <button type="button" onClick={onDelete} className="text-[#5f5e5e] hover:text-red-500 transition-colors">
@@ -151,14 +128,25 @@ function QuestionDraftCard({
 
 // ─── Per-question results (company view) ──────────────────────────────────────
 
+*/
+
+type AssessmentQuestion = {
+  id?: string | number;
+  type?: "open" | "mcq" | "truefalse" | string;
+  text?: string;
+  question?: string;
+  options?: string[];
+  correct?: number | boolean;
+};
+
 function QuestionResultCard({
   q,
   idx,
   answers,
 }: {
-  q: any;
+  q: AssessmentQuestion;
   idx: number;
-  answers: Record<string, any>;
+  answers: Record<string, unknown>;
 }) {
   const answer = answers[String(idx)];
   const isOldFormat = !q.type;
@@ -167,7 +155,7 @@ function QuestionResultCard({
     return (
       <div className="bg-[#f6f3f2] rounded-xl p-3">
         <p className="text-xs font-semibold text-[#1c1b1b] mb-1">Q{idx + 1}: {q.text ?? q.question}</p>
-        <p className="text-xs text-[#3d4a41]">{answer ?? answers[`q${q.id ?? idx + 1}`] ?? "No answer provided"}</p>
+        <p className="text-xs text-[#3d4a41]">{String(answer ?? answers[`q${q.id ?? idx + 1}`] ?? "No answer provided")}</p>
       </div>
     );
   }
@@ -176,7 +164,7 @@ function QuestionResultCard({
     return (
       <div className="bg-[#f6f3f2] rounded-xl p-3">
         <p className="text-xs font-semibold text-[#1c1b1b] mb-1">Q{idx + 1}: {q.question}</p>
-        <p className="text-xs text-[#3d4a41]">{answer ?? "No answer provided"}</p>
+        <p className="text-xs text-[#3d4a41]">{String(answer ?? "No answer provided")}</p>
       </div>
     );
   }
@@ -195,7 +183,7 @@ function QuestionResultCard({
           )}
         </div>
         <div className="flex flex-col gap-1">
-          {(q.options as string[]).map((opt: string, optIdx: number) => {
+          {(q.options ?? []).map((opt: string, optIdx: number) => {
             const isSelected = answer === optIdx;
             const isCorrectOpt = q.correct === optIdx;
             return (
@@ -290,17 +278,6 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Question builder state
-  const [draftQuestions, setDraftQuestions] = useState<QuestionDraft[]>([]);
-  const [showAddType, setShowAddType] = useState(false);
-
-  // Template state
-  const [loadedTemplateId, setLoadedTemplateId] = useState<string | null>(null);
-  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
-  const titleRef = React.useRef<HTMLInputElement>(null);
-  const descRef = React.useRef<HTMLTextAreaElement>(null);
-  const timeLimitRef = React.useRef<HTMLInputElement>(null);
-
   const allowedTargets = ALLOWED_TRANSITIONS[currentStatus] ?? [];
 
   async function handleStatusChange(newStatus: ApplicationStatus) {
@@ -308,49 +285,8 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
     setStatusChanging(true);
     setStatusError(null);
     const res = await updateApplicationStatus(application.id, newStatus);
-    if (res?.error) { setStatusError(res.error); } else { setCurrentStatus(newStatus); }
+    if ("error" in res) { setStatusError(res.error ?? "Could not update status."); } else { setCurrentStatus(newStatus); }
     setStatusChanging(false);
-  }
-
-  function addQuestion(type: QuestionType) {
-    const newQ: QuestionDraft =
-      type === "mcq"
-        ? { type: "mcq", question: "", options: ["", "", "", ""], correct: 0 }
-        : type === "truefalse"
-        ? { type: "truefalse", question: "", correct: true }
-        : { type: "open", question: "" };
-    setDraftQuestions((prev) => [...prev, newQ]);
-    setShowAddType(false);
-  }
-
-  async function handleSendAssessment(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (draftQuestions.length === 0) {
-      setFormError("Add at least one question.");
-      return;
-    }
-    setPending(true);
-    setFormError(null);
-    const formData = new FormData(e.currentTarget);
-    formData.set("application_id", application.id);
-    formData.set("questions", JSON.stringify(draftQuestions));
-
-    const res = await sendAssessment(formData);
-    if (res?.error) {
-      setFormError(res.error);
-    } else {
-      setShowAssessmentForm(false);
-      setDraftQuestions([]);
-      setCurrentStatus("assessment_sent");
-      const supabase = createClient();
-      const { data: a } = await supabase
-        .from("assessments")
-        .select("*")
-        .eq("application_id", application.id)
-        .maybeSingle();
-      setAssessment(a ?? null);
-    }
-    setPending(false);
   }
 
   async function handleReview(e: React.FormEvent<HTMLFormElement>) {
@@ -361,7 +297,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
     const formData = new FormData(e.currentTarget);
     formData.set("assessment_id", assessment.id);
     const res = await reviewAssessment(formData);
-    if (res?.error) {
+    if ("error" in res) {
       setFormError(res.error);
     } else {
       const supabase = createClient();
@@ -375,11 +311,23 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
     setPending(false);
   }
 
+  async function handleAssessmentSent() {
+    setShowAssessmentForm(false);
+    setCurrentStatus("assessment_sent");
+    const supabase = createClient();
+    const { data: a } = await supabase
+      .from("assessments")
+      .select("*")
+      .eq("application_id", application.id)
+      .maybeSingle();
+    setAssessment(a ?? null);
+  }
+
   async function handleRelease() {
     if (!assessment) return;
     setPending(true);
     const res = await releaseAssessmentResults(assessment.id);
-    if (res?.error) {
+    if ("error" in res) {
       setFormError(res.error);
     } else {
       setAssessment((prev) => prev ? { ...prev, results_released: true } : prev);
@@ -388,9 +336,24 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
   }
 
   // Parse submission answers — handles both V1 and V2 formats
-  const submissionRaw = assessment?.submission as any;
-  const submissionAnswers: Record<string, any> =
-    submissionRaw?.answers ?? submissionRaw ?? {};
+  const submissionRaw = assessment?.submission as { answers?: Record<string, unknown> } | Record<string, unknown> | null;
+  const submissionAnswers = (() => {
+    if (!submissionRaw) return {} as Record<string, unknown>;
+    if ("answers" in submissionRaw && submissionRaw.answers) return submissionRaw.answers;
+    if (!("answers" in submissionRaw)) return submissionRaw as Record<string, unknown>;
+    return {} as Record<string, unknown>;
+  })() as Record<string, unknown>;
+
+  useEffect(() => {
+    if (!showSubmission) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showSubmission]);
 
   return (
     <div className="px-6 py-10 max-w-5xl mx-auto w-full flex flex-col gap-8">
@@ -505,6 +468,15 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
             </div>
           </div>
 
+          {application.cover_letter && (
+            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
+              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">Cover Letter</h4>
+              <p className="text-[#3d4a41] text-sm leading-relaxed whitespace-pre-wrap">
+                {application.cover_letter}
+              </p>
+            </div>
+          )}
+
           {jsp?.bio && (
             <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
               <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">About</h4>
@@ -584,14 +556,6 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
             </div>
           )}
 
-          {application.cover_letter && (
-            <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
-              <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-3 pb-3 border-b border-[#f0edec]">Cover Letter</h4>
-              <p className="text-[#3d4a41] text-sm leading-relaxed whitespace-pre-wrap">
-                {application.cover_letter}
-              </p>
-            </div>
-          )}
         </div>
 
         {/* ── Right column ── */}
@@ -644,16 +608,15 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
               {assessment.status !== "pending" && assessment.submission && (
                 <div>
                   <button
-                    onClick={() => setShowSubmission((s) => !s)}
+                    onClick={() => setShowSubmission(true)}
                     className="w-full flex items-center justify-between text-sm font-medium text-[#006d43] py-2"
                   >
-                    View Submission{" "}
-                    {showSubmission ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    View Assessment
                   </button>
 
-                  {showSubmission && (
+                  {false && (
                     <div className="mt-2 flex flex-col gap-2">
-                      {((assessment.questions as any[]) ?? []).map((q: any, idx: number) => (
+                      {((assessment!.questions as AssessmentQuestion[] | null) ?? []).map((q, idx) => (
                         <QuestionResultCard
                           key={idx}
                           q={q}
@@ -662,7 +625,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                         />
                       ))}
 
-                      {assessment.status === "submitted" && (
+                      {assessment!.status === "submitted" && (
                         <form onSubmit={handleReview} className="flex flex-col gap-3 mt-2 pt-2 border-t border-[#f0edec]">
                           <div>
                             <label className="text-xs font-semibold text-[#1c1b1b] mb-1 block">
@@ -671,13 +634,13 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                             <textarea
                               name="feedback"
                               rows={3}
-                              defaultValue={assessment.feedback ?? ""}
+                              defaultValue={assessment!.feedback ?? ""}
                               className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20 resize-none"
                               placeholder="Add feedback for the candidate..."
                             />
                           </div>
                           {/* Keep score override for cases where all questions are open */}
-                          {assessment.score === null && (
+                          {assessment!.score === null && (
                             <div>
                               <label className="text-xs font-semibold text-[#1c1b1b] mb-1 block">
                                 Score (0–100)
@@ -732,16 +695,16 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
               <h4 className="font-semibold text-[#1c1b1b] text-sm uppercase tracking-wide mb-1 pb-3 border-b border-[#f0edec]">Assessment</h4>
               <p className="text-[#5f5e5e] text-sm mt-3 mb-4">No assessment sent yet.</p>
               <button
-                onClick={() => setShowAssessmentForm((s) => !s)}
+                onClick={() => setShowAssessmentForm(true)}
                 className="w-full bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white font-semibold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2 shadow-sm"
               >
                 <ClipboardCheck className="w-4 h-4" />
-                {showAssessmentForm ? "Cancel" : "Send Assessment"}
+                Create Assessment
               </button>
             </div>
           )}
 
-          {/* Assessment builder form */}
+          {/* Assessment builder form
           {showAssessmentForm && !assessment && (
             <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
               <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#f0edec]">
@@ -820,7 +783,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                   </div>
                 </div>
 
-                {/* Questions list */}
+                Questions list
                 {draftQuestions.length > 0 && (
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-semibold text-[#1c1b1b]">Questions</label>
@@ -840,7 +803,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                   </div>
                 )}
 
-                {/* Add question */}
+                Add question
                 <div className="relative">
                   <button
                     type="button"
@@ -877,7 +840,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                 </button>
               </form>
             </div>
-          )}
+          )} */}
 
           {/* Application meta */}
           <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-6">
@@ -900,14 +863,14 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
         </div>
       </div>
 
-      {/* Template picker modal */}
+      {/* Template picker modal
       {showTemplatePicker && templates.length > 0 && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowTemplatePicker(false); }}
         >
           <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
-            {/* Header */}
+            Header
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#e5e2e1] shrink-0">
               <div className="flex items-center gap-2">
                 <LayoutTemplate className="w-5 h-5 text-[#006d43]" />
@@ -925,7 +888,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
               </button>
             </div>
 
-            {/* Template list */}
+            Template list
             <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-3">
               {templates.map((t) => {
                 const qCount = ((t.questions as any[]) ?? []).length;
@@ -996,6 +959,147 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
             </div>
           </div>
         </div>
+      )} */}
+      {showSubmission && assessment && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSubmission(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="bg-white rounded-2xl border border-[#e5e2e1] shadow-2xl w-full max-w-4xl max-h-[86vh] flex flex-col overflow-hidden"
+          >
+            <div className="flex items-start justify-between gap-4 px-6 py-5 border-b border-[#e5e2e1] shrink-0">
+              <div>
+                <h3 className="font-headline text-xl font-semibold text-[#1c1b1b] tracking-tight">
+                  {assessment.title}
+                </h3>
+                <p className="text-sm text-[#5f5e5e] mt-1">{assessment.description}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSubmission(false)}
+                className="p-2 rounded-lg text-[#5f5e5e] hover:bg-[#f6f3f2] hover:text-[#1c1b1b] transition-colors"
+                aria-label="Close assessment"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-5 flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-[#f6f3f2] border border-[#e5e2e1] p-3">
+                  <p className="text-xs text-[#5f5e5e]">Status</p>
+                  <p className="text-sm font-semibold text-[#1c1b1b] capitalize">{assessment.status}</p>
+                </div>
+                <div className="rounded-xl bg-[#f6f3f2] border border-[#e5e2e1] p-3">
+                  <p className="text-xs text-[#5f5e5e]">Score</p>
+                  <p className="text-sm font-semibold text-[#1c1b1b]">
+                    {assessment.score === null ? "Not scored" : `${assessment.score} / 100`}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-[#f6f3f2] border border-[#e5e2e1] p-3">
+                  <p className="text-xs text-[#5f5e5e]">Time Limit</p>
+                  <p className="text-sm font-semibold text-[#1c1b1b]">
+                    {assessment.time_limit ? `${assessment.time_limit} min` : "None"}
+                  </p>
+                </div>
+              </div>
+
+              {assessment.status === "pending" && (
+                <p className="text-sm text-[#5f5e5e] bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                  The applicant has not submitted this assessment yet.
+                </p>
+              )}
+
+              {assessment.status !== "pending" && assessment.submission && (
+                <div className="flex flex-col gap-3">
+                  {((assessment.questions as AssessmentQuestion[] | null) ?? []).map((q, idx) => (
+                    <QuestionResultCard
+                      key={idx}
+                      q={q}
+                      idx={idx}
+                      answers={submissionAnswers}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {assessment.status === "submitted" && (
+                <form onSubmit={handleReview} className="flex flex-col gap-3 pt-3 border-t border-[#f0edec]">
+                  <div>
+                    <label className="text-xs font-semibold text-[#1c1b1b] mb-1 block">
+                      Feedback (optional)
+                    </label>
+                    <textarea
+                      name="feedback"
+                      rows={3}
+                      defaultValue={assessment.feedback ?? ""}
+                      className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20 resize-none"
+                      placeholder="Add feedback for the candidate..."
+                    />
+                  </div>
+                  {assessment.score === null && (
+                    <div>
+                      <label className="text-xs font-semibold text-[#1c1b1b] mb-1 block">
+                        Score (0-100)
+                      </label>
+                      <input
+                        name="score"
+                        type="number"
+                        min="0"
+                        max="100"
+                        className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+                      />
+                    </div>
+                  )}
+                  {formError && (
+                    <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{formError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={pending}
+                    className="w-full bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white font-semibold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-60"
+                  >
+                    {pending ? "Saving..." : "Mark as Reviewed"}
+                  </button>
+                </form>
+              )}
+
+              {assessment.status !== "pending" && (
+                <div className="pt-3 border-t border-[#f0edec]">
+                  {assessment.results_released ? (
+                    <p className="text-xs font-semibold text-[#006d43] flex items-center gap-1.5">
+                      <Check className="w-4 h-4" /> Results Released to Candidate
+                    </p>
+                  ) : (
+                    <button
+                      onClick={handleRelease}
+                      disabled={pending}
+                      className="w-full text-sm font-semibold text-[#006d43] border border-[#006d43]/30 py-2 rounded-xl hover:bg-[#006d43]/5 transition-colors disabled:opacity-60"
+                    >
+                      Release Results to Candidate
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAssessmentForm && !assessment && (
+        <AssessmentCreatorModal
+          key={application.id}
+          mode="assessment"
+          applicationId={application.id}
+          templates={templates}
+          onClose={() => setShowAssessmentForm(false)}
+          onAssessmentSent={handleAssessmentSent}
+        />
       )}
     </div>
   );
