@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-space-grotesk, "Space Grotesk", sans-serif);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-heading: var(--font-space-grotesk, "Space Grotesk", sans-serif);
   --font-headline: var(--font-space-grotesk, "Space Grotesk", sans-serif);
 
   /* Brand green palette (from Stitch design) */
@@ -170,4 +170,40 @@
 
 .hero-gradient-bg {
   background: linear-gradient(to bottom right, #006d43, #00a86b);
+}
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #090909 #090909;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: #090909;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #090909;
+  border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }

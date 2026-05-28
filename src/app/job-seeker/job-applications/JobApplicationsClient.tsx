@@ -164,7 +164,13 @@ export function JobApplicationsClient({ initialApplications }: { initialApplicat
               </div>
 
               {/* Action */}
-              <div className="col-span-2 flex justify-end relative z-10">
+              <div className="col-span-2 flex justify-end gap-2 relative z-10">
+                <Link
+                  href={`/job-seeker/applications/${app.id}`}
+                  className="px-4 py-2 rounded-lg border border-[#006d43]/30 text-[#006d43] text-xs font-semibold hover:bg-[#006d43]/5 transition-colors"
+                >
+                  Details
+                </Link>
                 {isAssessmentSent ? (
                   <Link
                     href="/job-seeker/assessments"

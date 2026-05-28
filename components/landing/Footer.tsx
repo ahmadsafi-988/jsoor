@@ -1,3 +1,5 @@
+import { JsoorLogo } from "@/components/JsoorLogo";
+
 const footerLinks = [
   [
     { label: "Find Jobs",    href: "#features" },
@@ -20,9 +22,7 @@ export function Footer() {
 
         {/* Brand */}
         <div>
-          <div className="text-xl font-bold text-white tracking-tight font-headline mb-4">
-            JSOOR
-          </div>
+          <JsoorLogo variant="white" className="mb-4 h-9 w-auto" />
           <p className="text-neutral-400 text-sm leading-relaxed max-w-xs">
             © 2024 JSOOR. The Architectural Bridge to Your Career.
           </p>

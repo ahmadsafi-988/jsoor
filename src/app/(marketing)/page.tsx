@@ -9,8 +9,11 @@ import { Testimonials } from "@/components/landing/Testimonials";
 import { Blog } from "@/components/landing/Blog";
 import { FAQ } from "@/components/landing/FAQ";
 import { Footer } from "@/components/landing/Footer";
+import { getPublishedBlogs } from "@/lib/blogs/data";
 
-export default function Home() {
+export default async function Home() {
+  const posts = await getPublishedBlogs(3);
+
   return (
     <div className="flex flex-col min-h-screen pt-[88px]">
       <Navbar />
@@ -36,7 +39,7 @@ export default function Home() {
           <Testimonials />
         </section>
         <section id="blog">
-          <Blog />
+          <Blog posts={posts} />
         </section>
         <section id="faq">
           <FAQ />

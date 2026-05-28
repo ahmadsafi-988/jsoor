@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { blockUser, unblockUser, suspendUser, unsuspendUser } from "@/lib/admin/actions";
 import type { AdminUser } from "@/lib/admin/data";
 import { ShieldOff, ShieldCheck, PauseCircle, PlayCircle, AlertTriangle } from "lucide-react";
@@ -61,7 +62,12 @@ export function AdminUsersClient({ users }: { users: AdminUser[] }) {
             <tr key={u.id} className={u.is_blocked ? "bg-red-50/40" : u.is_suspended ? "bg-yellow-50/40" : ""}>
               <td className="px-5 py-3.5">
                 <div>
-                  <p className="font-medium text-neutral-900">{u.first_name} {u.last_name}</p>
+                  <Link
+                    href={`/admin/users/${u.username || u.id}`}
+                    className="font-medium text-neutral-900 hover:text-[#006d43] hover:underline"
+                  >
+                    {u.first_name} {u.last_name}
+                  </Link>
                   <p className="text-xs text-neutral-500">@{u.username}</p>
                   {u.is_suspended && u.suspension_reason && (
                     <p className="text-xs text-yellow-700 mt-0.5">Suspended: {u.suspension_reason}</p>

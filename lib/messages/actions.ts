@@ -17,6 +17,10 @@ export type MessageRow = {
 export type ConversationSummary = {
   id: string;
   application_id: string;
+  other_id: string;
+  other_role: "job_seeker" | "company";
+  other_username: string | null;
+  other_profile_href: string | null;
   other_name: string;
   other_avatar: string | null;
   job_title: string;
@@ -40,6 +44,7 @@ type ConversationSummaryRow = {
     first_name?: string | null;
     last_name?: string | null;
     avatar_url?: string | null;
+    username?: string | null;
   } | null;
 };
 
@@ -53,14 +58,17 @@ type MessageSummaryRow = {
   attachment_name: string | null;
 };
 
-// ─── Conversation bootstrap ───────────────────────────────────────────────────
+type ConversationActionResult =
+  | { conversationId: string }
+  | { error: string };
 
 export async function getOrCreateConversation(applicationId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
-  // Verify caller is the applicant or the hiring company
   const { data: application } = await supabase
     .from("job_applications")
     .select("applicant_id, job:jobs!job_applications_job_id_fkey(company_id)")
@@ -71,10 +79,9 @@ export async function getOrCreateConversation(applicationId: string) {
 
   const job = application.job as { company_id: string } | null;
   const isApplicant = application.applicant_id === user.id;
-  const isCompany   = job?.company_id === user.id;
+  const isCompany = job?.company_id === user.id;
   if (!isApplicant && !isCompany) return { error: "Not authorized." };
 
-  // Return existing conversation if one already exists for this application
   const { data: existing } = await supabase
     .from("conversations")
     .select("id")
@@ -83,7 +90,6 @@ export async function getOrCreateConversation(applicationId: string) {
 
   if (existing) return { conversationId: existing.id };
 
-  // Create new conversation
   const { data: created, error } = await supabase
     .from("conversations")
     .insert({
@@ -94,7 +100,6 @@ export async function getOrCreateConversation(applicationId: string) {
     .select("id")
     .single();
 
-  // Race condition: another request created it between our check and insert
   if (error?.code === "23505") {
     const { data: fallback } = await supabase
       .from("conversations")
@@ -108,11 +113,143 @@ export async function getOrCreateConversation(applicationId: string) {
   return { conversationId: created.id };
 }
 
-// ─── Conversation lists ───────────────────────────────────────────────────────
+export async function openConversationWithCompany(
+  companyId: string,
+  applicationId?: string,
+): Promise<ConversationActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please log in before starting a conversation." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "job_seeker") {
+    return { error: "Only job seekers can message companies from this page." };
+  }
+
+  if (applicationId) {
+    const { data: application } = await supabase
+      .from("job_applications")
+      .select("id, applicant_id, job:jobs!job_applications_job_id_fkey(company_id)")
+      .eq("id", applicationId)
+      .maybeSingle();
+
+    const job = application?.job as { company_id: string } | null | undefined;
+    if (
+      application?.applicant_id === user.id &&
+      job?.company_id === companyId
+    ) {
+      return getOrCreateConversation(application.id);
+    }
+  }
+
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("company_id", companyId);
+
+  const jobIds = (jobs ?? []).map((job) => job.id);
+  if (jobIds.length === 0) {
+    return {
+      error: "You need to apply to one of this company's jobs before starting a conversation.",
+    };
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("id")
+    .eq("applicant_id", user.id)
+    .in("job_id", jobIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!application) {
+    return {
+      error: "You need to apply to one of this company's jobs before starting a conversation.",
+    };
+  }
+
+  return getOrCreateConversation(application.id);
+}
+
+export async function openConversationWithJobSeeker(
+  jobSeekerId: string,
+  applicationId?: string,
+): Promise<ConversationActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Please log in before starting a conversation." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "company") {
+    return { error: "Only companies can message job seekers from this page." };
+  }
+
+  if (applicationId) {
+    const { data: application } = await supabase
+      .from("job_applications")
+      .select("id, applicant_id, job:jobs!job_applications_job_id_fkey(company_id)")
+      .eq("id", applicationId)
+      .maybeSingle();
+
+    const job = application?.job as { company_id: string } | null | undefined;
+    if (
+      application?.applicant_id === jobSeekerId &&
+      job?.company_id === user.id
+    ) {
+      return getOrCreateConversation(application.id);
+    }
+  }
+
+  const { data: jobs } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("company_id", user.id);
+
+  const jobIds = (jobs ?? []).map((job) => job.id);
+  if (jobIds.length === 0) {
+    return {
+      error: "You can message a job seeker only when they have applied to one of your jobs.",
+    };
+  }
+
+  const { data: application } = await supabase
+    .from("job_applications")
+    .select("id")
+    .eq("applicant_id", jobSeekerId)
+    .in("job_id", jobIds)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!application) {
+    return {
+      error: "You can message a job seeker only when they have applied to one of your jobs.",
+    };
+  }
+
+  return getOrCreateConversation(application.id);
+}
 
 export async function getOrCreateConversationWithProfile(profileUserId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
   if (user.id === profileUserId) return { error: "You cannot message yourself." };
 
@@ -130,7 +267,10 @@ export async function getOrCreateConversationWithProfile(profileUserId: string) 
     .from("job_applications")
     .select("id, created_at")
     .eq("applicant_id", profileUserId)
-    .in("job_id", companyJobs.map((job) => job.id))
+    .in(
+      "job_id",
+      companyJobs.map((job) => job.id),
+    )
     .order("created_at", { ascending: false })
     .limit(1);
 
@@ -145,10 +285,11 @@ export async function getOrCreateConversationWithProfile(profileUserId: string) 
 
 export async function getJobSeekerConversations(): Promise<ConversationSummary[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return [];
 
-  // conversations_company_id_fkey → profiles, NOT companies, so we fetch companies separately
   const { data: convRows } = await supabase
     .from("conversations")
     .select(`
@@ -167,7 +308,9 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
 
   const typedConvRows = convRows as ConversationSummaryRow[];
   const convIds = typedConvRows.map((c) => c.id);
-  const companyIds = [...new Set(typedConvRows.map((c) => c.company_id).filter(Boolean))] as string[];
+  const companyIds = [
+    ...new Set(typedConvRows.map((c) => c.company_id).filter(Boolean)),
+  ] as string[];
 
   const [{ data: msgRows }, { data: companies }] = await Promise.all([
     supabase
@@ -182,14 +325,19 @@ export async function getJobSeekerConversations(): Promise<ConversationSummary[]
   ]);
 
   const companyMap: Record<string, { name: string; logo_url: string | null }> =
-    Object.fromEntries(((companies ?? []) as Array<{ id: string; name: string; logo_url: string | null }>).map((c) => [c.id, c]));
+    Object.fromEntries(
+      ((companies ?? []) as Array<{ id: string; name: string; logo_url: string | null }>)
+        .map((company) => [company.id, company]),
+    );
 
   return buildSummaries(typedConvRows, msgRows ?? [], user.id, "job_seeker", companyMap);
 }
 
 export async function getCompanyConversations(): Promise<ConversationSummary[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return [];
 
   const { data: convRows } = await supabase
@@ -202,7 +350,7 @@ export async function getCompanyConversations(): Promise<ConversationSummary[]> 
       application:job_applications!conversations_application_id_fkey(
         job:jobs!job_applications_job_id_fkey(title)
       ),
-      seeker:profiles!conversations_job_seeker_id_fkey(first_name, last_name, avatar_url)
+      seeker:profiles!conversations_job_seeker_id_fkey(first_name, last_name, avatar_url, username)
     `)
     .eq("company_id", user.id)
     .order("created_at", { ascending: false });
@@ -225,7 +373,7 @@ function buildSummaries(
   msgRows: MessageSummaryRow[],
   userId: string,
   perspective: "job_seeker" | "company",
-  companyMap?: Record<string, { name: string; logo_url: string | null }>
+  companyMap?: Record<string, { name: string; logo_url: string | null }>,
 ): ConversationSummary[] {
   const msgsByConv = new Map<string, MessageSummaryRow[]>();
   for (const msg of msgRows) {
@@ -236,25 +384,44 @@ function buildSummaries(
   const summaries = convRows.map((conv) => {
     const msgs = msgsByConv.get(conv.id) ?? [];
     const lastMsg = msgs[0];
-    const unreadCount = msgs.filter((m) => m.sender_id !== userId && !m.is_read).length;
+    const unreadCount = msgs.filter((msg) => msg.sender_id !== userId && !msg.is_read).length;
 
     let otherName: string;
     let otherAvatar: string | null = null;
+    let otherId = "";
+    let otherRole: "job_seeker" | "company";
+    let otherUsername: string | null = null;
+    let otherProfileHref: string | null = null;
 
     if (perspective === "job_seeker") {
       const co = conv.company_id ? companyMap?.[conv.company_id] : undefined;
+      otherId = conv.company_id ?? "";
+      otherRole = "company";
       otherName = co?.name ?? "Unknown Company";
       otherAvatar = co?.logo_url ?? null;
+      otherProfileHref = conv.company_id
+        ? `/job-seeker/companies/${conv.company_id}?applicationId=${conv.application_id}`
+        : null;
     } else {
-      const s = conv.seeker;
-      const fullName = `${s?.first_name ?? ""} ${s?.last_name ?? ""}`.trim();
+      const seeker = conv.seeker;
+      const fullName = `${seeker?.first_name ?? ""} ${seeker?.last_name ?? ""}`.trim();
+      otherId = conv.job_seeker_id ?? "";
+      otherRole = "job_seeker";
+      otherUsername = seeker?.username ?? null;
       otherName = fullName || "Applicant";
-      otherAvatar = s?.avatar_url ?? null;
+      otherAvatar = seeker?.avatar_url ?? null;
+      otherProfileHref = otherUsername
+        ? `/company/profiles/${otherUsername}?applicationId=${conv.application_id}`
+        : null;
     }
 
     return {
       id: conv.id,
       application_id: conv.application_id,
+      other_id: otherId,
+      other_role: otherRole,
+      other_username: otherUsername,
+      other_profile_href: otherProfileHref,
       other_name: otherName,
       other_avatar: otherAvatar,
       job_title: (conv.application?.job?.title as string | undefined) ?? "Unknown Job",
@@ -266,19 +433,18 @@ function buildSummaries(
     };
   });
 
-  // Sort by most recent activity (last message) descending
   return summaries.sort(
-    (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+    (a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime(),
   );
 }
 
-// ─── Messages ─────────────────────────────────────────────────────────────────
-
 export async function getMessages(
-  conversationId: string
+  conversationId: string,
 ): Promise<{ messages: MessageRow[] } | { error: string }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
   const { data: conv } = await supabase
@@ -306,10 +472,12 @@ export async function sendMessage(
   conversationId: string,
   content: string,
   attachmentUrl?: string,
-  attachmentName?: string
+  attachmentName?: string,
 ): Promise<{ message: MessageRow } | { error: string }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated." };
 
   const { data: conv } = await supabase
@@ -392,7 +560,9 @@ export async function sendMessage(
 
 export async function markConversationRead(conversationId: string) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return;
 
   await supabase
@@ -405,7 +575,9 @@ export async function markConversationRead(conversationId: string) {
 
 export async function getUnreadMessageCount(): Promise<number> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return 0;
 
   const { data: convIds } = await supabase
@@ -418,7 +590,10 @@ export async function getUnreadMessageCount(): Promise<number> {
   const { count } = await supabase
     .from("messages")
     .select("*", { count: "exact", head: true })
-    .in("conversation_id", convIds.map((c) => c.id))
+    .in(
+      "conversation_id",
+      convIds.map((c) => c.id),
+    )
     .neq("sender_id", user.id)
     .eq("is_read", false);
 

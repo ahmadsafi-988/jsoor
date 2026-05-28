@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { verifyCompany, unverifyCompany } from "@/lib/admin/actions";
 import type { AdminCompany } from "@/lib/admin/data";
 import { BadgeCheck, AlertTriangle } from "lucide-react";
@@ -45,7 +46,12 @@ export function AdminCompaniesClient({ companies }: { companies: AdminCompany[] 
                   ) : (
                     <div className="w-8 h-8 rounded-lg bg-neutral-100 shrink-0" />
                   )}
-                  <span className="font-medium text-neutral-900">{company.name}</span>
+                  <Link
+                    href={`/admin/companies/${company.id}`}
+                    className="font-medium text-neutral-900 hover:text-[#006d43] hover:underline"
+                  >
+                    {company.name}
+                  </Link>
                   {company.is_verified && <BadgeCheck className="w-4 h-4 text-[#00a86b] shrink-0" />}
                 </div>
               </td>

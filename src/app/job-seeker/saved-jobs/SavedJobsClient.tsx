@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { unsaveJob, applyToJob } from "@/lib/company/actions";
 import { MapPin, Building, Bookmark, ArrowRight } from "lucide-react";
 import type { JobWithCompany } from "@/lib/company/data";
+import Link from "next/link";
 
 const TYPE_COLORS: Record<string, string> = {
   "Full-time":  "bg-[#78fbb6]/20 text-[#005232]",
@@ -90,7 +91,12 @@ export function SavedJobsClient({ initialJobs, appliedJobIds }: Props) {
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-[#1c1b1b]">{job.title}</h3>
+                <Link
+                  href={`/job-seeker/jobs/${job.id}`}
+                  className="font-semibold text-[#1c1b1b] hover:text-[#006d43] transition-colors"
+                >
+                  {job.title}
+                </Link>
                 <p className="text-sm text-[#5f5e5e] mt-0.5">{job.company?.name ?? "Company"}</p>
                 <div className="flex items-center gap-2 flex-wrap mt-2">
                   {job.location && (
@@ -121,7 +127,13 @@ export function SavedJobsClient({ initialJobs, appliedJobIds }: Props) {
             <p className="text-sm text-[#5f5e5e] leading-relaxed line-clamp-2">{job.description}</p>
 
             {/* Actions */}
-            <div className="flex items-center justify-end pt-2 border-t border-[#f0edec]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#f0edec]">
+              <Link
+                href={`/job-seeker/jobs/${job.id}`}
+                className="px-4 py-2 rounded-lg border border-[#006d43]/30 text-[#006d43] text-xs font-semibold hover:bg-[#006d43]/5 transition-colors"
+              >
+                View Details
+              </Link>
               {isApplied ? (
                 <span className="text-xs font-semibold text-[#005232] bg-[#78fbb6]/20 px-3 py-1.5 rounded-lg">
                   Applied

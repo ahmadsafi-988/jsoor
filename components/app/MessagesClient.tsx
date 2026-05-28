@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Search, Send, Paperclip, MessageSquare, X, Download, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -55,6 +56,27 @@ function Avatar({ name, url, size = 10 }: { name: string; url: string | null; si
         <span className={size <= 8 ? "text-xs" : "text-sm"}>{initials}</span>
       )}
     </div>
+  );
+}
+
+function ProfileLink({
+  href,
+  children,
+  className,
+}: {
+  href: string | null;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <Link
+      href={href}
+      onClick={(event) => event.stopPropagation()}
+      className={className}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -259,7 +281,9 @@ export default function MessagesClient({
                   }`}
                 >
                   <div className="relative shrink-0 mt-0.5">
-                    <Avatar name={conv.other_name} url={conv.other_avatar} size={10} />
+                    <ProfileLink href={conv.other_profile_href}>
+                      <Avatar name={conv.other_name} url={conv.other_avatar} size={10} />
+                    </ProfileLink>
                     {conv.unread_count > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#006d43] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                         {conv.unread_count > 9 ? "9+" : conv.unread_count}
@@ -268,9 +292,14 @@ export default function MessagesClient({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center mb-0.5">
-                      <span className={`text-sm truncate font-semibold ${isActive ? "text-[#006d43]" : "text-[#1c1b1b]"}`}>
+                      <ProfileLink
+                        href={conv.other_profile_href}
+                        className={`min-w-0 truncate text-sm font-semibold hover:underline ${
+                          isActive ? "text-[#006d43]" : "text-[#1c1b1b]"
+                        }`}
+                      >
                         {conv.other_name}
-                      </span>
+                      </ProfileLink>
                       <span className="text-[11px] text-neutral-400 shrink-0 ml-2">
                         {formatTime(conv.last_message_at)}
                       </span>
@@ -301,11 +330,16 @@ export default function MessagesClient({
         <div className="flex-1 bg-[#fafaf9] flex flex-col overflow-hidden">
           {/* Chat header */}
           <div className="bg-white border-b border-[#f0edec] flex items-center px-6 py-3.5 gap-3 shrink-0 shadow-sm">
-            <Avatar name={activeConv.other_name} url={activeConv.other_avatar} size={10} />
+            <ProfileLink href={activeConv.other_profile_href}>
+              <Avatar name={activeConv.other_name} url={activeConv.other_avatar} size={10} />
+            </ProfileLink>
             <div className="min-w-0">
-              <h2 className="font-semibold text-[#1c1b1b] text-sm leading-tight truncate">
+              <ProfileLink
+                href={activeConv.other_profile_href}
+                className="block truncate text-sm font-semibold leading-tight text-[#1c1b1b] hover:text-[#006d43] hover:underline"
+              >
                 {activeConv.other_name}
-              </h2>
+              </ProfileLink>
               <p className="text-xs text-[#006d43] font-medium truncate">{activeConv.job_title}</p>
             </div>
           </div>

@@ -102,9 +102,12 @@ export function FAQ() {
 
         <div className="mt-12 text-center">
           <p className="text-sm text-[#3d4a41] mb-4">Still have questions?</p>
-          <button className="px-6 py-2.5 text-sm font-semibold text-white bg-[#006d43] hover:bg-[#00a86b] rounded-xl transition-colors shadow-[0_8px_16px_rgba(0,109,67,0.15)]">
+          <a
+            href="mailto:ahmadmadisafi9@ieee.org"
+            className="inline-flex px-6 py-2.5 text-sm font-semibold text-white bg-[#006d43] hover:bg-[#00a86b] rounded-xl transition-colors shadow-[0_8px_16px_rgba(0,109,67,0.15)]"
+          >
             Contact Support
-          </button>
+          </a>
         </div>
       </div>
     </section>

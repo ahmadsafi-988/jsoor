@@ -1,5 +1,9 @@
 import { AppSidebar } from "@/components/app/AppSidebar";
 import { AppTopBar } from "@/components/app/AppTopBar";
+import {
+  DashboardContent,
+  DashboardSidebarProvider,
+} from "@/components/app/DashboardSidebarState";
 
 export default function JobSeekerLayout({
   children,
@@ -7,12 +11,12 @@ export default function JobSeekerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#fcf9f8]">
+    <DashboardSidebarProvider className="bg-[#fcf9f8]">
       <AppSidebar />
-      <div className="flex-1 flex flex-col md:ml-64 min-w-0">
+      <DashboardContent>
         <AppTopBar />
         <main className="flex-1 min-w-0">{children}</main>
-      </div>
-    </div>
+      </DashboardContent>
+    </DashboardSidebarProvider>
   );
 }
