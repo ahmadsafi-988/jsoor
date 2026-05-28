@@ -29,6 +29,7 @@ type Props = {
   backHref: string;
   companyHref: string;
   applicantHref: string | null;
+  showApplicantProfileAction?: boolean;
 };
 
 export function ApplicationDetailContent({
@@ -36,6 +37,7 @@ export function ApplicationDetailContent({
   backHref,
   companyHref,
   applicantHref,
+  showApplicantProfileAction = true,
 }: Props) {
   const { application, job, company, applicant, applicantProfile } = detail;
   const applicantName = applicant
@@ -111,7 +113,11 @@ export function ApplicationDetailContent({
             </div>
           </div>
 
-          <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div
+            className={`mt-6 grid gap-6 ${
+              showApplicantProfileAction ? "lg:grid-cols-[1fr_280px]" : ""
+            }`}
+          >
             <section>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
                 Cover Letter
@@ -125,27 +131,29 @@ export function ApplicationDetailContent({
               </div>
             </section>
 
-            <aside className="rounded-xl border border-[#e5e2e1] p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
-                Public Profile
-              </h2>
-              {applicantHref ? (
-                <Link
-                  href={applicantHref}
-                  className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#006d43] hover:underline"
-                >
-                  <FileText className="h-4 w-4" />
-                  View profile
-                </Link>
-              ) : (
-                <p className="mb-3 text-sm text-[#5f5e5e]">Profile link unavailable.</p>
-              )}
-              <div className="space-y-2 text-sm text-[#3d4a41]">
-                {applicantProfile?.degree && <p>{applicantProfile.degree}</p>}
-                {applicantProfile?.institution && <p>{applicantProfile.institution}</p>}
-                {applicantProfile?.location && <p>{applicantProfile.location}</p>}
-              </div>
-            </aside>
+            {showApplicantProfileAction && (
+              <aside className="rounded-xl border border-[#e5e2e1] p-4">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
+                  Public Profile
+                </h2>
+                {applicantHref ? (
+                  <Link
+                    href={applicantHref}
+                    className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-[#006d43] hover:underline"
+                  >
+                    <FileText className="h-4 w-4" />
+                    View profile
+                  </Link>
+                ) : (
+                  <p className="mb-3 text-sm text-[#5f5e5e]">Profile link unavailable.</p>
+                )}
+                <div className="space-y-2 text-sm text-[#3d4a41]">
+                  {applicantProfile?.degree && <p>{applicantProfile.degree}</p>}
+                  {applicantProfile?.institution && <p>{applicantProfile.institution}</p>}
+                  {applicantProfile?.location && <p>{applicantProfile.location}</p>}
+                </div>
+              </aside>
+            )}
           </div>
         </section>
       </main>

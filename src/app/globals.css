@@ -171,3 +171,39 @@
 .hero-gradient-bg {
   background: linear-gradient(to bottom right, #006d43, #00a86b);
 }
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #090909 #090909;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: #090909;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #090909;
+  border-radius: 9999px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}

@@ -21,6 +21,7 @@ export default async function JobSeekerApplicationDetailPage({
           ? `/job-seeker/profile/${detail.applicant.username}`
           : null
       }
+      showApplicantProfileAction={false}
     />
   );
 }

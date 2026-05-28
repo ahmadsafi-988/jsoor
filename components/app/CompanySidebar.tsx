@@ -3,10 +3,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Briefcase, ClipboardCheck,
-  Building2, Bell, MessageSquare,
+  Building2, Bell, MessageSquare, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { JsoorLogo } from "@/components/JsoorLogo";
 import { LogoutConfirmationButton } from "@/components/app/LogoutConfirmationButton";
+import { useDashboardSidebar } from "@/components/app/DashboardSidebarState";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -19,13 +20,17 @@ const NAV_ITEMS = [
   { label: "Notifications", href: "/company/notifications",  icon: Bell },
 ];
 
-type SidebarCompany = { name: string; logoUrl: string | null };
-
 export function CompanySidebar() {
   const pathname = usePathname();
-  const [company, setCompany] = useState<SidebarCompany | null>(null);
+  const { collapsed, toggleCollapsed } = useDashboardSidebar();
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [unreadMsgs, setUnreadMsgs] = useState(0);
+  const visibleUnreadMsgs = pathname.startsWith("/company/messages")
+    ? 0
+    : unreadMsgs;
+  const visibleUnreadNotifs = pathname.startsWith("/company/notifications")
+    ? 0
+    : unreadNotifs;
 
   useEffect(() => {
     const load = async () => {
@@ -33,11 +38,11 @@ export function CompanySidebar() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [{ data }, { count: notifCount }] = await Promise.all([
-        supabase.from("companies").select("name, logo_url").eq("id", user.id).single(),
-        supabase.from("notifications").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("is_read", false),
-      ]);
-      if (data) setCompany({ name: data.name, logoUrl: data.logo_url });
+      const { count: notifCount } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
       setUnreadNotifs(notifCount ?? 0);
 
       // Unread messages: count unread msgs in conversations this company is part of
@@ -58,33 +63,44 @@ export function CompanySidebar() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (pathname.startsWith("/company/messages"))      setUnreadMsgs(0);
-    if (pathname.startsWith("/company/notifications")) setUnreadNotifs(0);
-  }, [pathname]);
-
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-neutral-950 z-50 flex flex-col p-6 shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex">
-      <div className="mb-8">
-        <Link href="/company/home" className="inline-flex items-center">
-          <JsoorLogo variant="white" className="h-10 w-auto" priority />
+    <aside
+      className={`fixed left-0 top-0 h-screen overflow-hidden bg-neutral-950 z-50 flex-col shadow-[20px_0_40px_rgba(0,168,107,0.05)] hidden md:flex transition-[width,padding] duration-200 ${
+        collapsed ? "w-20 p-4" : "w-64 p-6"
+      }`}
+    >
+      <div className={`mb-8 ${collapsed ? "flex justify-center" : ""}`}>
+        <Link href="/company/home" className="inline-flex items-center" title="JSOOR">
+          <JsoorLogo
+            variant="white"
+            markOnly={collapsed}
+            className={collapsed ? "h-9 w-9" : "h-10 w-auto"}
+            priority
+          />
         </Link>
-        <p className="text-neutral-500 text-xs mt-0.5">Company Portal</p>
+        {!collapsed && (
+          <p className="text-neutral-500 text-xs mt-0.5">Company Portal</p>
+        )}
       </div>
 
-      <nav className="flex-1 flex flex-col gap-1">
+      <nav className="scrollbar-hidden flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-1">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
           const isActive = pathname === href || pathname.startsWith(href + "/");
           const badge =
-            label === "Notifications" ? unreadNotifs :
-            label === "Messages"      ? unreadMsgs   : 0;
+            label === "Notifications" ? visibleUnreadNotifs :
+            label === "Messages"      ? visibleUnreadMsgs   : 0;
           return (
             <Link key={href} href={href}>
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? "bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white shadow-lg shadow-[#00a86b]/20"
-                  : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
-              }`}>
+              <div
+                title={collapsed ? label : undefined}
+                className={`flex items-center rounded-lg transition-all duration-200 cursor-pointer ${
+                  collapsed ? "justify-center px-0 py-3" : "gap-3 px-4 py-3"
+                } ${
+                  isActive
+                    ? "bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white shadow-lg shadow-[#00a86b]/20"
+                    : "text-neutral-400 hover:bg-neutral-800 hover:text-white"
+                }`}
+              >
                 <div className="relative shrink-0">
                   <Icon className="w-5 h-5" />
                   {badge > 0 && (
@@ -93,31 +109,39 @@ export function CompanySidebar() {
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-medium">{label}</span>
+                {!collapsed && <span className="text-sm font-medium">{label}</span>}
               </div>
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-1">
-        <LogoutConfirmationButton />
+      <div className="mt-auto shrink-0 flex flex-col gap-1">
+        <LogoutConfirmationButton
+          showLabel={!collapsed}
+          className={`flex items-center rounded-lg py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white transition-colors w-full ${
+            collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"
+          }`}
+        />
 
-        {company && (
-          <div className="mt-4 pt-4 border-t border-neutral-800 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-white overflow-hidden shrink-0 ring-2 ring-[#006d43]/30 flex items-center justify-center p-0.5">
-              {company.logoUrl ? (
-                <img src={company.logoUrl} alt={company.name} className="w-full h-full object-contain rounded-full" />
-              ) : (
-                <Building2 className="w-4 h-4 text-neutral-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-semibold truncate">{company.name}</p>
-              <p className="text-neutral-500 text-xs">Company</p>
-            </div>
-          </div>
-        )}
+        <div className="mt-4 pt-4 border-t border-neutral-800">
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className={`flex w-full items-center rounded-lg py-2.5 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white ${
+              collapsed ? "justify-center px-0" : "gap-3 px-4 text-left"
+            }`}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4 shrink-0" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 shrink-0" />
+            )}
+            {!collapsed && <span className="text-sm font-medium">Collapse</span>}
+          </button>
+        </div>
       </div>
     </aside>
   );

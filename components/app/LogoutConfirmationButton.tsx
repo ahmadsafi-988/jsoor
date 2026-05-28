@@ -17,9 +17,13 @@ import { createClient } from "@/lib/supabase/client";
 
 type LogoutConfirmationButtonProps = {
   className?: string;
+  showLabel?: boolean;
 };
 
-export function LogoutConfirmationButton({ className }: LogoutConfirmationButtonProps) {
+export function LogoutConfirmationButton({
+  className,
+  showLabel = true,
+}: LogoutConfirmationButtonProps) {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -37,9 +41,10 @@ export function LogoutConfirmationButton({ className }: LogoutConfirmationButton
             className ??
             "flex items-center gap-3 px-4 py-2.5 text-neutral-400 hover:bg-neutral-800 hover:text-white rounded-lg transition-colors w-full text-left"
           }
+          title="Logout"
         >
           <LogOut className="w-4 h-4 shrink-0" />
-          <span className="text-sm font-medium">Logout</span>
+          {showLabel && <span className="text-sm font-medium">Logout</span>}
         </button>
       </AlertDialogTrigger>
       <AlertDialogContent>
