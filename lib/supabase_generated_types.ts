@@ -701,6 +701,21 @@ export type Database = {
           },
         ]
       }
+      locations: {
+        Row: {
+          id: number
+          name: string
+        }
+        Insert: {
+          id?: number
+          name: string
+        }
+        Update: {
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -979,6 +994,60 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_categories: {
+        Row: {
+          created_at: string
+          id: number
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      skill_to_categories: {
+        Row: {
+          category_id: number
+          skill_id: number
+        }
+        Insert: {
+          category_id: number
+          skill_id: number
+        }
+        Update: {
+          category_id?: number
+          skill_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_to_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "skill_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_to_categories_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "skills"
             referencedColumns: ["id"]
           },
         ]

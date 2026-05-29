@@ -48,7 +48,7 @@ export async function getProfileByUsername(
       .eq("name", job_seeker_profile.institution)
       .maybeSingle();
 
-    education_logo_url = university?.logo_url ?? null;
+    education_logo_url = university?.logo_url?.trim() || null;
   }
 
   const { data: projects, error: projectsError } = await supabase

@@ -498,10 +498,35 @@ export async function getCompanyStats() {
 
 // ─── Skills queries ───────────────────────────────────────────────────────────
 
-export async function getAllSkills(): Promise<Tables<"skills">[]> {
+export type SkillCategory = Tables<"skill_categories">;
+export type SkillWithCategories = Tables<"skills"> & {
+  skill_to_categories?: { category_id: number }[] | null;
+};
+export type LocationOption = Tables<"locations">;
+
+export async function getLocations(): Promise<LocationOption[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("skills").select("*").order("name");
+  const { data } = await supabase.from("locations").select("*").order("name");
   return data ?? [];
+}
+
+export async function getSkillCategories(): Promise<SkillCategory[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("skill_categories")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+  return data ?? [];
+}
+
+export async function getAllSkills(): Promise<SkillWithCategories[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("skills")
+    .select("*, skill_to_categories(category_id)")
+    .order("name");
+  return (data ?? []) as SkillWithCategories[];
 }
 
 export async function getJobSkillIds(jobId: string): Promise<number[]> {

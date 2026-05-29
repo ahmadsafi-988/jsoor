@@ -15,6 +15,7 @@ import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 
+import { LocationPicker } from "@/components/app/LocationPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ import {
   removeProfileSkill,
 } from "@/lib/profile/actions";
 import { uploadAvatar, uploadCV } from "@/lib/storage/upload";
+import type { LocationOption } from "@/lib/company/data";
 import type { user, project, badge, ProjectSkill } from "@/lib/global_types";
 
 
@@ -56,6 +58,8 @@ import {
   AlertTriangle,
   Check,
   Search,
+  SlidersHorizontal,
+  ChevronDown,
   Wrench,
   XCircle, 
   CheckCircle2, 
@@ -110,6 +114,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
   const supabase = createClient();
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
+  const [locations, setLocations] = React.useState<LocationOption[]>([]);
 
   // Avatar
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(profile.avatar_url);
@@ -134,6 +139,15 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
     }, 300);
     return () => clearTimeout(t);
   }, [query, selectedUni]);
+
+  React.useEffect(() => {
+    const client = createClient();
+    client
+      .from("locations")
+      .select("id,name")
+      .order("name")
+      .then(({ data: rows }) => setLocations(rows ?? []));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -235,7 +249,13 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       <div className="space-y-1.5">
         <Label htmlFor="location">Location</Label>
-        <Input id="location" name="location" defaultValue={profile.location ?? ""} />
+        <LocationPicker
+          locations={locations}
+          defaultValue={profile.location}
+          placeholder="Search locations..."
+          inputClassName="h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+        />
+        <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -274,7 +294,9 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
                   onClick={() => { setSelectedUni(u); setQuery(u.name); setUniResults([]); }}
                   className="flex w-full items-center gap-3 px-3 py-2 text-sm text-[#3d4a41] hover:bg-[#f6f3f2]"
                 >
-                  <img src={u.logo_url} alt={u.name} className="h-6 w-6 rounded object-contain" />
+                  {u.logo_url && (
+                    <img src={u.logo_url} alt={u.name} className="h-6 w-6 rounded object-contain" />
+                  )}
                   {u.name}
                 </button>
               ))}
@@ -913,13 +935,17 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
 
 // ─── Tab: skills ─────────────────────────────────────────────────────────────
 type SkillEntry = { skill_id: number; skills: { id: number; name: string } }
+type SkillRow = { id: number; name: string; skill_to_categories?: { category_id: number }[] | null };
+type SkillCategory = { id: number; name: string; slug: string; sort_order: number };
 
 
 function TabSkills({ profileSkills: initial = [], username }: { profileSkills: SkillEntry[]; username: string }) {
-  const supabase = createClient();
   const [profileSkills, setProfileSkills] = React.useState<SkillEntry[]>(initial);
   const [query, setQuery] = React.useState("");
-  const [results, setResults] = React.useState<{ id: number; name: string }[]>([]);
+  const [results, setResults] = React.useState<SkillRow[]>([]);
+  const [categories, setCategories] = React.useState<SkillCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = React.useState<Set<number>>(new Set());
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
   const [isPending, setIsPending] = React.useState<number | null>(null);
 
@@ -934,18 +960,55 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
 
   // Fetch results - Limit removed to show "all", scroll handles the UI
   React.useEffect(() => {
-    const t = setTimeout(async () => {
-      // Removed .limit(10) to show all skills
-      let queryBuilder = supabase.from("skills").select("id, name").order('name', { ascending: true });
-      
-      if (query.trim()) {
-        queryBuilder = queryBuilder.ilike("name", `%${query}%`);
+    const loadSkills = async () => {
+      const client = createClient();
+      const [skillsRes, categoriesRes] = await Promise.all([
+        client
+          .from("skills")
+          .select("id, name, skill_to_categories(category_id)")
+          .order("name", { ascending: true }),
+        client
+          .from("skill_categories")
+          .select("id, name, slug, sort_order")
+          .order("sort_order", { ascending: true })
+          .order("name", { ascending: true }),
+      ]);
+
+      setResults((skillsRes.data ?? []) as SkillRow[]);
+      setCategories(categoriesRes.data ?? []);
+    };
+
+    loadSkills();
+  }, []);
+
+  const filteredResults = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return results.filter((skill) => {
+      const matchesQuery = normalizedQuery
+        ? skill.name.toLowerCase().includes(normalizedQuery)
+        : true;
+      const matchesCategory =
+        selectedCategoryIds.size === 0 ||
+        (skill.skill_to_categories ?? []).some((entry) =>
+          selectedCategoryIds.has(entry.category_id)
+        );
+
+      return matchesQuery && matchesCategory;
+    });
+  }, [query, results, selectedCategoryIds]);
+
+  function toggleCategory(categoryId: number) {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
       }
-      const { data } = await queryBuilder;
-      setResults(data ?? []);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query, supabase]);
+      return next;
+    });
+  }
 
   async function handleAdd(skill: { id: number; name: string }) {
     if (profileSkills.some(s => s.skill_id === skill.id)) return;
@@ -1018,14 +1081,79 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
           />
         </div>
 
+        {categories.length > 0 && (
+          <div className="rounded-xl border border-[#e5e2e1] bg-white">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold text-[#1c1b1b]"
+            >
+              <span className="inline-flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-[#5f5e5e]" />
+                Filter by industry
+                {selectedCategoryIds.size > 0 && (
+                  <span className="rounded-full bg-[#e5f7ee] px-2 py-0.5 text-xs font-semibold text-[#005232]">
+                    {selectedCategoryIds.size} selected
+                  </span>
+                )}
+              </span>
+              <ChevronDown
+                className={`h-4 w-4 text-[#5f5e5e] transition-transform ${
+                  filtersOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {filtersOpen && (
+              <div className="border-t border-[#e5e2e1] bg-[#f6f3f2] p-3">
+                {selectedCategoryIds.size > 0 && (
+                  <div className="mb-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategoryIds(new Set())}
+                      className="text-xs font-semibold text-[#006d43] hover:text-[#005232]"
+                    >
+                      Clear filters
+                    </button>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((category) => {
+                    const checked = selectedCategoryIds.has(category.id);
+                    return (
+                      <label
+                        key={category.id}
+                        className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          checked
+                            ? "border-[#006d43] bg-[#e5f7ee] text-[#005232]"
+                            : "border-[#e5e2e1] bg-white text-[#3d4a41] hover:border-[#006d43]/40"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleCategory(category.id)}
+                          className="h-3.5 w-3.5 accent-[#006d43]"
+                        />
+                        {category.name}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 3. SCROLLABLE Result List */}
         <div className="overflow-hidden rounded-xl border border-[#e5e2e1] bg-[#f6f3f2]">
           <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
-            {results.length === 0 && query && (
+            {filteredResults.length === 0 && (query || selectedCategoryIds.size > 0) && (
                <p className="py-10 text-center text-sm text-[#5f5e5e]">No matching skills found.</p>
             )}
             <div className="grid grid-cols-1 gap-1">
-              {results.map((s) => {
+              {filteredResults.map((s) => {
                 const isAdded = profileSkills.some(p => p.skill_id === s.id);
                 return (
                   <button

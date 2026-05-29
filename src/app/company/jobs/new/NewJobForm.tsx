@@ -3,14 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createJob } from "@/lib/company/actions";
+import { LocationPicker } from "@/components/app/LocationPicker";
 import { SkillPicker } from "@/components/app/SkillPicker";
-import type { Tables } from "@/lib/supabase_generated_types";
+import type { LocationOption, SkillCategory, SkillWithCategories } from "@/lib/company/data";
 import { ArrowLeft, Briefcase } from "lucide-react";
 import Link from "next/link";
 
 const JOB_TYPES = ["Full-time", "Part-time", "Remote", "Hybrid", "Contract", "Internship"] as const;
 
-export function NewJobForm({ allSkills }: { allSkills: Tables<"skills">[] }) {
+export function NewJobForm({
+  allSkills,
+  categories,
+  locations,
+}: {
+  allSkills: SkillWithCategories[];
+  categories: SkillCategory[];
+  locations: LocationOption[];
+}) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +30,8 @@ export function NewJobForm({ allSkills }: { allSkills: Tables<"skills">[] }) {
     setError(null);
     const formData = new FormData(e.currentTarget);
     const result = await createJob(formData);
-    if (result?.error) {
-      setError(result.error);
+    if ("error" in result) {
+      setError(result.error ?? "Something went wrong.");
       setPending(false);
     } else {
       router.push("/company/jobs");
@@ -68,12 +77,9 @@ export function NewJobForm({ allSkills }: { allSkills: Tables<"skills">[] }) {
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-[#1c1b1b]">Location</label>
-            <input
-              name="location"
-              placeholder="e.g. Amman, JO or Remote"
-              className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
-            />
+            <label htmlFor="location" className="text-sm font-semibold text-[#1c1b1b]">Location</label>
+            <LocationPicker locations={locations} placeholder="Search locations..." />
+            <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
           </div>
         </div>
 
@@ -110,7 +116,7 @@ export function NewJobForm({ allSkills }: { allSkills: Tables<"skills">[] }) {
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-semibold text-[#1c1b1b]">Required Skills</label>
           <p className="text-xs text-[#5f5e5e]">Select the skills candidates should have for this role.</p>
-          <SkillPicker allSkills={allSkills} />
+          <SkillPicker allSkills={allSkills} categories={categories} />
         </div>
 
         {error && (

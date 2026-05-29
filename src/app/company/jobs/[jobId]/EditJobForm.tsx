@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateJob, deleteJob } from "@/lib/company/actions";
+import { LocationPicker } from "@/components/app/LocationPicker";
 import { SkillPicker } from "@/components/app/SkillPicker";
 import type { Tables } from "@/lib/supabase_generated_types";
+import type { LocationOption, SkillCategory, SkillWithCategories } from "@/lib/company/data";
 import { ArrowLeft, Users, Trash2, Save, Lock } from "lucide-react";
 import Link from "next/link";
 
@@ -12,11 +14,13 @@ const JOB_TYPES = ["Full-time", "Part-time", "Remote", "Hybrid", "Contract", "In
 
 type Props = {
   job: Tables<"jobs">;
-  allSkills: Tables<"skills">[];
+  allSkills: SkillWithCategories[];
   initialSkillIds: number[];
+  categories: SkillCategory[];
+  locations: LocationOption[];
 };
 
-export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
+export function EditJobForm({ job, allSkills, initialSkillIds, categories, locations }: Props) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,8 +34,8 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
     const formData = new FormData(e.currentTarget);
     formData.set("jobId", job.id);
     const result = await updateJob(formData);
-    if (result?.error) {
-      setError(result.error);
+    if ("error" in result) {
+      setError(result.error ?? "Something went wrong.");
     } else {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 2500);
@@ -42,8 +46,8 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
   async function handleDelete() {
     if (!confirm("Are you sure you want to delete this job? This cannot be undone.")) return;
     const result = await deleteJob(job.id);
-    if (result?.error) {
-      setError(result.error);
+    if ("error" in result) {
+      setError(result.error ?? "Something went wrong.");
     } else {
       router.push("/company/jobs");
     }
@@ -102,12 +106,13 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
             </select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-[#1c1b1b]">Location</label>
-            <input
-              name="location"
-              defaultValue={job.location ?? ""}
-              className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+            <label htmlFor="location" className="text-sm font-semibold text-[#1c1b1b]">Location</label>
+            <LocationPicker
+              locations={locations}
+              defaultValue={job.location}
+              placeholder="Search locations..."
             />
+            <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
           </div>
         </div>
 
@@ -144,7 +149,11 @@ export function EditJobForm({ job, allSkills, initialSkillIds }: Props) {
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-semibold text-[#1c1b1b]">Required Skills</label>
           <p className="text-xs text-[#5f5e5e]">Select the skills candidates should have for this role.</p>
-          <SkillPicker allSkills={allSkills} initialSelectedIds={initialSkillIds} />
+          <SkillPicker
+            allSkills={allSkills}
+            categories={categories}
+            initialSelectedIds={initialSkillIds}
+          />
         </div>
 
         <div className="flex items-center gap-3">

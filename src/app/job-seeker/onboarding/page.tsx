@@ -15,6 +15,7 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LocationPicker } from "@/components/app/LocationPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,11 +29,12 @@ import {
   addProfileSkill,
 } from "@/lib/profile/actions";
 import { uploadAvatar, uploadCV } from "@/lib/storage/upload";
+import type { LocationOption } from "@/lib/company/data";
 import {
   ImageIcon, Search, CheckCircle2, PlusCircle, Loader2,
   XCircle, ArrowRight, ArrowLeft, Sparkles, User,
   GraduationCap, Wrench, Check, FileText, Upload,
-  FolderGit2, Award,
+  FolderGit2, Award, SlidersHorizontal, ChevronDown,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +64,8 @@ type EducationData = {
 };
 
 type SkillEntry = { skill_id: number; name: string };
-type SkillRow   = { id: number; name: string };
+type SkillRow   = { id: number; name: string; skill_to_categories?: { category_id: number }[] | null };
+type SkillCategory = { id: number; name: string; slug: string; sort_order: number };
 type University = { id: number; name: string; logo_url: string };
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
@@ -133,6 +136,7 @@ function StepIdentity({
   const [usernameStatus, setUsernameStatus] = React.useState<
     "idle" | "checking" | "taken" | "available"
   >("idle");
+  const [locations, setLocations] = React.useState<LocationOption[]>([]);
 
   React.useEffect(() => {
     const trimmed = data.username.trim();
@@ -145,6 +149,15 @@ function StepIdentity({
     }, 400);
     return () => clearTimeout(t);
   }, [data.username]);
+
+  React.useEffect(() => {
+    const client = createClient();
+    client
+      .from("locations")
+      .select("id,name")
+      .order("name")
+      .then(({ data: rows }) => setLocations(rows ?? []));
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -292,7 +305,14 @@ function StepIdentity({
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div className="space-y-2">
           <Label htmlFor="location">Location</Label>
-          <Input id="location" value={data.location} onChange={(e) => onChange({ location: e.target.value })} placeholder="Amman, JO" />
+          <LocationPicker
+            locations={locations}
+            value={data.location}
+            onChange={(location) => onChange({ location })}
+            placeholder="Search locations..."
+            inputClassName="h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+          />
+          <p className="text-xs text-muted-foreground">Choose a location from the list, or use Not specified.</p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="website">Website</Label>
@@ -451,21 +471,63 @@ function StepSkills({
   onBack: () => void;
   username: string;
 }) {
-  const supabase = createClient();
   const [query, setQuery]         = React.useState("");
   const [results, setResults]     = React.useState<SkillRow[]>([]);
+  const [categories, setCategories] = React.useState<SkillCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = React.useState<Set<number>>(new Set());
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [selected, setSelected]   = React.useState<SkillEntry[]>([]);
   const [isPending, setIsPending] = React.useState<number | null>(null);
   const [finishing, setFinishing] = React.useState(false);
   const [feedback, setFeedback]   = React.useState<{ error?: string } | null>(null);
 
   React.useEffect(() => {
-    supabase.from("skills").select("id,name").order("name").then(({ data }) => setResults(data ?? []));
+    const client = createClient();
+
+    Promise.all([
+      client
+        .from("skills")
+        .select("id,name,skill_to_categories(category_id)")
+        .order("name"),
+      client
+        .from("skill_categories")
+        .select("id,name,slug,sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true }),
+    ]).then(([skillsRes, categoriesRes]) => {
+      setResults((skillsRes.data ?? []) as SkillRow[]);
+      setCategories(categoriesRes.data ?? []);
+    });
   }, []);
 
-  const filtered = query.trim()
-    ? results.filter((s) => s.name.toLowerCase().includes(query.toLowerCase()))
-    : results;
+  const filtered = React.useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    return results.filter((skill) => {
+      const matchesQuery = normalizedQuery
+        ? skill.name.toLowerCase().includes(normalizedQuery)
+        : true;
+      const matchesCategory =
+        selectedCategoryIds.size === 0 ||
+        (skill.skill_to_categories ?? []).some((entry) =>
+          selectedCategoryIds.has(entry.category_id)
+        );
+
+      return matchesQuery && matchesCategory;
+    });
+  }, [query, results, selectedCategoryIds]);
+
+  function toggleCategory(categoryId: number) {
+    setSelectedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  }
 
   async function handleAdd(skill: SkillRow) {
     if (selected.some((s) => s.skill_id === skill.id)) return;
@@ -524,10 +586,75 @@ function StepSkills({
         <Input className="pl-9 h-11" placeholder="Search skills…" value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
 
+      {categories.length > 0 && (
+        <div className="rounded-lg border bg-background">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+            className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold text-foreground"
+          >
+            <span className="inline-flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              Filter by industry
+              {selectedCategoryIds.size > 0 && (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                  {selectedCategoryIds.size} selected
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${
+                filtersOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+
+          {filtersOpen && (
+            <div className="border-t bg-muted/5 p-3">
+              {selectedCategoryIds.size > 0 && (
+                <div className="mb-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCategoryIds(new Set())}
+                    className="text-xs font-semibold text-primary hover:text-primary/80"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {categories.map((category) => {
+                  const checked = selectedCategoryIds.has(category.id);
+                  return (
+                    <label
+                      key={category.id}
+                      className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        checked
+                          ? "border-primary/50 bg-primary/10 text-primary"
+                          : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleCategory(category.id)}
+                        className="h-3.5 w-3.5 accent-primary"
+                      />
+                      {category.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Skill list */}
       <div className="rounded-lg border bg-muted/5 overflow-hidden">
         <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
-          {filtered.length === 0 && query && (
+          {filtered.length === 0 && (query || selectedCategoryIds.size > 0) && (
             <p className="text-center py-10 text-sm text-muted-foreground">No matching skills found.</p>
           )}
           <div className="grid grid-cols-2 gap-0.5">

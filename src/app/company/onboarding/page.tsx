@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { upsertCompany } from "@/lib/company/actions";
+import { LocationPicker } from "@/components/app/LocationPicker";
 import { createClient } from "@/lib/supabase/client";
 import type { Tables } from "@/lib/supabase_generated_types";
+import type { LocationOption } from "@/lib/company/data";
 import { Building2, ArrowRight, CheckCircle, Camera, Loader2 } from "lucide-react";
 
 const INDUSTRIES = [
@@ -22,6 +24,7 @@ export default function CompanyOnboardingPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const userIdRef = useRef<string | null>(null);
@@ -36,9 +39,10 @@ export default function CompanyOnboardingPage() {
       }
       userIdRef.current = user.id;
 
-      const [{ data: companyData }, { data: profile }] = await Promise.all([
+      const [{ data: companyData }, { data: profile }, { data: locationRows }] = await Promise.all([
         supabase.from("companies").select("*").eq("id", user.id).maybeSingle(),
         supabase.from("profiles").select("username").eq("id", user.id).maybeSingle(),
+        supabase.from("locations").select("id,name").order("name"),
       ]);
 
       if (companyData?.is_verified) {
@@ -49,6 +53,7 @@ export default function CompanyOnboardingPage() {
       setCompany(companyData ?? null);
       setUsername(profile?.username ?? "");
       setLogoUrl(companyData?.logo_url ?? null);
+      setLocations(locationRows ?? []);
       setLoading(false);
     };
 
@@ -240,13 +245,13 @@ export default function CompanyOnboardingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold text-[#1c1b1b]">Location</label>
-              <input
-                name="location"
-                defaultValue={company?.location ?? ""}
-                placeholder="e.g. New York, NY"
-                className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+              <label htmlFor="location" className="text-sm font-semibold text-[#1c1b1b]">Location</label>
+              <LocationPicker
+                locations={locations}
+                defaultValue={company?.location}
+                placeholder="Search locations..."
               />
+              <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
             </div>
 
             <div className="flex flex-col gap-1.5">

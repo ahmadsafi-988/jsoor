@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { upsertCompany } from "@/lib/company/actions";
+import { LocationPicker } from "@/components/app/LocationPicker";
+import type { LocationOption } from "@/lib/company/data";
 import { Building2, Camera, Loader2 } from "lucide-react";
 
 const INDUSTRIES = [
@@ -15,6 +17,7 @@ export default function CompanyProfilePage() {
   const [company, setCompany] = useState<any>(null);
   const [username, setUsername] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [pending, setPending] = useState(false);
@@ -29,13 +32,15 @@ export default function CompanyProfilePage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       userIdRef.current = user.id;
-      const [companyRes, profileRes] = await Promise.all([
+      const [companyRes, profileRes, locationsRes] = await Promise.all([
         supabase.from("companies").select("*").eq("id", user.id).single(),
         supabase.from("profiles").select("username").eq("id", user.id).single(),
+        supabase.from("locations").select("id,name").order("name"),
       ]);
       setCompany(companyRes.data ?? {});
       setLogoUrl(companyRes.data?.logo_url ?? null);
       setUsername(profileRes.data?.username ?? "");
+      setLocations(locationsRes.data ?? []);
       setLoading(false);
     };
     load();
@@ -214,13 +219,13 @@ export default function CompanyProfilePage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-semibold text-[#1c1b1b]">Location</label>
-            <input
-              name="location"
-              defaultValue={company?.location ?? ""}
-              placeholder="e.g. San Francisco, CA"
-              className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+            <label htmlFor="location" className="text-sm font-semibold text-[#1c1b1b]">Location</label>
+            <LocationPicker
+              locations={locations}
+              defaultValue={company?.location}
+              placeholder="Search locations..."
             />
+            <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-semibold text-[#1c1b1b]">Founded Year</label>
