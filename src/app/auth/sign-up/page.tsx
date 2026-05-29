@@ -1,26 +1,27 @@
-"use client";
-
-// app/auth/sign-up/page.tsx
-// Thin wrapper — the heavy form logic lives in sign-up-form.tsx (from the
-// Supabase UI block). We keep this page consistent with that structure.
-
-import Link from "next/link";
 import { SignUpForm } from "@/components/supabase/sign-up-form";
+import Link from "next/link";
+import { JsoorLogo } from "@/components/JsoorLogo";
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl font-bold">Create your account</h1>
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link href="/auth/login" className="underline underline-offset-4 hover:text-primary">
-              Sign in
-            </Link>
-          </p>
+    <div className="min-h-screen bg-[#f6f3f2] flex items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex justify-center">
+            <JsoorLogo className="h-12 w-auto" priority />
+          </Link>
+          <p className="text-sm text-[#5f5e5e] mt-1">Smart Career Matching</p>
         </div>
-        <SignUpForm />
+
+        {/* Card */}
+        <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-8">
+          <div className="mb-6">
+            <h2 className="font-headline text-2xl font-bold text-[#1c1b1b] tracking-tight">Create your account</h2>
+            <p className="text-sm text-[#5f5e5e] mt-1">Start your journey on Jsoor today</p>
+          </div>
+          <SignUpForm />
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100" role="img" aria-labelledby="title desc">
+  <title id="title">Jsoor full logo</title>
+  <desc id="desc">Jsoor bridge icon, wordmark, and platform tagline.</desc>
+  <g transform="translate(8 10) scale(.58)" fill="none" fill-rule="evenodd">
+    <path d="M64 29C87 15 127 15 150 29" stroke="#00A86B" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="43" cy="30" r="14" fill="#00A86B"/>
+    <circle cx="172" cy="30" r="14" fill="#00A86B"/>
+    <path d="M18 76 58 50h40v26H18Z" fill="#121212"/>
+    <path d="M122 50h40l36 26h-76V50Z" fill="#121212"/>
+    <path d="M104 50h14v26h-14V50Z" fill="#00A86B"/>
+  </g>
+  <g>
+    <text x="135" y="68" textLength="175" lengthAdjust="spacingAndGlyphs" fill="#121212" font-family="Bahnschrift SemiBold, Bahnschrift, Arial, sans-serif" font-size="62" font-weight="600">Jsoor</text>
+    <path d="M220 49h38" stroke="#00A86B" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="220" cy="49" r="4" fill="#00A86B"/>
+    <circle cx="258" cy="49" r="4" fill="#00A86B"/>
+  </g>
+  <text x="13" y="91" textLength="143" lengthAdjust="spacing" fill="#121212" font-family="Bahnschrift, Arial, sans-serif" font-size="6.5" font-weight="400" letter-spacing="2.3">SMART INTERNSHIP &amp; SKILLS MATCHING PLATFORM</text>
+</svg>

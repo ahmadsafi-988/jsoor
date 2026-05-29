@@ -2,20 +2,13 @@
 // Server-side Supabase queries for the profile page.
 
 import { createClient } from "@/lib/supabase/server";
-import type { profile } from "@/lib/global_types";
+import type { FullJobSeekerProfile } from "@/lib/global_types";
 
-/**
- * Fetches the full profile composite (base + projects + badges)
- * by matching the `username` column in the `profiles` table.
- *
- * Returns null when no user with that username exists.
- */
 export async function getProfileByUsername(
   username: string
-): Promise<profile | null> {
+): Promise<FullJobSeekerProfile | null> {
   const supabase = await createClient();
 
-  // ── 1. Base profile ────────────────────────────────────────────────────────
   const { data: profile_base, error: profileError } = await supabase
     .from("profiles")
     .select("*")
@@ -27,17 +20,46 @@ export async function getProfileByUsername(
     return null;
   }
 
-  // ── 2. Projects ────────────────────────────────────────────────────────────
+  const { data: job_seeker_profile_data } = await supabase
+    .from("job_seeker_profiles")
+    .select("*")
+    .eq("id", profile_base.id)
+    .maybeSingle();
+
+  const job_seeker_profile = job_seeker_profile_data ?? {
+    id: profile_base.id,
+    bio: "",
+    degree: null,
+    institution: null,
+    gpa: null,
+    edu_start: null,
+    edu_end: null,
+    github: null,
+    location: null,
+    website: null,
+    cv_url: null,
+  };
+
+  let education_logo_url: string | null = null;
+  if (job_seeker_profile.institution) {
+    const { data: university } = await supabase
+      .from("universities")
+      .select("logo_url")
+      .eq("name", job_seeker_profile.institution)
+      .maybeSingle();
+
+    education_logo_url = university?.logo_url?.trim() || null;
+  }
+
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
-    .select("*")
+    .select("*, project_to_skills(skill:skills(name))")
     .eq("user_id", profile_base.id);
 
   if (projectsError) {
     console.error("[getProfileByUsername] projects error:", projectsError);
   }
 
-  // ── 3. Badges ──────────────────────────────────────────────────────────────
   const { data: badges, error: badgesError } = await supabase
     .from("badges")
     .select("*")
@@ -48,47 +70,57 @@ export async function getProfileByUsername(
   }
 
   const { data: profileSkills } = await supabase
-  .from("profile_to_skills")
-  .select("skills(name)")
-  .eq("user_id", profile_base.id)
+    .from("profile_to_skills")
+    .select("skills(name)")
+    .eq("user_id", profile_base.id);
 
-  const skills = (profileSkills ?? []).map((s: any) => s.skills.name)
+  const skills = ((profileSkills ?? []) as Array<{ skills: { name: string } | null }>)
+    .map((s) => s.skills?.name)
+    .filter((name): name is string => Boolean(name));
+
+  const projectsWithSkills = ((projects ?? []) as Array<
+    NonNullable<typeof projects>[number] & {
+      project_to_skills?: Array<{ skill: { name: string } | null }>;
+    }
+  >).map(({ project_to_skills, ...project }) => ({
+    ...project,
+    skills: (project_to_skills ?? [])
+      .map((projectSkill) => projectSkill.skill?.name)
+      .filter((name): name is string => Boolean(name)),
+  }));
+
   return {
     profile_base,
-    projects: projects ?? [],
+    job_seeker_profile,
+    education_logo_url,
+    projects: projectsWithSkills,
     badges: badges ?? [],
-    skills
+    skills,
   };
-
 }
 
-/**
- * Returns the currently authenticated user's ID, or null if not signed in.
- */
 export async function getCurrentUserId(): Promise<string | null> {
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getClaims()
-  return data?.claims?.sub ?? null
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
 }
-
 
 export async function getCurrentUsername(): Promise<string | null> {
-  const supabase = await createClient()
-  
-  const id = await getCurrentUserId();
+  const supabase = await createClient();
 
+  const id = await getCurrentUserId();
   if (!id) return null;
 
   const { data, error } = await supabase
     .from("profiles")
     .select("username")
     .eq("id", id)
-    .single()
+    .single();
 
   if (error || !data) {
-    console.error("Error fetching username:", error?.message)
-    return null
+    console.error("Error fetching username:", error?.message);
+    return null;
   }
 
-  return data.username
+  return data.username || null;
 }

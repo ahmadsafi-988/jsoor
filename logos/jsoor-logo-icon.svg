@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 110" role="img" aria-labelledby="title desc">
+  <title id="title">Jsoor icon</title>
+  <desc id="desc">Minimal architectural bridge icon with two emerald connection points and a geometric base.</desc>
+  <g fill="none" fill-rule="evenodd">
+    <path d="M64 29C87 15 127 15 150 29" stroke="#00A86B" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="43" cy="30" r="14" fill="#00A86B"/>
+    <circle cx="172" cy="30" r="14" fill="#00A86B"/>
+    <path d="M18 76 58 50h40v26H18Z" fill="#121212"/>
+    <path d="M122 50h40l36 26h-76V50Z" fill="#121212"/>
+    <path d="M104 50h14v26h-14V50Z" fill="#00A86B"/>
+  </g>
+</svg>

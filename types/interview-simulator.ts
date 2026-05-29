@@ -1,7 +1,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Phase = "idle" | "loading" | "questioning" | "feedback" | "complete";
+type Phase = "setup" | "loading" | "questioning" | "feedback" | "complete";
 
 interface Question {
   id: number;
@@ -24,4 +24,7 @@ interface InterviewConfig {
   jobTitle: string;
   jobDescription: string;
   questionCount: number;
+  interviewType: string;
+  level: string;
 }
+

@@ -1,19 +1,17 @@
 "use client";
 
-// components/sign-up-form.tsx
-// Replaces the default Supabase UI block sign-up-form.
-// Calls the signUp server action which redirects to /auth/sign-up-success.
-
-import React from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import React, { useState } from "react";
 import { signUp } from "@/lib/profile/actions";
+import { signUpAsCompany } from "@/lib/company/actions";
+import { User, Building2 } from "lucide-react";
+import Link from "next/link";
+
+type Role = "job_seeker" | "company";
 
 export function SignUpForm() {
-  const [pending, setPending] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<Role>("job_seeker");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,67 +33,101 @@ export function SignUpForm() {
       return;
     }
 
-    const result = await signUp(formData);
+    const result = role === "company"
+      ? await signUpAsCompany(formData)
+      : await signUp(formData);
+
     if (result?.error) {
       setError(result.error);
       setPending(false);
     }
-    // On success, signUp() redirects — no further handling needed
   }
 
+  const inputClass = "w-full bg-[#f6f3f2] border border-[#e5e2e1] rounded-xl px-4 py-2.5 text-sm text-[#1c1b1b] placeholder-[#5f5e5e] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20 focus:border-[#006d43]/40 transition";
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* Role selector */}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-semibold text-[#1c1b1b]">I am a</span>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            { value: "job_seeker", label: "Job Seeker", icon: User },
+            { value: "company",    label: "Company",    icon: Building2 },
+          ] as { value: Role; label: string; icon: React.ElementType }[]).map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setRole(value)}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-all ${
+                role === value
+                  ? "bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white border-transparent shadow-sm"
+                  : "border-[#e5e2e1] text-[#3d4a41] hover:border-[#006d43]/40 hover:text-[#006d43] bg-[#f6f3f2]"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="email" className="text-sm font-semibold text-[#1c1b1b]">Email</label>
+        <input
           id="email"
           name="email"
           type="email"
           placeholder="you@example.com"
           required
           autoComplete="email"
+          className={inputClass}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="password" className="text-sm font-semibold text-[#1c1b1b]">Password</label>
+        <input
           id="password"
           name="password"
           type="password"
           placeholder="At least 8 characters"
           required
           autoComplete="new-password"
+          className={inputClass}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="confirm_password">Confirm Password</Label>
-        <Input
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="confirm_password" className="text-sm font-semibold text-[#1c1b1b]">Confirm Password</label>
+        <input
           id="confirm_password"
           name="confirm_password"
           type="password"
           placeholder="Repeat your password"
           required
           autoComplete="new-password"
+          className={inputClass}
         />
       </div>
 
       {error && (
-        <p className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          {error}
-        </p>
+        <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-2.5">{error}</p>
       )}
 
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Creating account…" : "Create account"}
-      </Button>
+      <button
+        type="submit"
+        disabled={pending}
+        className="w-full bg-gradient-to-br from-[#006d43] to-[#00a86b] text-white font-semibold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all disabled:opacity-60 shadow-sm"
+      >
+        {pending ? "Creating account…" : "Create Account"}
+      </button>
 
-      <p className="text-center text-xs text-muted-foreground">
-        By signing up you agree to our{" "}
-        <a href="/terms" className="underline hover:text-foreground">Terms</a>{" "}
-        and{" "}
-        <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+      <p className="text-center text-sm text-[#5f5e5e]">
+        Already have an account?{" "}
+        <Link href="/auth/login" className="font-semibold text-[#006d43] hover:text-[#00a86b] transition-colors">
+          Sign in
+        </Link>
       </p>
     </form>
   );

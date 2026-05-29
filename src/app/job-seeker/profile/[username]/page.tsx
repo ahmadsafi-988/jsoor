@@ -1,219 +1,372 @@
-// app/job-seeker/profile/[username]/page.tsx
-// ─────────────────────────────────────────────────────────────────────────────
-// Server Component — fetches profile data from Supabase by username,
-// determines ownership via the current auth session, then renders the page.
-// ─────────────────────────────────────────────────────────────────────────────
-
 import { notFound } from "next/navigation";
 import React from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
-  FileText,
-  Download,
-  GitBranch,
-  Award,
-  ExternalLink,
-  GraduationCap,
-  FolderGit2,
-  Wrench,
-  BookOpen,
-  Calendar,
+  MapPin, Download, ExternalLink, Award, GitBranch,
+  GraduationCap, Star, Calendar, FileText,
+  Link2, Pencil,
 } from "lucide-react";
+import Link from "next/link";
 
-import { ProfileHero } from "@/components/profile/profile-hero";
+import { ExpandableBio } from "@/components/profile/expandable-bio";
+import { ExpandableSkills } from "@/components/profile/expandable-skills";
+import { ExpandableText } from "@/components/profile/expandable-text";
+import { MessageProfileButton } from "@/components/profile/message-profile-button";
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
-import type { project, badge } from "@/lib/global_types";
+import { getCvSignedUrl } from "@/lib/storage/cv";
+import type { project, badge, user } from "@/lib/global_types";
 
-// ─── Section header ───────────────────────────────────────────────────────────
-function SectionHeader({
-  icon: Icon,
-  title,
-}: {
-  icon: React.ElementType;
-  title: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 pb-1">
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      <h2 className="font-semibold text-foreground">{title}</h2>
-    </div>
-  );
+function withProtocol(url: string) {
+  return url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
 }
 
-// ─── Skills ───────────────────────────────────────────────────────────────────
-function SkillsSection({ skills }: { skills: string[] }) {
+function githubUrl(github: string) {
+  return withProtocol(github);
+}
+
+function githubLabel(github: string) {
+  const normalized = withProtocol(github);
+
+  try {
+    const url = new URL(normalized);
+    return `${url.hostname.replace(/^www\./, "")}${url.pathname}`.replace(/\/$/, "");
+  } catch {
+    return github;
+  }
+}
+
+// ─── Profile Header Card ──────────────────────────────────────────────────────
+function ProfileHeaderCard({
+  user,
+  isOwnProfile,
+  username,
+}: {
+  user: user;
+  isOwnProfile: boolean;
+  username: string;
+}) {
   return (
-    <div className="space-y-2">
-      <SectionHeader icon={Wrench} title="Skills" />
-      <div className="flex flex-wrap gap-2">
-        {skills.map((skill) => (
-          <Badge key={skill} variant="secondary">
-            {skill}
-          </Badge>
-        ))}
+    <section className="bg-white rounded-2xl overflow-hidden border border-[#e5e2e1] shadow-sm">
+      {/* Banner */}
+      <div className="h-28 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a] relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/10 rounded-full" />
+        <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-black/5 rounded-full" />
+        <div className="absolute right-1/3 top-1/4 w-16 h-16 bg-white/5 rounded-full" />
       </div>
-    </div>
-  );
-}
 
-// ─── Education ────────────────────────────────────────────────────────────────
-// Built from the profile_base fields (single institution per profile for now).
-function EducationSection({
-  institution,
-  degree,
-  gpa,
-  eduStart,
-  eduEnd,
-  logoUrl,
-}: {
-  institution: string;
-  degree: string;
-  gpa: string | null;
-  eduStart: string | null;
-  eduEnd: string | null;
-  logoUrl: string | null;
-}) {
-  return (
-    <div className="space-y-3">
-      <SectionHeader icon={GraduationCap} title="Education" />
-      <div className="flex gap-4 rounded-lg border bg-card px-4 py-3.5">
-        {logoUrl && (
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted">
-            <img
-              src={logoUrl}
-              alt={institution}
-              className="h-16 w-16 object-contain p-1.5"
-            />
+      {/* Avatar + actions row */}
+      <div className="px-6 pb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between -mt-12 mb-4 relative z-10">
+          <div className="w-24 h-24 rounded-full bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center shrink-0">
+            {user.avatar_url ? (
+              <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
+            ) : (
+              <span className="w-full h-full bg-[#e5e2e1] flex items-center justify-center font-headline font-bold text-2xl text-[#3d4a41]">
+                {user.first_name.slice(0, 2).toUpperCase()}
+              </span>
+            )}
           </div>
-        )}
-        <div className="min-w-0 flex-1 space-y-0.5">
-          <p className="font-semibold leading-snug">{institution}</p>
-          <p className="text-sm text-muted-foreground">{degree}</p>
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 pt-0.5 text-xs text-muted-foreground">
-            {gpa && (
-              <span className="flex items-center gap-1">
-                <BookOpen className="h-3 w-3" />
-                GPA: {gpa}
-              </span>
+
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            {isOwnProfile && (
+              <Link
+                href={`/job-seeker/profile/${username}/edit#profile`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#e5e2e1] bg-white text-sm font-medium text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+                Edit Profile
+              </Link>
             )}
-            {(eduStart || eduEnd) && (
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {eduStart ?? "?"} — {eduEnd ?? "Present"}
-              </span>
-            )}
+            {!isOwnProfile && <MessageProfileButton targetUserId={user.id} />}
           </div>
         </div>
+
+        {/* Name + headline */}
+        <h1 className="font-headline text-2xl font-bold text-[#1c1b1b] leading-tight">
+          {user.first_name} {user.last_name}
+        </h1>
+        {user.username && (
+          <p className="text-sm text-[#5f5e5e] mt-0.5">@{user.username}</p>
+        )}
+        {user.degree && (
+          <p className="text-sm text-[#3d4a41] mt-0.5">{user.degree}</p>
+        )}
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3 text-sm text-[#5f5e5e]">
+          {user.location && (
+            <span className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              {user.location}
+            </span>
+          )}
+          {user.website && (
+            <a
+              href={withProtocol(user.website)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-[#006d43] transition-colors"
+            >
+              <Link2 className="w-3.5 h-3.5 shrink-0" />
+              {user.website}
+            </a>
+          )}
+          {user.github && (
+            <a
+              href={githubUrl(user.github)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 hover:text-[#006d43] transition-colors"
+            >
+              <GitBranch className="w-3.5 h-3.5 shrink-0" />
+              {githubLabel(user.github)}
+            </a>
+          )}
+          <span className="flex items-center gap-1">
+            <Calendar className="w-3.5 h-3.5 shrink-0" />
+            Joined {user.joined_date}
+          </span>
+        </div>
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── Projects ─────────────────────────────────────────────────────────────────
-function ProjectsSection({ projects }: { projects: project[] }) {
+// ─── About Section ────────────────────────────────────────────────────────────
+function AboutSection({
+  bio,
+  isOwnProfile,
+  username,
+}: {
+  bio: string | null;
+  isOwnProfile: boolean;
+  username: string;
+}) {
+  if (!bio && !isOwnProfile) return null;
   return (
-    <div className="space-y-3">
-      <SectionHeader icon={FolderGit2} title="Projects" />
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">About</h2>
+        {isOwnProfile && (
+          <Link
+            href={`/job-seeker/profile/${username}/edit#bio`}
+            className="p-1.5 rounded-lg text-[#006d43] hover:bg-[#f6f3f2] transition-colors"
+            title="Edit bio"
+          >
+            <Pencil className="w-4 h-4" />
+          </Link>
+        )}
+      </div>
+      {bio ? (
+        <ExpandableBio
+          bio={bio}
+          className="text-sm text-[#3d4a41] leading-relaxed"
+        />
+      ) : (
+        <p className="text-sm text-[#5f5e5e] italic">No bio added yet.</p>
+      )}
+    </section>
+  );
+}
+
+// ─── Projects Section ─────────────────────────────────────────────────────────
+function ProjectsSection({ projects }: { projects: project[] }) {
+  if (projects.length === 0) return null;
+  return (
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider mb-5">Projects</h2>
       <div className="space-y-3">
-        {projects.map((project, i) => (
-          <React.Fragment key={project.id}>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold">{project.name}</p>
-                <Badge
-                  variant={project.status === "Live" ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {project.status}
-                </Badge>
-              </div>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                {project.description}
-              </p>
+        {projects.map((project) => (
+          <div key={project.id} className="p-4 rounded-xl bg-[#f6f3f2] border border-[#e5e2e1]">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-sm text-[#1c1b1b]">{project.name}</h3>
+              <span
+                className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  project.status === "Live"
+                    ? "bg-[#78fbb6]/30 text-[#005232]"
+                    : "bg-[#e5e2e1] text-[#5f5e5e]"
+                }`}
+              >
+                {project.status}
+              </span>
+            </div>
+            {project.description && (
+              <ExpandableText
+                text={project.description}
+                className="mt-2 text-xs text-[#3d4a41] leading-relaxed"
+              />
+            )}
+            {project.skills && project.skills.length > 0 && (
+              <ExpandableSkills
+                skills={project.skills}
+                initialCount={6}
+                className="mt-3"
+                chipClassName="bg-white text-[#3d4a41] text-[11px] px-2.5 py-1 rounded-full font-medium border border-[#e5e2e1]"
+                buttonClassName="text-[11px] font-medium text-[#006d43] hover:text-[#00a86b] hover:underline transition-colors"
+              />
+            )}
+            {project.url && (
               <a
                 href={project.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-[#006d43] hover:text-[#00a86b] transition-colors"
               >
-                <GitBranch className="h-3.5 w-3.5" />
+                <GitBranch className="w-3 h-3" />
                 View on GitHub
               </a>
-            </div>
-            {i < projects.length - 1 && <Separator />}
-          </React.Fragment>
+            )}
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-// ─── CV Download ──────────────────────────────────────────────────────────────
-function CVDownloadCard({ cvUrl }: { cvUrl: string }) {
+// ─── Details Card ─────────────────────────────────────────────────────────────
+function CvCard({ cvSignedUrl }: { cvSignedUrl: string | null }) {
+  if (!cvSignedUrl) return null;
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          Curriculum Vitae
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-muted-foreground">
-          Download the latest CV for a full overview of experience, education,
-          and projects.
-        </p>
-        <Button asChild size="sm" className="w-full">
-          <a href={cvUrl} download>
-            <Download className="mr-2 h-4 w-4" />
-            Download CV
-          </a>
-        </Button>
-      </CardContent>
-    </Card>
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <FileText className="w-4 h-4 text-[#006d43]" />
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">CV</h2>
+      </div>
+      <p className="text-xs text-[#5f5e5e] mb-4">
+        Download the latest CV for a full overview of education, projects, and experience.
+      </p>
+      <a
+        href={cvSignedUrl}
+        download
+        className="flex items-center justify-center gap-2 w-full bg-[#f6f3f2] border border-[#e5e2e1] text-[#1c1b1b] px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#e5e2e1] transition-colors"
+      >
+        <Download className="w-4 h-4 text-[#006d43]" />
+        Download CV
+      </a>
+    </section>
   );
 }
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
+function EducationCard({
+  user,
+  educationLogoUrl,
+}: {
+  user: user;
+  educationLogoUrl: string | null;
+}) {
+  const hasAny = user.institution || user.degree || user.gpa || user.edu_start || user.edu_end;
+  if (!hasAny) return null;
+
+  return (
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider mb-5">Education</h2>
+      <div>
+        {(user.institution || user.degree) && (
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white">
+              {educationLogoUrl ? (
+                <img
+                  src={educationLogoUrl}
+                  alt={`${user.institution} logo`}
+                  className="h-full w-full object-contain p-0.5"
+                />
+              ) : (
+                <GraduationCap className="h-5 w-5 text-[#006d43]" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              {user.institution && (
+                <p className="text-sm font-semibold leading-snug text-[#1c1b1b]">{user.institution}</p>
+              )}
+              {user.degree && (
+                <p className="mt-0.5 text-sm text-[#3d4a41]">{user.degree}</p>
+              )}
+              {(user.gpa || user.edu_start || user.edu_end) && (
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#5f5e5e]">
+                  {user.gpa && (
+                    <span className="inline-flex items-center gap-1">
+                      <Star className="h-3 w-3 text-[#006d43]" />
+                      GPA {user.gpa}
+                    </span>
+                  )}
+                  {(user.edu_start || user.edu_end) && (
+                    <span className="inline-flex items-center gap-1">
+                      <Calendar className="h-3 w-3 text-[#006d43]" />
+                      {user.edu_start ?? "?"} - {user.edu_end ?? "Present"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── Skills Card ──────────────────────────────────────────────────────────────
+function SkillsCard({
+  skills,
+  isOwnProfile,
+  username,
+}: {
+  skills: string[];
+  isOwnProfile: boolean;
+  username: string;
+}) {
+  if (skills.length === 0 && !isOwnProfile) return null;
+  return (
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">Skills</h2>
+        {isOwnProfile && (
+          <Link
+            href={`/job-seeker/profile/${username}/edit#skills`}
+            className="p-1.5 rounded-lg text-[#006d43] hover:bg-[#f6f3f2] transition-colors"
+            title="Edit skills"
+          >
+            <Pencil className="w-4 h-4" />
+          </Link>
+        )}
+      </div>
+      {skills.length > 0 ? (
+        <ExpandableSkills skills={skills} initialCount={12} />
+      ) : (
+        <p className="text-xs text-[#5f5e5e] italic">No skills added yet.</p>
+      )}
+    </section>
+  );
+}
+
+// ─── Badges Card ──────────────────────────────────────────────────────────────
 function BadgesCard({ badges }: { badges: badge[] }) {
+  if (badges.length === 0) return null;
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Award className="h-4 w-4 text-muted-foreground" />
-          Certifications &amp; Badges
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
+    <section className="bg-white rounded-2xl p-6 border border-[#e5e2e1] shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <Award className="w-4 h-4 text-[#006d43]" />
+        <h2 className="text-xs font-semibold text-[#5f5e5e] uppercase tracking-wider">Certifications</h2>
+      </div>
+      <div className="space-y-1">
         {badges.map((b) => (
           <a
             key={b.id}
             href={b.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 rounded-md p-1.5 transition-colors hover:bg-muted"
+            className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#f6f3f2] transition-colors group"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted">
-              <img
-                src={b.image}
-                alt={b.name}
-                className="h-10 w-10 object-contain"
-              />
+            <div className="w-9 h-9 rounded-lg bg-[#f6f3f2] overflow-hidden shrink-0 flex items-center justify-center group-hover:bg-[#e5e2e1] transition-colors">
+              <img src={b.image} alt={b.name} className="w-8 h-8 object-contain" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-medium">{b.name}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {b.issuer} · {b.date}
-              </p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-[#1c1b1b] truncate">{b.name}</p>
+              <p className="text-[11px] text-[#5f5e5e] truncate">{b.issuer} · {b.date}</p>
             </div>
-            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <ExternalLink className="w-3.5 h-3.5 text-[#5f5e5e] shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </a>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -225,54 +378,39 @@ export default async function ProfilePage({
 }) {
   const { username } = await params;
 
-  // Fetch in parallel: profile data + current user id
   const [profileData, currentUserId] = await Promise.all([
     getProfileByUsername(username),
     getCurrentUserId(),
   ]);
 
-  // 404 if username doesn't exist
   if (!profileData) notFound();
 
-  const { profile_base, projects, badges, skills } = profileData
-
-  // The Edit Profile button is shown only when the viewer owns this profile
+  const { profile_base, job_seeker_profile, education_logo_url, projects, badges, skills } = profileData;
   const isOwnProfile = currentUserId === profile_base.id;
+  const flatUser = { ...profile_base, ...job_seeker_profile };
+
+  const cvSignedUrl = isOwnProfile && job_seeker_profile.cv_url
+    ? await getCvSignedUrl(job_seeker_profile.cv_url)
+    : null;
 
   return (
-    <main>
-      <ProfileHero user={profile_base} isOwnProfile={isOwnProfile} />
+    <div className="p-6 xl:p-8">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left column */}
+        <div className="lg:col-span-8 space-y-6">
+          <ProfileHeaderCard user={flatUser} isOwnProfile={isOwnProfile} username={username} />
+          <SkillsCard skills={skills} isOwnProfile={isOwnProfile} username={username} />
+          <AboutSection bio={job_seeker_profile.bio} isOwnProfile={isOwnProfile} username={username} />
+          <ProjectsSection projects={projects} />
+        </div>
 
-      <div className="mx-auto max-w-5xl px-4 pb-16">
-        <Separator className="my-5" />
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          {/* Left column */}
-          <div className="flex-1 space-y-6">
-            <SkillsSection skills={skills} />
-            {/* Education — rendered only when institution data is present */}
-            {profile_base.institution && profile_base.degree && (
-              <EducationSection
-                institution={profile_base.institution}
-                degree={profile_base.degree}
-                gpa={profile_base.gpa}
-                eduStart={profile_base.edu_start}
-                eduEnd={profile_base.edu_end}
-                logoUrl={profile_base.logo_url}
-              />
-            )}
-
-            {projects.length > 0 && <ProjectsSection projects={projects} />}
-          </div>
-
-          {/* Right column */}
-          <div className="w-full space-y-4 lg:w-64 lg:shrink-0">
-            {profile_base.cv_url && (
-              <CVDownloadCard cvUrl={profile_base.cv_url} />
-            )}
-            {badges.length > 0 && <BadgesCard badges={badges} />}
-          </div>
+        {/* Right column */}
+        <div className="lg:col-span-4 space-y-6">
+          <CvCard cvSignedUrl={cvSignedUrl} />
+          <EducationCard user={flatUser} educationLogoUrl={education_logo_url} />
+          <BadgesCard badges={badges} />
         </div>
       </div>
-    </main>
+    </div>
   );
 }

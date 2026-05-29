@@ -1,5 +1,9 @@
-import { Sidebar } from "@/components/sidebar";
-import { jobSeekerNavGroups } from "@/components/nav-items";
+import { AppSidebar } from "@/components/app/AppSidebar";
+import { AppTopBar } from "@/components/app/AppTopBar";
+import {
+  DashboardContent,
+  DashboardSidebarProvider,
+} from "@/components/app/DashboardSidebarState";
 
 export default function JobSeekerLayout({
   children,
@@ -7,13 +11,12 @@ export default function JobSeekerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50">
-      <Sidebar
-        title="Job Seeker"
-        navGroups={jobSeekerNavGroups}
-        rootHref="/job-seeker"
-      />
-      <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
-    </div>
+    <DashboardSidebarProvider className="bg-[#fcf9f8]">
+      <AppSidebar />
+      <DashboardContent>
+        <AppTopBar />
+        <main className="flex-1 min-w-0">{children}</main>
+      </DashboardContent>
+    </DashboardSidebarProvider>
   );
 }
