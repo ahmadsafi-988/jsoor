@@ -260,3 +260,31 @@ Structural cleanup → env/bug fixes → admin panel → notifications → messa
 **How to apply:** The send-assessment form gets a "Load from template" option. Selecting a template prefills all fields. Company can still edit before sending. `use_count` increments on each use so companies know which templates are most useful.
 
 **Table already exists in DB:** `assessment_templates` with `company_id`, `title`, `description`, `questions` (jsonb), `time_limit`, `tags` (array), `use_count`, `created_at`, `updated_at`.
+
+---
+
+## 2026-05-29 — Forums MVP
+
+**Decision: Forums use shared canonical routes, not role-prefixed routes.**
+
+Routes are `/forums`, `/forums/[forumSlug]`, `/forums/[forumSlug]/new`, and `/forums/[forumSlug]/posts/[postId]`. Admin moderation lives at `/admin/forums`.
+
+**Why:** The same community URL should continue working when company access is added later. Role access is enforced by layout guards, server actions, and RLS rather than by changing the route shape.
+
+---
+
+**Decision: Companies are blocked from forums for the MVP.**
+
+**Why:** The current scope is student community support and admin moderation. Company participation can be enabled later by relaxing role checks and RLS policies without changing canonical routes.
+
+---
+
+**Decision: Anonymous forum content always stores the real `author_id`.**
+
+**Why:** Normal users need privacy, while admins need accountability and moderation traceability. Public UI displays `Anonymous Job Seeker`; admin UI shows the real author plus an anonymous badge.
+
+---
+
+**Decision: Forum images use a private `forum-media` bucket and signed URLs.**
+
+**Why:** The project already uses private storage + signed URLs for sensitive files. Forum media is not inline HTML; it is post attachment media rendered as a gallery.

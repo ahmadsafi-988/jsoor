@@ -14,6 +14,19 @@ const ACTION_LABELS: Record<string, string> = {
   review_report: "Marked report reviewed",
   dismiss_report: "Dismissed report",
   lock_job_from_report: "Locked job (from report)",
+  create_forum: "Created forum",
+  activate_forum: "Activated forum",
+  deactivate_forum: "Deactivated forum",
+  approve_forum_request: "Approved forum request",
+  reject_forum_request: "Rejected forum request",
+  hide_forum_post: "Hid forum post",
+  unhide_forum_post: "Unhid forum post",
+  delete_forum_post: "Deleted forum post",
+  hide_forum_comment: "Hid forum comment",
+  unhide_forum_comment: "Unhid forum comment",
+  delete_forum_comment: "Deleted forum comment",
+  review_forum_report: "Marked forum report reviewed",
+  dismiss_forum_report: "Dismissed forum report",
 };
 
 const ACTION_COLORS: Record<string, string> = {
@@ -26,8 +39,21 @@ const ACTION_COLORS: Record<string, string> = {
   unblock_user: "bg-green-100 text-green-700",
   unsuspend_user: "bg-green-100 text-green-700",
   review_report: "bg-blue-100 text-blue-700",
+  review_forum_report: "bg-blue-100 text-blue-700",
   dismiss_report: "bg-neutral-100 text-neutral-500",
+  dismiss_forum_report: "bg-neutral-100 text-neutral-500",
   unverify_company: "bg-neutral-100 text-neutral-500",
+  create_forum: "bg-green-100 text-green-700",
+  activate_forum: "bg-green-100 text-green-700",
+  approve_forum_request: "bg-green-100 text-green-700",
+  reject_forum_request: "bg-red-100 text-red-700",
+  deactivate_forum: "bg-neutral-100 text-neutral-500",
+  hide_forum_post: "bg-red-100 text-red-700",
+  delete_forum_post: "bg-red-100 text-red-700",
+  hide_forum_comment: "bg-red-100 text-red-700",
+  delete_forum_comment: "bg-red-100 text-red-700",
+  unhide_forum_post: "bg-green-100 text-green-700",
+  unhide_forum_comment: "bg-green-100 text-green-700",
 };
 
 export default async function AdminAuditLogPage() {

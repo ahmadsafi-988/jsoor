@@ -422,6 +422,24 @@ Resend integration removed. In-app notifications (Sprint 4) are sufficient — e
 
 ---
 
+## Sprint 13 — Forums
+**Status:** Code complete; pending Supabase SQL execution.
+
+### TASK-43: Reddit-like forums MVP ✅
+
+- [x] Added shared canonical forum routes under `/forums`.
+- [x] Added `/admin/forums` moderation surface.
+- [x] Added forum data/action layer with server actions for requests, posts, comments, votes, reports, and moderation.
+- [x] Added private `forum-media` signed URL image flow.
+- [x] Added job seeker/admin sidebar entries.
+- [x] Added active forum results to global dashboard search for job seekers/admins only.
+- [x] Added manual Supabase migration SQL with RLS, grants, storage policies, and notification type updates.
+- [x] Updated manual Supabase types.
+- [ ] Run `supabase/migrations/20260529090000_forums.sql` in Supabase.
+- [ ] Smoke test with job seeker, admin, and company accounts after SQL is applied.
+
+---
+
 ## Remaining Known Issues
 
 | Issue | Status |

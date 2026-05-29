@@ -41,6 +41,10 @@ type BlogRow = Pick<
   Tables<"blogs">,
   "id" | "slug" | "title" | "category" | "excerpt" | "is_published"
 >;
+type ForumRow = Pick<
+  Tables<"forums">,
+  "id" | "slug" | "name" | "description" | "is_active"
+>;
 type ApplicationRow = Pick<
   Tables<"job_applications">,
   "id" | "applicant_id" | "job_id" | "status" | "created_at"
@@ -165,6 +169,18 @@ async function searchBlogs(
 
   const { data } = await query;
   return (data ?? []) as BlogRow[];
+}
+
+async function searchForums(supabase: Supabase, pattern: string) {
+  const { data } = await supabase
+    .from("forums")
+    .select("id, slug, name, description, is_active")
+    .or(`name.ilike.${pattern},description.ilike.${pattern}`)
+    .eq("is_active", true)
+    .order("name", { ascending: true })
+    .limit(RESULT_LIMIT);
+
+  return (data ?? []) as ForumRow[];
 }
 
 async function getCompanyApplicantResults(
@@ -316,11 +332,12 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
   const categories: SearchResultCategory[] = [];
 
   if (role === "job_seeker") {
-    const [users, companies, jobs, blogs] = await Promise.all([
+    const [users, companies, jobs, blogs, forums] = await Promise.all([
       searchProfiles(supabase, pattern, "job_seeker"),
       searchCompanies(supabase, pattern),
       searchJobs(supabase, pattern, { publicOnly: true }),
       searchBlogs(supabase, pattern, { publishedOnly: true }),
+      searchForums(supabase, pattern),
     ]);
 
     addCategory(
@@ -365,6 +382,17 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
         title: result.title,
         subtitle: result.category,
         href: `/blog/${result.slug}`,
+      })),
+    );
+    addCategory(
+      categories,
+      "forums",
+      "Forums",
+      forums.map((result) => ({
+        id: result.id,
+        title: result.name,
+        subtitle: result.description,
+        href: `/forums/${result.slug}`,
       })),
     );
   } else if (role === "company") {
@@ -431,6 +459,7 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
       jobs,
       applications,
       blogs,
+      forums,
     ] = await Promise.all([
       searchProfiles(adminClient, pattern, "any"),
       searchProfiles(adminClient, pattern, "job_seeker"),
@@ -439,6 +468,7 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
       searchJobs(adminClient, pattern),
       getAdminApplicationResults(adminClient, term),
       searchBlogs(adminClient, pattern),
+      searchForums(adminClient, pattern),
     ]);
 
     addCategory(
@@ -507,6 +537,17 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
         title: result.title,
         subtitle: result.is_published ? result.category : `Draft - ${result.category}`,
         href: `/admin/blogs/${result.id}`,
+      })),
+    );
+    addCategory(
+      categories,
+      "forums",
+      "Forums",
+      forums.map((result) => ({
+        id: result.id,
+        title: result.name,
+        subtitle: result.description,
+        href: `/forums/${result.slug}`,
       })),
     );
   }

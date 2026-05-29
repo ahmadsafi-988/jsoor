@@ -383,6 +383,48 @@ Companies build reusable assessment templates at `/company/assessments/templates
 
 ---
 
+### F-22: Forums
+**Status:** ✅ (code complete; requires Supabase SQL/storage setup)
+
+Shared forum routes:
+- `/forums`
+- `/forums/[forumSlug]`
+- `/forums/[forumSlug]/new`
+- `/forums/[forumSlug]/posts/[postId]`
+
+Admin route:
+- `/admin/forums`
+
+Implementation summary:
+- Approved active forums are browseable by job seekers and admins.
+- Companies are blocked from forums in the shared forum layout and RLS policies.
+- Job seekers can request forums; admins approve/reject requests.
+- Admins can create forums directly.
+- Forum names and generated slugs are unique.
+- Job seekers can create posts with text and up to 5 image attachments.
+- Post images are stored in private `forum-media` storage and rendered through signed URLs.
+- Users can comment and create one-level replies.
+- Posts and comments can be anonymous to normal users; admins see the real author and an anonymous badge.
+- Users can vote on posts/comments and report posts/comments.
+- Admins can manage requests, forums, reports, and hide/unhide/delete reported content.
+- Forum moderation actions are logged in `admin_audit_logs`.
+- Global dashboard search includes active forum results for job seekers and admins only.
+- Forum request/comment/reply notifications are inserted through the existing notification system.
+
+Key files:
+- `lib/forums/data.ts`
+- `lib/forums/actions.ts`
+- `lib/storage/forums.ts`
+- `src/app/forums/`
+- `src/app/admin/forums/`
+- `supabase/migrations/20260529090000_forums.sql`
+
+Manual setup:
+- Run `supabase/migrations/20260529090000_forums.sql` in Supabase.
+- Confirm the private `forum-media` bucket exists with the SQL-defined policies.
+
+---
+
 ## Feature Dependencies
 
 ```
