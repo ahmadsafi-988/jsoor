@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building, Flag, Calendar, Banknote, CheckCircle2 } from "lucide-react";
+import { MapPin, Bookmark, ArrowRight, ChevronDown, Search, Building, Flag, Calendar, Banknote, CheckCircle2, SlidersHorizontal, X } from "lucide-react";
 import { applyToJob, saveJob, unsaveJob, reportJob } from "@/lib/company/actions";
 import type { JobWithSkillsAndMatch } from "@/lib/company/data";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -307,10 +307,10 @@ function JobCard({
   const extraSkills = job.requiredSkills.length - visibleSkills.length;
 
   return (
-    <div className="relative group bg-white rounded-2xl p-6 border border-[#e5e2e1] hover:shadow-[0_20px_40px_rgba(0,109,67,0.08)] hover:border-[#006d43]/20 transition-all duration-300 overflow-hidden">
+    <div className="relative group h-full bg-white rounded-2xl p-6 border border-[#e5e2e1] hover:shadow-[0_20px_40px_rgba(0,109,67,0.08)] hover:border-[#006d43]/20 transition-all duration-300 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-[#006d43]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col gap-4">
+      <div className="relative z-10 flex h-full flex-col gap-4">
         {/* Top row — save / report (not part of clickable zone) */}
         <div className="flex items-start justify-between gap-3">
           <div className="w-12 h-12 rounded-xl bg-white overflow-hidden shrink-0 flex items-center justify-center border border-[#e5e2e1] p-1.5">
@@ -347,7 +347,7 @@ function JobCard({
         </div>
 
         {/* Clickable zone — opens detail sheet */}
-        <div onClick={onOpen} className="cursor-pointer flex flex-col gap-3">
+        <div onClick={onOpen} className="cursor-pointer flex flex-1 flex-col gap-3">
           {/* Title + company + match badge */}
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -372,11 +372,12 @@ function JobCard({
           </div>
 
           {/* Description */}
-          <p className="text-sm text-[#5f5e5e] leading-relaxed line-clamp-2">{job.description}</p>
+          <p className="min-h-10 text-sm text-[#5f5e5e] leading-relaxed line-clamp-2">{job.description}</p>
 
           {/* Required skill tags */}
-          {visibleSkills.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+          <div className="min-h-12">
+            {visibleSkills.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
               {visibleSkills.map((s) => (
                 <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-[#f6f3f2] border border-[#e5e2e1] text-[#3d4a41]">
                   {s}
@@ -387,12 +388,13 @@ function JobCard({
                   +{extraSkills} more
                 </span>
               )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Salary + CTA (not part of clickable zone) */}
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#f0edec]">
+        <div className="mt-auto flex items-center justify-between gap-3 pt-2 border-t border-[#f0edec]">
           <span className="text-sm font-semibold text-[#1c1b1b]">
             {job.salary_range ?? "Salary not specified"}
           </span>
@@ -493,30 +495,95 @@ type Props = {
 const PAGE_SIZE = 9;
 
 export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSavedIds }: Props) {
-  const [filter, setFilter] = useState("All");
+  const [jobType, setJobType] = useState("All");
+  const [sortBy, setSortBy] = useState("recommended");
+  const [locationFilter, setLocationFilter] = useState("All");
+  const [industryFilter, setIndustryFilter] = useState("All");
+  const [salarySpecifiedOnly, setSalarySpecifiedOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
+  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set());
+  const [skillQuery, setSkillQuery] = useState("");
   const [appliedIds, setAppliedIds] = useState(new Set(initialAppliedIds));
   const [savedIds, setSavedIds] = useState(new Set(initialSavedIds));
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedJob, setSelectedJob] = useState<JobWithSkillsAndMatch | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const filters = ["All", "Best Match", "Full-time", "Remote", "Hybrid", "Internship"];
+  const jobTypes = ["All", "Full-time", "Part-time", "Remote", "Hybrid", "Contract", "Internship"];
+  const locationOptions = ["All", ...Array.from(
+    new Set(initialJobs.map((job) => job.location).filter(Boolean) as string[])
+  ).sort((a, b) => a.localeCompare(b))];
+  const industryOptions = ["All", ...Array.from(
+    new Set(initialJobs.map((job) => job.company?.industry).filter(Boolean) as string[])
+  ).sort((a, b) => a.localeCompare(b))];
+  const skillOptions = Array.from(
+    new Set(initialJobs.flatMap((job) => job.requiredSkills))
+  ).sort((a, b) => a.localeCompare(b));
+  const skillMatches = skillOptions
+    .filter((skill) => {
+      const q = skillQuery.trim().toLowerCase();
+      return q ? skill.toLowerCase().includes(q) : true;
+    })
+    .filter((skill) => !selectedSkills.has(skill))
+    .slice(0, 8);
+  const activeAdvancedCount =
+    (locationFilter !== "All" ? 1 : 0) +
+    (industryFilter !== "All" ? 1 : 0) +
+    (salarySpecifiedOnly ? 1 : 0) +
+    selectedSkills.size;
 
   const allFiltered = initialJobs.filter((j) => {
-    if (filter === "Best Match") {
-      if (j.matchTotal === 0 || j.matchCount / j.matchTotal < 0.5) return false;
-    } else if (filter !== "All") {
-      if (j.type !== filter) return false;
+    if (jobType !== "All") {
+      if (j.type !== jobType) return false;
     }
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        j.title.toLowerCase().includes(q) ||
-        (j.company?.name ?? "").toLowerCase().includes(q)
-      );
+
+    if (savedOnly && !savedIds.has(j.id)) return false;
+
+    if (locationFilter !== "All" && j.location !== locationFilter) return false;
+    if (industryFilter !== "All" && j.company?.industry !== industryFilter) return false;
+    if (salarySpecifiedOnly && !j.salary_range) return false;
+
+    if (selectedSkills.size > 0) {
+      const hasSelectedSkill = j.requiredSkills.some((skill) => selectedSkills.has(skill));
+      if (!hasSelectedSkill) return false;
+    }
+
+    const q = search.trim().toLowerCase();
+    if (q) {
+      const searchableText = [
+        j.title,
+        j.company?.name,
+        j.location,
+        j.description,
+        j.requirements,
+        ...j.requiredSkills,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return searchableText.includes(q);
     }
     return true;
+  }).sort((a, b) => {
+    if (sortBy === "newest") {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+    if (sortBy === "oldest") {
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    }
+    if (sortBy === "saved") {
+      const savedA = savedIds.has(a.id) ? 1 : 0;
+      const savedB = savedIds.has(b.id) ? 1 : 0;
+      if (savedB !== savedA) return savedB - savedA;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    }
+
+    const ratioA = a.matchTotal > 0 ? a.matchCount / a.matchTotal : -1;
+    const ratioB = b.matchTotal > 0 ? b.matchCount / b.matchTotal : -1;
+    if (ratioB !== ratioA) return ratioB - ratioA;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 
   const displayed = allFiltered.slice(0, visibleCount);
@@ -525,6 +592,28 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
   function openSheet(job: JobWithSkillsAndMatch) {
     setSelectedJob(job);
     setSheetOpen(true);
+  }
+
+  function toggleSkill(skill: string) {
+    setSelectedSkills((prev) => {
+      const next = new Set(prev);
+      if (next.has(skill)) {
+        next.delete(skill);
+      } else {
+        next.add(skill);
+      }
+      return next;
+    });
+    setVisibleCount(PAGE_SIZE);
+  }
+
+  function clearAdvancedFilters() {
+    setLocationFilter("All");
+    setIndustryFilter("All");
+    setSalarySpecifiedOnly(false);
+    setSelectedSkills(new Set());
+    setSkillQuery("");
+    setVisibleCount(PAGE_SIZE);
   }
 
   return (
@@ -557,65 +646,250 @@ export function JobSeekerHomeClient({ initialJobs, initialAppliedIds, initialSav
       </section>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2 flex-wrap">
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => { setFilter(f); setVisibleCount(PAGE_SIZE); }}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                filter === f
-                  ? "bg-[#006d43] text-white"
-                  : "bg-[#f6f3f2] text-[#3d4a41] hover:bg-[#e5e2e1] hover:text-[#1c1b1b]"
-              }`}
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-[#e5e2e1] bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-[#3d4a41]">
+            Job type
+            <select
+              value={jobType}
+              onChange={(e) => {
+                setJobType(e.target.value);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              className="min-w-36 rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm text-[#1c1b1b] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
             >
-              {f}
-            </button>
-          ))}
+              {jobTypes.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex items-center gap-2 text-sm font-medium text-[#3d4a41]">
+            Sort by
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="min-w-40 rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm text-[#1c1b1b] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+            >
+              <option value="recommended">Recommended</option>
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="saved">Saved first</option>
+            </select>
+          </label>
+
+          <label className="inline-flex items-center gap-2 rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm font-medium text-[#1c1b1b]">
+            <input
+              type="checkbox"
+              checked={savedOnly}
+              onChange={(e) => {
+                setSavedOnly(e.target.checked);
+                setVisibleCount(PAGE_SIZE);
+              }}
+              className="h-4 w-4 accent-[#006d43]"
+            />
+            Saved
+          </label>
+
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((open) => !open)}
+            className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              advancedOpen || activeAdvancedCount > 0
+                ? "bg-[#1c1b1b] text-white"
+                : "border border-[#e5e2e1] bg-[#f6f3f2] text-[#3d4a41] hover:bg-[#e5e2e1]"
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            More filters
+            {activeAdvancedCount > 0 && (
+              <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-semibold">
+                {activeAdvancedCount}
+              </span>
+            )}
+          </button>
         </div>
         <span className="text-xs font-semibold text-[#3d4a41] uppercase tracking-widest">
           {allFiltered.length} opportunities
         </span>
       </div>
 
+      {advancedOpen && (
+        <div className="mb-6 rounded-2xl border border-[#e5e2e1] bg-white p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-[#1c1b1b]">More filters</h3>
+              <p className="text-xs text-[#5f5e5e]">
+                Narrow by location, industry, salary, or exact skills.
+              </p>
+            </div>
+            {activeAdvancedCount > 0 && (
+              <button
+                type="button"
+                onClick={clearAdvancedFilters}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#006d43] hover:text-[#005232]"
+              >
+                <X className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-[minmax(220px,280px)_1fr]">
+            <div className="grid gap-3">
+              <label className="flex flex-col gap-1.5 text-sm font-medium text-[#3d4a41]">
+                Location
+                <select
+                  value={locationFilter}
+                  onChange={(e) => {
+                    setLocationFilter(e.target.value);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className="rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm text-[#1c1b1b] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+                >
+                  {locationOptions.map((location) => (
+                    <option key={location} value={location}>{location}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1.5 text-sm font-medium text-[#3d4a41]">
+                Industry
+                <select
+                  value={industryFilter}
+                  onChange={(e) => {
+                    setIndustryFilter(e.target.value);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className="rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm text-[#1c1b1b] focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+                >
+                  {industryOptions.map((industry) => (
+                    <option key={industry} value={industry}>{industry}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="inline-flex items-center gap-2 rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm font-medium text-[#1c1b1b]">
+                <input
+                  type="checkbox"
+                  checked={salarySpecifiedOnly}
+                  onChange={(e) => {
+                    setSalarySpecifiedOnly(e.target.checked);
+                    setVisibleCount(PAGE_SIZE);
+                  }}
+                  className="h-4 w-4 accent-[#006d43]"
+                />
+                Salary specified
+              </label>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-[#3d4a41]">
+                  Required skills
+                </p>
+                {selectedSkills.size > 0 && (
+                  <span className="text-xs text-[#5f5e5e]">
+                    {selectedSkills.size} selected
+                  </span>
+                )}
+              </div>
+              {skillOptions.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                  <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f5e5e]" />
+                    <input
+                      value={skillQuery}
+                      onChange={(e) => setSkillQuery(e.target.value)}
+                      placeholder="Search skills to add..."
+                      className="w-full rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 pl-9 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+                    />
+                  </div>
+
+                  {selectedSkills.size > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {[...selectedSkills].map((skill) => (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => toggleSkill(skill)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-[#006d43] px-3 py-1 text-xs font-medium text-white"
+                        >
+                          {skill}
+                          <X className="h-3 w-3" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {skillMatches.map((skill) => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => toggleSkill(skill)}
+                        className="truncate rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-left text-xs font-medium text-[#3d4a41] transition-colors hover:border-[#006d43]/40 hover:bg-white"
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                    {skillMatches.length === 0 && (
+                      <p className="sm:col-span-2 lg:col-span-4 rounded-xl border border-dashed border-[#e5e2e1] px-4 py-5 text-center text-sm text-[#5f5e5e]">
+                        No skills match that search.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="rounded-xl border border-dashed border-[#e5e2e1] px-4 py-5 text-center text-sm text-[#5f5e5e]">
+                  No required skills are attached to current jobs yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <h3 className="font-headline text-base font-semibold text-[#1c1b1b] mb-4">
-        {filter === "Best Match"
-          ? "Jobs matching your skills"
-          : search
+        {search
           ? `Results for "${search}"`
           : "Recommended for you"}
       </h3>
 
-      {allFiltered.length === 0 ? (
-        <div className="text-center py-16 text-[#3d4a41]">
-          <p className="text-lg font-semibold text-[#1c1b1b] mb-2">No jobs found</p>
-          <p className="text-sm">
-            {filter === "Best Match"
-              ? "Add skills to your profile to see matched jobs here."
-              : "Try adjusting your search or filters."}
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {displayed.map((job) => (
-            <JobCard
-              key={job.id}
-              job={job}
-              applied={appliedIds.has(job.id)}
-              saved={savedIds.has(job.id)}
-              onApplied={(id) => setAppliedIds((s) => new Set([...s, id]))}
-              onSaveToggle={(id, isSaved) =>
-                setSavedIds((s) => {
-                  const next = new Set(s);
-                  isSaved ? next.add(id) : next.delete(id);
-                  return next;
-                })
-              }
-              onOpen={() => openSheet(job)}
-            />
-          ))}
-        </div>
-      )}
+      <div className="min-h-[760px]">
+        {allFiltered.length === 0 ? (
+          <div className="text-center py-16 text-[#3d4a41]">
+            <p className="text-lg font-semibold text-[#1c1b1b] mb-2">No jobs found</p>
+            <p className="text-sm">
+              Try adjusting your search or filters.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {displayed.map((job) => (
+              <JobCard
+                key={job.id}
+                job={job}
+                applied={appliedIds.has(job.id)}
+                saved={savedIds.has(job.id)}
+                onApplied={(id) => setAppliedIds((s) => new Set([...s, id]))}
+                onSaveToggle={(id, isSaved) =>
+                  setSavedIds((s) => {
+                    const next = new Set(s);
+                    if (isSaved) {
+                      next.add(id);
+                    } else {
+                      next.delete(id);
+                    }
+                    return next;
+                  })
+                }
+                onOpen={() => openSheet(job)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       {hasMore && (
         <div className="mt-10 flex justify-center">

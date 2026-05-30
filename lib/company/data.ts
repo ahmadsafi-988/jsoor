@@ -25,7 +25,7 @@ export type ApplicantProfileResult = {
   company_owns_application: boolean;
 };
 
-export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url"> | null };
+export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url" | "industry"> | null };
 
 export type CanonicalJob = JobRow & {
   company: CompanyRow | null;
@@ -553,7 +553,7 @@ export async function getActiveJobsWithSkills(
     .from("jobs")
     .select(`
       *,
-      company:companies!jobs_company_id_fkey(name, logo_url),
+      company:companies!jobs_company_id_fkey(name, logo_url, industry),
       job_to_skills(skill_id, skill:skills(name))
     `)
     .eq("is_active", true)

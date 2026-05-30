@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  Bookmark,
   Brain,
   ChevronLeft,
   ChevronRight,
@@ -24,7 +23,6 @@ const NAV_ITEMS = [
   { label: "Home", href: "/job-seeker/home", icon: Home },
   { label: "Profile", href: "/job-seeker/profile", icon: User },
   { label: "My Applications", href: "/job-seeker/job-applications", icon: FileText },
-  { label: "Saved Jobs", href: "/job-seeker/saved-jobs", icon: Bookmark },
   { label: "Assessments", href: "/job-seeker/assessments", icon: ClipboardCheck },
   { label: "Interview Simulator", href: "/job-seeker/interview-simulator", icon: Brain },
   { label: "Messages", href: "/job-seeker/messages", icon: MessageSquare },
