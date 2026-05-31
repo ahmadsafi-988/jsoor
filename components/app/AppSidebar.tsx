@@ -12,6 +12,7 @@ import {
   FileText,
   Home,
   MessageSquare,
+  MessagesSquare,
   User,
 } from "lucide-react";
 import { JsoorLogo } from "@/components/JsoorLogo";
@@ -25,6 +26,7 @@ const NAV_ITEMS = [
   { label: "My Applications", href: "/job-seeker/job-applications", icon: FileText },
   { label: "Assessments", href: "/job-seeker/assessments", icon: ClipboardCheck },
   { label: "Interview Simulator", href: "/job-seeker/interview-simulator", icon: Brain },
+  { label: "Communities", href: "/forums", icon: MessagesSquare },
   { label: "Messages", href: "/job-seeker/messages", icon: MessageSquare },
   { label: "Notifications", href: "/job-seeker/notifications", icon: Bell },
 ];

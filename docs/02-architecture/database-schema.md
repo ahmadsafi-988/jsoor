@@ -209,6 +209,24 @@ Extension table for admin users.
 
 ---
 
+### Forum tables
+Added for the Forums MVP.
+
+| Table | Purpose |
+|---|---|
+| `forums` | Approved forum communities with unique `name` and `slug` |
+| `forum_creation_requests` | Job seeker forum requests awaiting admin approval/rejection |
+| `forum_posts` | Forum posts with real `author_id`, `is_anonymous`, and moderation flags |
+| `forum_post_images` | Private storage attachment paths for post image galleries |
+| `forum_comments` | Comments and one-level replies via nullable `parent_comment_id` |
+| `forum_votes` | One vote per user per post/comment target |
+| `forum_reports` | User reports for posts/comments |
+| `forum_moderators` | Reserved for future per-forum moderation roles |
+
+Forum image files live in the private `forum-media` Supabase Storage bucket. The database stores storage paths; server code creates signed URLs for display.
+
+---
+
 ## RLS Policy Summary
 
 | Table | RLS | Policies |

@@ -13,7 +13,14 @@ export type NotificationType =
   | "assessment_submitted"
   | "new_message"
   | "company_approval_requested"
-  | "job_report_submitted";
+  | "job_report_submitted"
+  | "forum_request_submitted"
+  | "forum_request_received"
+  | "forum_request_approved"
+  | "forum_request_rejected"
+  | "forum_post_commented"
+  | "forum_comment_replied"
+  | "forum_report_submitted";
 
 export type AppNotification = {
   id: string;
