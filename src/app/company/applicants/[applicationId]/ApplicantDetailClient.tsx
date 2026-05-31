@@ -12,7 +12,7 @@ import type { ApplicantProfileResult } from "@/lib/company/data";
 import type { Tables } from "@/lib/supabase_generated_types";
 import {
   ArrowLeft, User, MapPin, Globe, GraduationCap,
-  FileText, ClipboardCheck, Star, Code2, ExternalLink,
+  FileText, ClipboardCheck, Star, ExternalLink,
   Check, X, Timer, MessageSquare, Download, Paperclip,
 } from "lucide-react";
 import Link from "next/link";
@@ -360,6 +360,10 @@ type Props = {
   templates: TemplateRow[];
 };
 
+function withProtocol(url: string) {
+  return url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
+}
+
 export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, templates }: Props) {
   const { application, applicant, projects, badges, skills } = result;
   const jsp = applicant.job_seeker_profile;
@@ -547,15 +551,9 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                 </p>
               )}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
-                {jsp?.github && (
-                  <a href={`https://github.com/${jsp.github}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="GitHub">
-                    <Code2 className="w-4 h-4" />
-                  </a>
-                )}
                 {jsp?.website && (
-                  <a href={jsp.website} target="_blank" rel="noopener noreferrer"
-                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="Website">
+                  <a href={withProtocol(jsp.website)} target="_blank" rel="noopener noreferrer"
+                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="Website / Portfolio">
                     <Globe className="w-4 h-4" />
                   </a>
                 )}

@@ -21,7 +21,7 @@ export type ApplicantProfileResult = {
     job: Pick<Tables<"jobs">, "id" | "title" | "type" | "location" | "company_id">;
   };
   applicant: Tables<"profiles"> & {
-    job_seeker_profile: Tables<"job_seeker_profiles"> | null;
+    job_seeker_profile: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   };
   projects: ProjectWithSkills[];
   badges: Tables<"badges">[];
@@ -56,7 +56,7 @@ export type CanonicalApplicationDetail = {
 
 export type ApplicationWithProfile = ApplicationRow & {
   profile: (Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "avatar_url" | "username"> & {
-    job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "github" | "website" | "cv_url"> | null;
+    job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   }) | null;
   job: Pick<JobRow, "title" | "type" | "location"> | null;
 };
@@ -231,7 +231,7 @@ export async function getJobApplicants(jobId: string): Promise<ApplicationWithPr
       .in("id", applicantIds),
     supabase
       .from("job_seeker_profiles")
-      .select("id, bio, degree, institution, location, github, website, cv_url")
+      .select("id, bio, degree, institution, location, website, cv_url")
       .in("id", applicantIds),
   ]);
 
@@ -269,7 +269,7 @@ export async function getApplicationById(applicationId: string): Promise<Applica
       .single(),
     supabase
       .from("job_seeker_profiles")
-      .select("id, bio, degree, institution, location, github, website, cv_url")
+      .select("id, bio, degree, institution, location, website, cv_url")
       .eq("id", application.applicant_id)
       .single(),
   ]);
@@ -370,7 +370,7 @@ export async function getApplicationWithApplicantProfile(
   const [profileRes, projectsRes, skillsRes, badgesRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*, job_seeker_profile:job_seeker_profiles(*)")
+      .select("*, job_seeker_profile:job_seeker_profiles(bio, degree, institution, location, website, cv_url)")
       .eq("id", applicantId)
       .single(),
 
@@ -395,7 +395,7 @@ export async function getApplicationWithApplicantProfile(
   if (!profileRes.data) return null;
 
   const applicant = profileRes.data as Tables<"profiles"> & {
-    job_seeker_profile: Tables<"job_seeker_profiles"> | null;
+    job_seeker_profile: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   };
 
   const projects: ProjectWithSkills[] = ((projectsRes.data ?? []) as any[]).map((p) => ({

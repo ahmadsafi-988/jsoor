@@ -5,7 +5,7 @@
 // UI restyled to match the warm beige/green design system from page 3.
 
 import React from "react";
-import { MapPin, Link2, Mail, Calendar, GitBranch, Pencil } from "lucide-react";
+import { MapPin, Link2, Mail, Calendar, Pencil } from "lucide-react";
 import type { Tables } from "@/lib/supabase_generated_types";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -116,24 +116,13 @@ export function ProfileHero({
           )}
           {user.website && (
             <a
-              href={`https://${user.website}`}
+              href={user.website.startsWith("http") ? user.website : `https://${user.website}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 hover:text-[#006d43] transition-colors"
             >
               <Link2 className="h-3.5 w-3.5" />
               {user.website}
-            </a>
-          )}
-          {user.github && (
-            <a
-              href={`https://github.com/${user.github}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-[#006d43] transition-colors"
-            >
-              <GitBranch className="h-3.5 w-3.5" />
-              {user.github}
             </a>
           )}
           <span className="flex items-center gap-1">

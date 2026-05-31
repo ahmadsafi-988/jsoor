@@ -39,8 +39,8 @@ export function CompanyProfileDetail({
             {company.cover_url && (
               <ImagePreviewDialog
                 src={company.cover_url}
-                alt={`${company.name} company background`}
-                label="company background"
+                alt={`${company.name} company cover`}
+                label="company cover"
                 triggerClassName="block h-full w-full cursor-zoom-in"
               >
                 <ImageWithFallback

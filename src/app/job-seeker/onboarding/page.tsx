@@ -47,7 +47,6 @@ type IdentityData = {
   bio: string;
   location: string;
   website: string;
-  github: string;
   avatarFile: File | null;
   avatarPreview: string | null;
   cvFile: File | null;
@@ -68,6 +67,18 @@ type SkillRow   = { id: number; name: string; skill_to_categories?: { category_i
 type SkillCategory = { id: number; name: string; slug: string; sort_order: number };
 type University = { id: number; name: string; logo_url: string };
 
+const FIELD_LABEL = "text-sm font-semibold text-[#1c1b1b]";
+const FIELD_CLASS =
+  "h-11 rounded-xl border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus-visible:border-[#006d43]/50 focus-visible:ring-[#006d43]/20";
+const TEXTAREA_CLASS =
+  "rounded-xl border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus-visible:border-[#006d43]/50 focus-visible:ring-[#006d43]/20";
+const PRIMARY_BUTTON =
+  "rounded-xl bg-gradient-to-br from-[#006d43] to-[#00a86b] px-6 text-sm font-semibold text-white shadow-lg shadow-[#00a86b]/20 hover:brightness-110";
+const OUTLINE_BUTTON =
+  "rounded-xl border-[#e5e2e1] bg-white text-sm font-semibold text-[#3d4a41] hover:bg-[#f6f3f2]";
+const GHOST_BUTTON =
+  "rounded-xl text-sm font-semibold text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#1c1b1b]";
+
 // ─── Step indicator ───────────────────────────────────────────────────────────
 const STEPS: { label: string; icon: React.ElementType }[] = [
   { label: "Identity",  icon: User          },
@@ -78,7 +89,7 @@ const STEPS: { label: string; icon: React.ElementType }[] = [
 
 function StepIndicator({ current }: { current: Step }) {
   return (
-    <div className="flex items-center justify-center gap-0">
+    <div className="flex w-full items-center justify-center overflow-x-auto pb-1">
       {STEPS.map((s, i) => {
         const stepNum  = (i + 1) as Step;
         const isDone   = current > stepNum;
@@ -88,19 +99,19 @@ function StepIndicator({ current }: { current: Step }) {
           <React.Fragment key={s.label}>
             <div className="flex flex-col items-center gap-1.5">
               <div className={[
-                "h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
-                isDone   ? "border-amber-500 bg-amber-500 text-white" : "",
-                isActive ? "border-amber-500 bg-background text-amber-600 shadow-[0_0_0_4px_rgba(245,158,11,0.15)]" : "",
-                !isDone && !isActive ? "border-border bg-muted text-muted-foreground" : "",
+                "flex h-10 w-10 items-center justify-center rounded-full border transition-all duration-300",
+                isDone   ? "border-[#006d43] bg-[#006d43] text-white" : "",
+                isActive ? "border-[#006d43] bg-white text-[#006d43] shadow-[0_0_0_4px_rgba(0,109,67,0.12)]" : "",
+                !isDone && !isActive ? "border-[#e5e2e1] bg-[#f6f3f2] text-[#5f5e5e]" : "",
               ].join(" ")}>
                 {isDone ? <Check className="h-4 w-4" strokeWidth={2.5} /> : <Icon className="h-4 w-4" />}
               </div>
-              <span className={`text-xs font-medium tracking-wide ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+              <span className={`whitespace-nowrap text-xs font-semibold ${isActive ? "text-[#1c1b1b]" : "text-[#5f5e5e]"}`}>
                 {s.label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className={`h-[2px] w-16 mb-6 mx-2 rounded-full transition-all duration-500 ${current > stepNum ? "bg-amber-500" : "bg-border"}`} />
+              <div className={`mx-2 mb-6 h-px w-8 rounded-full transition-all duration-500 sm:w-16 ${current > stepNum ? "bg-[#006d43]" : "bg-[#e5e2e1]"}`} />
             )}
           </React.Fragment>
         );
@@ -113,9 +124,9 @@ function StepIndicator({ current }: { current: Step }) {
 function Feedback({ state }: { state: { error?: string; message?: string } | null }) {
   if (!state) return null;
   if (state.error)
-    return <p className="rounded-md bg-destructive/10 px-4 py-2.5 text-sm text-destructive">{state.error}</p>;
+    return <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{state.error}</p>;
   if (state.message)
-    return <p className="rounded-md bg-green-500/10 px-4 py-2.5 text-sm text-green-700 dark:text-green-400">{state.message}</p>;
+    return <p className="rounded-xl border border-[#78fbb6]/40 bg-[#78fbb6]/20 px-4 py-3 text-sm text-[#005232]">{state.message}</p>;
   return null;
 }
 
@@ -165,30 +176,30 @@ function StepIdentity({
     onNext();
   }
 
-  const UsernameIcon = () => {
-    if (usernameStatus === "checking")  return <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />;
-    if (usernameStatus === "taken")     return <XCircle className="h-4 w-4 text-destructive" />;
-    if (usernameStatus === "available") return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+  function renderUsernameIcon() {
+    if (usernameStatus === "checking")  return <Loader2 className="h-4 w-4 animate-spin text-[#5f5e5e]" />;
+    if (usernameStatus === "taken")     return <XCircle className="h-4 w-4 text-red-600" />;
+    if (usernameStatus === "available") return <CheckCircle2 className="h-4 w-4 text-[#006d43]" />;
     return null;
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-7">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-7">
 
       {/* Avatar + CV upload row */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         {/* Avatar */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Profile photo</Label>
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20 border-2 border-border shrink-0">
+        <div className="flex flex-col gap-2">
+          <Label className={FIELD_LABEL}>Profile photo</Label>
+          <div className="flex items-center gap-4 rounded-2xl border border-[#e5e2e1] bg-[#f6f3f2] p-4">
+            <Avatar className="h-20 w-20 shrink-0 border border-[#e5e2e1] bg-white">
               <AvatarImage src={data.avatarPreview ?? undefined} />
-              <AvatarFallback><ImageIcon className="h-7 w-7 text-muted-foreground" /></AvatarFallback>
+              <AvatarFallback className="bg-white"><ImageIcon className="h-7 w-7 text-[#3d4a41]" /></AvatarFallback>
             </Avatar>
             <div className="space-y-1.5">
               <Label
                 htmlFor="avatar_onboard"
-                className="cursor-pointer inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-[#e5e2e1] bg-white px-3 py-2 text-sm font-semibold text-[#3d4a41] transition-colors hover:bg-[#fcf9f8]"
               >
                 <Upload className="h-3.5 w-3.5" />
                 {data.avatarPreview ? "Change photo" : "Upload photo"}
@@ -201,44 +212,44 @@ function StepIdentity({
                   onChange({ avatarFile: f, avatarPreview: URL.createObjectURL(f) });
                 }}
               />
-              <p className="text-xs text-muted-foreground">Recommended: 400 x 400 px. PNG, JPG or WEBP.</p>
+              <p className="text-xs text-[#5f5e5e]">Recommended: 400 x 400 px. PNG, JPG or WEBP.</p>
             </div>
           </div>
         </div>
 
         {/* CV */}
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">Curriculum Vitae</Label>
+        <div className="flex flex-col gap-2">
+          <Label className={FIELD_LABEL}>Curriculum Vitae</Label>
           <div className={[
-            "flex flex-col gap-2 rounded-lg border-2 border-dashed px-4 py-4 transition-colors",
-            data.cvFile ? "border-amber-500/40 bg-amber-500/5" : "border-border hover:border-muted-foreground/40",
+            "flex min-h-[114px] flex-col justify-center gap-2 rounded-2xl border border-dashed px-4 py-4 transition-colors",
+            data.cvFile ? "border-[#006d43]/40 bg-[#78fbb6]/15" : "border-[#bccabe] bg-[#f6f3f2] hover:border-[#006d43]/50",
           ].join(" ")}>
             {data.cvFile ? (
               <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 shrink-0 text-amber-500" />
+                <FileText className="h-8 w-8 shrink-0 text-[#006d43]" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{data.cvName}</p>
-                  <p className="text-xs text-muted-foreground">Ready to upload</p>
+                  <p className="truncate text-sm font-semibold text-[#1c1b1b]">{data.cvName}</p>
+                  <p className="text-xs text-[#5f5e5e]">Ready to upload</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => onChange({ cvFile: null, cvName: null })}
-                  className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                  className="shrink-0 text-[#5f5e5e] transition-colors hover:text-red-600"
                 >
                   <XCircle className="h-4 w-4" />
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 text-center">
-                <FileText className="h-8 w-8 text-muted-foreground/50" />
+                <FileText className="h-8 w-8 text-[#3d4a41]" />
                 <div>
                   <Label
                     htmlFor="cv_onboard"
-                    className="cursor-pointer text-sm font-medium text-primary hover:underline"
+                    className="cursor-pointer text-sm font-semibold text-[#006d43] hover:underline"
                   >
                     Click to upload your CV
                   </Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">PDF · Max 10 MB · Optional</p>
+                  <p className="mt-0.5 text-xs text-[#5f5e5e]">PDF - Max 10 MB - Optional</p>
                 </div>
               </div>
             )}
@@ -254,73 +265,76 @@ function StepIdentity({
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* Name */}
-      <div className="grid grid-cols-2 gap-5">
-        <div className="space-y-2">
-          <Label htmlFor="first_name">First name <span className="text-destructive">*</span></Label>
-          <Input id="first_name" value={data.firstName} required onChange={(e) => onChange({ firstName: e.target.value })} placeholder="Ada" />
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="first_name" className={FIELD_LABEL}>First name <span className="text-red-600">*</span></Label>
+          <Input id="first_name" value={data.firstName} required onChange={(e) => onChange({ firstName: e.target.value })} placeholder="Ada" className={FIELD_CLASS} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="last_name">Last name <span className="text-destructive">*</span></Label>
-          <Input id="last_name" value={data.lastName} required onChange={(e) => onChange({ lastName: e.target.value })} placeholder="Lovelace" />
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="last_name" className={FIELD_LABEL}>Last name <span className="text-red-600">*</span></Label>
+          <Input id="last_name" value={data.lastName} required onChange={(e) => onChange({ lastName: e.target.value })} placeholder="Lovelace" className={FIELD_CLASS} />
         </div>
       </div>
 
       {/* Username */}
-      <div className="space-y-2">
-        <Label htmlFor="username">Username <span className="text-destructive">*</span></Label>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="username" className={FIELD_LABEL}>Username <span className="text-red-600">*</span></Label>
         <div className="flex items-center gap-2">
           <div className="flex flex-1 items-center">
-            <span className="flex h-10 items-center rounded-l-md border border-r-0 bg-muted px-3 text-sm text-muted-foreground">@</span>
+            <span className="flex h-11 items-center rounded-l-xl border border-r-0 border-[#e5e2e1] bg-[#f6f3f2] px-4 text-sm text-[#5f5e5e]">@</span>
             <Input
               id="username" value={data.username} required minLength={3}
               onChange={(e) => onChange({ username: e.target.value.toLowerCase().replace(/\s/g, "") })}
               placeholder="ada_lovelace"
-              className="rounded-l-none"
+              className={`${FIELD_CLASS} rounded-l-none`}
             />
           </div>
           <div className="flex h-10 w-10 shrink-0 items-center justify-center">
-            <UsernameIcon />
+            {renderUsernameIcon()}
           </div>
         </div>
-        {usernameStatus === "taken"     && <p className="text-xs text-destructive">That username is already taken.</p>}
-        {usernameStatus === "available" && <p className="text-xs text-green-600 dark:text-green-400">Looks good!</p>}
-        {usernameStatus === "idle"      && <p className="text-xs text-muted-foreground">Your public profile URL · At least 3 characters</p>}
+        {usernameStatus === "taken"     && <p className="text-xs text-red-600">That username is already taken.</p>}
+        {usernameStatus === "available" && <p className="text-xs text-[#006d43]">Looks good.</p>}
+        {usernameStatus === "idle"      && <p className="text-xs text-[#5f5e5e]">Your public profile URL - at least 3 characters.</p>}
       </div>
 
       {/* Bio */}
-      <div className="space-y-2">
-        <Label htmlFor="bio">Short bio</Label>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="bio" className={FIELD_LABEL}>Short bio</Label>
         <Textarea
-          id="bio" value={data.bio} rows={3} maxLength={300} className="resize-none"
+          id="bio" value={data.bio} rows={4} maxLength={1000} className={`${TEXTAREA_CLASS} resize-none`}
           onChange={(e) => onChange({ bio: e.target.value })}
-          placeholder="A few words about yourself…"
+          placeholder="A few words about yourself..."
         />
-        <p className="text-right text-xs text-muted-foreground">{data.bio.length}/300</p>
+        <p className="text-right text-xs text-[#5f5e5e]">{data.bio.length}/1000</p>
       </div>
 
-      {/* Location / Website / GitHub */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
+      {/* Location / Website */}
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="location" className={FIELD_LABEL}>Location</Label>
           <LocationPicker
             locations={locations}
             value={data.location}
             onChange={(location) => onChange({ location })}
             placeholder="Search locations..."
-            inputClassName="h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-9 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+            inputClassName="h-11 w-full rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3 pl-9 text-sm text-[#1c1b1b] shadow-none outline-none placeholder:text-neutral-400 focus-visible:border-[#006d43]/50 focus-visible:ring-2 focus-visible:ring-[#006d43]/20"
           />
-          <p className="text-xs text-muted-foreground">Choose a location from the list, or use Not specified.</p>
+          <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="website">Website</Label>
-          <Input id="website" value={data.website} onChange={(e) => onChange({ website: e.target.value })} placeholder="yoursite.com" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="github">GitHub handle</Label>
-          <Input id="github" value={data.github} onChange={(e) => onChange({ github: e.target.value })} placeholder="octocat" />
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="website" className={FIELD_LABEL}>Website / Portfolio URL</Label>
+          <Input
+            id="website"
+            type="url"
+            value={data.website}
+            onChange={(e) => onChange({ website: e.target.value })}
+            placeholder="https://your-portfolio.com"
+            className={FIELD_CLASS}
+          />
         </div>
       </div>
 
@@ -329,7 +343,7 @@ function StepIdentity({
           type="submit"
           size="lg"
           disabled={usernameStatus === "taken" || usernameStatus === "checking"}
-          className="gap-2 px-8"
+          className={`${PRIMARY_BUTTON} gap-2`}
         >
           Continue <ArrowRight className="h-4 w-4" />
         </Button>
@@ -381,33 +395,33 @@ function StepEducation({
   }
 
   return (
-    <div className="space-y-7">
-      <p className="text-sm text-muted-foreground -mt-1">
+    <div className="flex flex-col gap-7">
+      <p className="-mt-1 text-sm text-[#5f5e5e]">
         Tell us about your academic background. You can always fill this in later.
       </p>
 
       {/* University search */}
-      <div className="space-y-2">
-        <Label>University / Institution</Label>
+      <div className="flex flex-col gap-2">
+        <Label className={FIELD_LABEL}>University / Institution</Label>
         {selectedUni ? (
-          <div className="flex items-center gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+          <div className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3">
             {selectedUni.logo_url && (
               <img src={selectedUni.logo_url} alt={selectedUni.name} className="h-9 w-9 rounded object-contain" />
             )}
-            <span className="flex-1 text-sm font-medium">{selectedUni.name}</span>
-            <button type="button" onClick={clearUni} className="text-muted-foreground hover:text-destructive transition-colors">
+            <span className="flex-1 text-sm font-semibold text-[#1c1b1b]">{selectedUni.name}</span>
+            <button type="button" onClick={clearUni} className="text-[#5f5e5e] transition-colors hover:text-red-600">
               <XCircle className="h-4 w-4" />
             </button>
           </div>
         ) : (
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9 h-11" placeholder="Search your university…" value={query} onChange={(e) => setQuery(e.target.value)} />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f5e5e]" />
+            <Input className={`${FIELD_CLASS} pl-10`} placeholder="Search your university..." value={query} onChange={(e) => setQuery(e.target.value)} />
             {uniResults.length > 0 && (
-              <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover shadow-lg overflow-hidden">
+              <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-xl border border-[#e5e2e1] bg-white shadow-lg">
                 {uniResults.map((u) => (
                   <button key={u.id} type="button" onClick={() => selectUni(u)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors">
+                    className="flex w-full items-center gap-3 px-4 py-3 text-sm text-[#1c1b1b] transition-colors hover:bg-[#f6f3f2]">
                     {u.logo_url && <img src={u.logo_url} alt={u.name} className="h-6 w-6 rounded object-contain" />}
                     {u.name}
                   </button>
@@ -419,40 +433,40 @@ function StepEducation({
       </div>
 
       {/* Degree */}
-      <div className="space-y-2">
-        <Label htmlFor="degree">Degree</Label>
-        <Input id="degree" value={data.degree} onChange={(e) => onChange({ degree: e.target.value })} placeholder="B.Sc. Computer Science" className="h-11" />
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="degree" className={FIELD_LABEL}>Degree</Label>
+        <Input id="degree" value={data.degree} onChange={(e) => onChange({ degree: e.target.value })} placeholder="B.Sc. Computer Science" className={FIELD_CLASS} />
       </div>
 
       {/* GPA + years */}
-      <div className="grid grid-cols-3 gap-5">
-        <div className="space-y-2">
-          <Label htmlFor="gpa">GPA</Label>
-          <Input id="gpa" value={data.gpa} onChange={(e) => onChange({ gpa: e.target.value })} placeholder="3.8" className="h-11" />
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="gpa" className={FIELD_LABEL}>GPA</Label>
+          <Input id="gpa" value={data.gpa} onChange={(e) => onChange({ gpa: e.target.value })} placeholder="3.8" className={FIELD_CLASS} />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="edu_start">Start year</Label>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="edu_start" className={FIELD_LABEL}>Start year</Label>
           <Input
-            id="edu_start" value={data.eduStart} placeholder="2020" maxLength={4} className="h-11"
+            id="edu_start" value={data.eduStart} placeholder="2020" maxLength={4} className={FIELD_CLASS}
             onChange={(e) => onChange({ eduStart: e.target.value.replace(/\D/g, "").slice(0, 4) })}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="edu_end">End year</Label>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="edu_end" className={FIELD_LABEL}>End year</Label>
           <Input
-            id="edu_end" value={data.eduEnd} placeholder="2024" maxLength={4} className="h-11"
+            id="edu_end" value={data.eduEnd} placeholder="2024" maxLength={4} className={FIELD_CLASS}
             onChange={(e) => onChange({ eduEnd: e.target.value.replace(/\D/g, "").slice(0, 4) })}
           />
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2">
-        <Button type="button" variant="ghost" size="lg" onClick={onBack} className="gap-2">
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <Button type="button" variant="ghost" size="lg" onClick={onBack} className={`${GHOST_BUTTON} gap-2 sm:w-auto`}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" size="lg" onClick={onNext}>Skip for now</Button>
-          <Button type="button" size="lg" onClick={onNext} className="gap-2 px-8">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="button" variant="outline" size="lg" onClick={onNext} className={OUTLINE_BUTTON}>Skip for now</Button>
+          <Button type="button" size="lg" onClick={onNext} className={`${PRIMARY_BUTTON} gap-2`}>
             Continue <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
@@ -558,19 +572,19 @@ function StepSkills({
   }
 
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-muted-foreground -mt-1">
+    <div className="flex flex-col gap-6">
+      <p className="-mt-1 text-sm text-[#5f5e5e]">
         Add skills that best represent your expertise. You can refine these anytime.
       </p>
 
       {/* Selected chips */}
-      <div className="min-h-[3rem] flex flex-wrap gap-2">
+      <div className="flex min-h-[3rem] flex-wrap gap-2 rounded-2xl border border-[#e5e2e1] bg-[#f6f3f2] p-3">
         {selected.length === 0
-          ? <p className="text-sm text-muted-foreground italic py-1">No skills selected yet.</p>
+          ? <p className="py-1 text-sm text-[#5f5e5e]">No skills selected yet.</p>
           : selected.map((s) => (
-            <Badge key={s.skill_id} variant="secondary" className="text-sm py-1.5 px-3 gap-2 border border-primary/20 bg-secondary/60">
+            <Badge key={s.skill_id} variant="secondary" className="gap-2 rounded-full border border-[#006d43]/20 bg-[#78fbb6]/20 px-3 py-1.5 text-sm text-[#005232]">
               <span className="font-medium">{s.name}</span>
-              <button type="button" onClick={() => handleRemove(s.skill_id)} className="text-muted-foreground hover:text-destructive transition-colors">
+              <button type="button" onClick={() => handleRemove(s.skill_id)} className="text-[#3d4a41] transition-colors hover:text-red-600">
                 <XCircle className="h-3.5 w-3.5" />
               </button>
             </Badge>
@@ -578,46 +592,46 @@ function StepSkills({
         }
       </div>
 
-      <Separator />
+      <Separator className="bg-[#e5e2e1]" />
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9 h-11" placeholder="Search skills…" value={query} onChange={(e) => setQuery(e.target.value)} />
+        <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5f5e5e]" />
+        <Input className={`${FIELD_CLASS} pl-10`} placeholder="Search skills..." value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
 
       {categories.length > 0 && (
-        <div className="rounded-lg border bg-background">
+        <div className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-white">
           <button
             type="button"
             onClick={() => setFiltersOpen((open) => !open)}
             aria-expanded={filtersOpen}
-            className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-sm font-semibold text-foreground"
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-[#1c1b1b]"
           >
             <span className="inline-flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <SlidersHorizontal className="h-4 w-4 text-[#5f5e5e]" />
               Filter by industry
               {selectedCategoryIds.size > 0 && (
-                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                <span className="rounded-full bg-[#78fbb6]/20 px-2 py-0.5 text-xs font-semibold text-[#005232]">
                   {selectedCategoryIds.size} selected
                 </span>
               )}
             </span>
             <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${
+              className={`h-4 w-4 text-[#5f5e5e] transition-transform ${
                 filtersOpen ? "rotate-180" : ""
               }`}
             />
           </button>
 
           {filtersOpen && (
-            <div className="border-t bg-muted/5 p-3">
+            <div className="border-t border-[#e5e2e1] bg-[#f6f3f2] p-3">
               {selectedCategoryIds.size > 0 && (
                 <div className="mb-2 flex justify-end">
                   <button
                     type="button"
                     onClick={() => setSelectedCategoryIds(new Set())}
-                    className="text-xs font-semibold text-primary hover:text-primary/80"
+                    className="text-xs font-semibold text-[#006d43] hover:text-[#005232]"
                   >
                     Clear filters
                   </button>
@@ -631,15 +645,15 @@ function StepSkills({
                       key={category.id}
                       className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                         checked
-                          ? "border-primary/50 bg-primary/10 text-primary"
-                          : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                          ? "border-[#006d43]/50 bg-[#78fbb6]/20 text-[#005232]"
+                          : "border-[#e5e2e1] bg-white text-[#3d4a41] hover:border-[#006d43]/40"
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleCategory(category.id)}
-                        className="h-3.5 w-3.5 accent-primary"
+                        className="h-3.5 w-3.5 accent-[#006d43]"
                       />
                       {category.name}
                     </label>
@@ -652,12 +666,12 @@ function StepSkills({
       )}
 
       {/* Skill list */}
-      <div className="rounded-lg border bg-muted/5 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-[#f6f3f2]">
         <div className="max-h-[300px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-border">
           {filtered.length === 0 && (query || selectedCategoryIds.size > 0) && (
-            <p className="text-center py-10 text-sm text-muted-foreground">No matching skills found.</p>
+            <p className="py-10 text-center text-sm text-[#5f5e5e]">No matching skills found.</p>
           )}
-          <div className="grid grid-cols-2 gap-0.5">
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
             {filtered.map((s) => {
               const isAdded = selected.some((p) => p.skill_id === s.id);
               return (
@@ -665,16 +679,16 @@ function StepSkills({
                   key={s.id} type="button"
                   disabled={isAdded || isPending === s.id}
                   onClick={() => handleAdd(s)}
-                  className="group flex items-center justify-between px-4 py-2.5 text-sm font-medium rounded-md hover:bg-background hover:shadow-sm transition-all border border-transparent hover:border-border disabled:opacity-60 disabled:cursor-default"
+                  className="group flex items-center justify-between rounded-xl border border-transparent px-4 py-2.5 text-sm font-medium text-[#1c1b1b] transition-all hover:border-[#e5e2e1] hover:bg-white hover:shadow-sm disabled:cursor-default disabled:opacity-60"
                 >
                   <span className="flex items-center gap-3">
                     {isAdded
-                      ? <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      : <PlusCircle className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                      ? <CheckCircle2 className="h-4 w-4 shrink-0 text-[#006d43]" />
+                      : <PlusCircle className="h-4 w-4 shrink-0 text-[#5f5e5e] transition-colors group-hover:text-[#006d43]" />
                     }
                     <span className="truncate">{s.name}</span>
                   </span>
-                  {isPending === s.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary shrink-0" />}
+                  {isPending === s.id && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[#006d43]" />}
                 </button>
               );
             })}
@@ -684,13 +698,13 @@ function StepSkills({
 
       <Feedback state={feedback} />
 
-      <div className="flex items-center justify-between pt-2">
-        <Button type="button" variant="ghost" size="lg" onClick={onBack} className="gap-2" disabled={finishing}>
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+        <Button type="button" variant="ghost" size="lg" onClick={onBack} className={`${GHOST_BUTTON} gap-2`} disabled={finishing}>
           <ArrowLeft className="h-4 w-4" /> Back
         </Button>
-        <Button size="lg" onClick={handleFinish} disabled={finishing} className="gap-2 px-8">
+        <Button size="lg" onClick={handleFinish} disabled={finishing} className={`${PRIMARY_BUTTON} gap-2`}>
           {finishing
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</>
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
             : <>Finish setup <ArrowRight className="h-4 w-4" /></>
           }
         </Button>
@@ -706,41 +720,41 @@ function StepDone({ username, firstName }: { username: string; firstName: string
     <div className="flex flex-col items-center gap-8 py-4 text-center">
       {/* Animated ring */}
       <div className="relative flex h-28 w-28 items-center justify-center">
-        <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-ping [animation-duration:2.5s]" />
-        <div className="absolute inset-2 rounded-full bg-amber-500/10" />
-        <div className="relative flex h-24 w-24 items-center justify-center rounded-full border-2 border-amber-500 bg-background">
-          <Sparkles className="h-10 w-10 text-amber-500" />
+        <div className="absolute inset-0 animate-ping rounded-full bg-[#78fbb6]/20 [animation-duration:2.5s]" />
+        <div className="absolute inset-2 rounded-full bg-[#78fbb6]/20" />
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-[#006d43]/30 bg-white">
+          <Sparkles className="h-10 w-10 text-[#006d43]" />
         </div>
       </div>
 
-      <div className="space-y-2 max-w-md">
-        <h2 className="text-3xl font-bold">You're all set{firstName ? `, ${firstName}` : ""}!</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Your profile is live — but the best profiles stand out with real work behind them.
+      <div className="max-w-md space-y-2">
+        <h2 className="font-headline text-3xl font-bold tracking-tight text-[#1c1b1b]">You&apos;re all set{firstName ? `, ${firstName}` : ""}!</h2>
+        <p className="text-sm leading-relaxed text-[#5f5e5e]">
+          Your profile is live, and the strongest profiles stand out with real work behind them.
         </p>
       </div>
 
       {/* Primary CTA — complete profile */}
       <div className="w-full max-w-sm space-y-4">
-        <div className="rounded-xl border-2 border-amber-500/30 bg-amber-500/5 px-5 py-4 text-left space-y-3">
-          <p className="text-sm font-semibold text-foreground">Make your profile shine ✨</p>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Head to your profile editor to add <span className="font-medium text-foreground">projects</span> and{" "}
-            <span className="font-medium text-foreground">certifications & badges</span> — these are what employers look at first.
+        <div className="space-y-3 rounded-2xl border border-[#78fbb6]/40 bg-[#78fbb6]/15 px-5 py-4 text-left">
+          <p className="text-sm font-semibold text-[#1c1b1b]">Make your profile shine</p>
+          <p className="text-xs leading-relaxed text-[#3d4a41]">
+            Head to your profile editor to add <span className="font-medium text-[#1c1b1b]">projects</span> and{" "}
+            <span className="font-medium text-[#1c1b1b]">certifications & badges</span>. These are what employers look at first.
           </p>
-          <div className="flex gap-3 text-xs text-muted-foreground">
+          <div className="flex gap-3 text-xs text-[#3d4a41]">
             <span className="flex items-center gap-1.5">
-              <FolderGit2 className="h-3.5 w-3.5 text-amber-500" /> Projects
+              <FolderGit2 className="h-3.5 w-3.5 text-[#006d43]" /> Projects
             </span>
             <span className="flex items-center gap-1.5">
-              <Award className="h-3.5 w-3.5 text-amber-500" /> Badges & Certs
+              <Award className="h-3.5 w-3.5 text-[#006d43]" /> Badges & Certs
             </span>
           </div>
         </div>
 
         <Button
           size="lg"
-          className="w-full gap-2"
+          className={`${PRIMARY_BUTTON} w-full gap-2`}
           onClick={() => router.push(`/job-seeker/profile/${username}/edit`)}
         >
           Complete my profile
@@ -750,7 +764,7 @@ function StepDone({ username, firstName }: { username: string; firstName: string
         <Button
           variant="ghost"
           size="sm"
-          className="w-full text-muted-foreground hover:text-foreground"
+          className={`${GHOST_BUTTON} w-full`}
           onClick={() => router.push(`/job-seeker/profile/${username}`)}
         >
           View my profile first
@@ -771,7 +785,7 @@ export default function OnboardingPage() {
 
   const [identity, setIdentity] = React.useState<IdentityData>({
     firstName: "", lastName: "", username: "", bio: "",
-    location: "", website: "", github: "",
+    location: "", website: "",
     avatarFile: null, avatarPreview: null,
     cvFile: null, cvName: null,
   });
@@ -788,7 +802,7 @@ export default function OnboardingPage() {
 
       const [{ data: prof }, { data: jsProf }] = await Promise.all([
         supabase.from("profiles").select("first_name, last_name, avatar_url").eq("id", user.id).single(),
-        supabase.from("job_seeker_profiles").select("bio, location, website, github").eq("id", user.id).single(),
+        supabase.from("job_seeker_profiles").select("bio, location, website").eq("id", user.id).single(),
       ]);
 
       if (prof) {
@@ -799,7 +813,6 @@ export default function OnboardingPage() {
           bio:           jsProf?.bio        ?? "",
           location:      jsProf?.location   ?? "",
           website:       jsProf?.website    ?? "",
-          github:        jsProf?.github     ?? "",
           avatarPreview: prof.avatar_url    ?? null,
         }));
       }
@@ -820,7 +833,6 @@ export default function OnboardingPage() {
     fd.set("bio",        identity.bio.trim());
     fd.set("location",   identity.location.trim());
     fd.set("website",    identity.website.trim());
-    fd.set("github",     identity.github.trim());
 
     // Education — only if filled
     if (education.institution) fd.set("institution", education.institution);
@@ -854,8 +866,8 @@ export default function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-svh items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-svh items-center justify-center bg-[#fcf9f8]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#006d43]" />
       </div>
     );
   }
@@ -867,26 +879,26 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="flex min-h-svh flex-col bg-muted/30">
-      <header className="flex h-14 items-center justify-between border-b bg-background px-8">
-        <span className="font-semibold tracking-tight">Complete your profile</span>
-        <span className="text-xs text-muted-foreground tabular-nums">Step {step} of 4</span>
+    <div className="flex min-h-svh flex-col bg-[#fcf9f8]">
+      <header className="flex h-14 items-center justify-between border-b border-[#e5e2e1] bg-white px-5 sm:px-8">
+        <span className="font-headline font-semibold tracking-tight text-[#1c1b1b]">Complete your profile</span>
+        <span className="rounded-full bg-[#f6f3f2] px-3 py-1 text-xs font-semibold tabular-nums text-[#3d4a41]">Step {step} of 4</span>
       </header>
 
-      <main className="flex flex-1 items-start justify-center px-4 py-12">
+      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:py-12">
         <div className="w-full max-w-2xl space-y-8">
 
           {step < 4 && <StepIndicator current={step} />}
 
-          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+          <div className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-white shadow-sm">
             {step < 4 && (
-              <div className="border-b bg-muted/20 px-8 py-5">
-                <h1 className="text-xl font-bold leading-tight">{cardTitles[step]?.title}</h1>
-                <p className="text-sm text-muted-foreground mt-1">{cardTitles[step]?.subtitle}</p>
+              <div className="border-b border-[#e5e2e1] bg-[#f6f3f2] px-5 py-5 sm:px-8">
+                <h1 className="font-headline text-xl font-bold leading-tight tracking-tight text-[#1c1b1b]">{cardTitles[step]?.title}</h1>
+                <p className="mt-1 text-sm text-[#5f5e5e]">{cardTitles[step]?.subtitle}</p>
               </div>
             )}
 
-            <div className={step === 4 ? "px-8 py-10" : "px-8 py-7"}>
+            <div className={step === 4 ? "px-5 py-10 sm:px-8" : "px-5 py-7 sm:px-8"}>
               {step === 1 && (
                 <StepIdentity
                   data={identity}

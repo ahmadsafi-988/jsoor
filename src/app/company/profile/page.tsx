@@ -104,14 +104,14 @@ export default function CompanyProfilePage() {
 
     const upload = await uploadCompanyCover(userIdRef.current, file);
     if ("error" in upload) {
-      setError("Failed to upload background. Please try again.");
+      setError("Failed to upload cover. Please try again.");
       setUploadingCover(false);
       return;
     }
 
     const saved = await updateCompanyCoverUrl(upload.url);
     if (saved?.error) {
-      setError("Background uploaded but failed to save. Please try again.");
+      setError("Cover uploaded but failed to save. Please try again.");
     } else {
       setCoverUrl(upload.url);
     }
@@ -188,12 +188,12 @@ export default function CompanyProfilePage() {
         />
       </div>
 
-      {/* Company background */}
+      {/* Company cover */}
       <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 mb-5">
         <div className="overflow-hidden rounded-xl border border-[#e5e2e1] bg-[#f6f3f2]">
           <div className="h-36 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]">
             {coverUrl ? (
-              <img src={coverUrl} alt="Company background" className="h-full w-full object-cover" />
+              <img src={coverUrl} alt="Company cover" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-white/80">
                 <ImageIcon className="h-8 w-8" />
@@ -202,7 +202,7 @@ export default function CompanyProfilePage() {
           </div>
           <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-semibold text-[#1c1b1b] text-sm">Company Background</p>
+              <p className="font-semibold text-[#1c1b1b] text-sm">Company Cover</p>
               <p className="text-[#5f5e5e] text-xs mt-0.5">Recommended: 1600 x 400 px. JPG, PNG or WebP.</p>
             </div>
             <button
@@ -212,7 +212,7 @@ export default function CompanyProfilePage() {
               className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e5e2e1] bg-white px-3 py-2 text-sm font-medium text-[#3d4a41] transition-colors hover:bg-[#f6f3f2] disabled:opacity-60"
             >
               {uploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-              Change background
+              Change cover
             </button>
             <input
               ref={coverFileRef}

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import React from "react";
 import {
-  MapPin, Plus, Download, ExternalLink, Award, GitBranch,
+  MapPin, Plus, Download, ExternalLink, Award,
   GraduationCap, BookOpen, Star, Globe, Calendar,
 } from "lucide-react";
 import Link from "next/link";
@@ -138,8 +138,8 @@ function ProjectsSection({ projects }: { projects: project[] }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-[#006d43] hover:text-[#00a86b] transition-colors"
               >
-                <GitBranch className="w-3 h-3" />
-                View on GitHub
+                <ExternalLink className="w-3 h-3" />
+                View project
               </a>
             )}
           </div>

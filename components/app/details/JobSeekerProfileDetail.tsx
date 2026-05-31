@@ -2,7 +2,6 @@ import {
   Award,
   BookOpen,
   ExternalLink,
-  GitBranch,
   Globe,
   GraduationCap,
   MapPin,
@@ -40,8 +39,8 @@ export function JobSeekerProfileDetail({
                 {profile_base.cover_url && (
                   <ImagePreviewDialog
                     src={profile_base.cover_url}
-                    alt={`${fullName} profile background`}
-                    label="profile background"
+                    alt={`${fullName} profile cover`}
+                    label="profile cover"
                     triggerClassName="block h-full w-full cursor-zoom-in"
                   >
                     <img src={profile_base.cover_url} alt="" className="h-full w-full object-cover" />
@@ -124,7 +123,7 @@ export function JobSeekerProfileDetail({
                           rel="noopener noreferrer"
                           className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#006d43] transition-colors hover:text-[#00a86b]"
                         >
-                          <GitBranch className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3" />
                           View project
                         </a>
                       )}
@@ -178,7 +177,7 @@ export function JobSeekerProfileDetail({
                   <div className="flex items-start gap-3">
                     <Globe className="mt-0.5 h-4 w-4 shrink-0 text-[#006d43]" />
                     <div>
-                      <p className="text-[11px] text-[#5f5e5e]">Website</p>
+                      <p className="text-[11px] text-[#5f5e5e]">Website / Portfolio</p>
                       <a
                         href={
                           job_seeker_profile.website.startsWith("http")

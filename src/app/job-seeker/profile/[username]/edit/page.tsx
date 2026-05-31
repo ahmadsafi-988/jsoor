@@ -1,8 +1,8 @@
 "use client";
 
 // app/job-seeker/profile/[username]/edit/page.tsx
-// Profile editing page — tabbed layout.
-// Tabs: Profile · Projects · Badges · Account
+// Profile editing page - tabbed layout.
+// Tabs: Profile - Projects - Badges - Account
 //
 // RULES:
 //  - Email change: triggers Supabase confirmation to the NEW address (not instant)
@@ -115,6 +115,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
   const [locations, setLocations] = React.useState<LocationOption[]>([]);
+  const [bioCount, setBioCount] = React.useState((profile.bio ?? "").length);
 
   // Profile cover
   const [coverPreview, setCoverPreview] = React.useState<string | null>(profile.cover_url ?? null);
@@ -158,6 +159,8 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
     setPending(true);
     setFeedback(null);
     const fd = new FormData(e.currentTarget);
+    const bio = String(fd.get("bio") ?? "");
+    fd.set("bio", bio.slice(0, 1000));
     if (selectedUni) { fd.set("institution", selectedUni.name); fd.set("logo_url", selectedUni.logo_url); }
 
     // Save profile fields
@@ -303,7 +306,15 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       <div id="bio" className="space-y-1.5 scroll-mt-36">
         <Label htmlFor="bio_input">Bio</Label>
-        <Textarea id="bio_input" name="bio" defaultValue={profile.bio} rows={3} />
+        <Textarea
+          id="bio_input"
+          name="bio"
+          defaultValue={profile.bio}
+          rows={4}
+          maxLength={1000}
+          onChange={(e) => setBioCount(e.target.value.length)}
+        />
+        <p className="text-right text-xs text-muted-foreground">{Math.min(bioCount, 1000)}/1000</p>
       </div>
 
       <div className="space-y-1.5">
@@ -317,15 +328,15 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="website">Website</Label>
-          <Input id="website" name="website" defaultValue={profile.website ?? ""} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="github">GitHub</Label>
-          <Input id="github" name="github" defaultValue={profile.github ?? ""} placeholder="https://github.com/username" />
-        </div>
+      <div className="max-w-md space-y-1.5">
+        <Label htmlFor="website">Website / Portfolio URL</Label>
+        <Input
+          id="website"
+          name="website"
+          type="url"
+          defaultValue={profile.website ?? ""}
+          placeholder="https://your-portfolio.com"
+        />
       </div>
 
       <Separator className="bg-[#e5e2e1]" />
@@ -341,7 +352,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
               className="pl-9"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelectedUni(null); }}
-              placeholder="Search universities…"
+              placeholder="Search universities..."
             />
           </div>
           {uniResults.length > 0 && !selectedUni && (
@@ -389,7 +400,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       {/* CV */}
       <div id="cv" className="space-y-2 scroll-mt-24">
-        <Label>CV / Résumé</Label>
+        <Label>CV / Resume</Label>
         <div className="flex items-center gap-3">
           {profile.cv_url && !cvFile && (
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -418,15 +429,17 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
             }}
           />
         </div>
-        <p className="text-xs text-muted-foreground">PDF, DOC or DOCX · Max 10 MB. Stored privately — only accessible via a secure link.</p>
+        <p className="text-xs text-muted-foreground">PDF, DOC or DOCX, max 10 MB. Stored privately and only accessible via a secure link.</p>
       </div>
 
       <Feedback state={feedback} />
 
-      <Button type="submit" disabled={pending} className="bg-[#006d43] text-white hover:bg-[#005232]">
-        <Save className="mr-1.5 h-4 w-4" />
-        {pending ? "Saving…" : "Save profile"}
-      </Button>
+      <div className="sticky bottom-4 z-20 flex justify-end">
+        <Button type="submit" disabled={pending} className="bg-[#006d43] text-white shadow-[0_12px_28px_rgba(0,109,67,0.22)] hover:bg-[#005232]">
+          <Save className="mr-1.5 h-4 w-4" />
+          {pending ? "Saving..." : "Save profile"}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -492,8 +505,8 @@ function ProjectForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label>GitHub URL</Label>
-          <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://github.com/…" />
+          <Label>Project URL</Label>
+          <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://example.com/project" />
         </div>
       </div>
       <div className="space-y-2">
@@ -791,7 +804,7 @@ function TabBadges({ badges, onBadgesChange, username }: {
           {b.image && <img src={b.image} alt={b.name} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
           <div className="flex-1 min-w-0">
             <p className="truncate text-sm font-medium text-[#1c1b1b]">{b.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{b.issuer} · {b.date}</p>
+            <p className="text-xs text-muted-foreground truncate">{b.issuer} - {b.date}</p>
           </div>
           <button type="button" onClick={() => handleDelete(b.id)} className="shrink-0 text-destructive hover:text-destructive/80" title="Remove badge">
             <Trash2 className="h-4 w-4" />
@@ -864,7 +877,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <p className="text-amber-800">
-            Changing your email requires confirmation. A verification link will be sent to your <strong>new</strong> address — your email won&apos;t change until you click it.
+            Changing your email requires confirmation. A verification link will be sent to your new email address - your email won&apos;t change until you click it.
           </p>
         </div>
         <form onSubmit={handleEmailSubmit} className="space-y-3">
@@ -874,7 +887,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
           </div>
           <Feedback state={emailFeedback} />
           <Button type="submit" variant="outline" disabled={emailPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
-            {emailPending ? "Sending…" : "Send confirmation email"}
+            {emailPending ? "Sending..." : "Send confirmation email"}
           </Button>
         </form>
       </div>
@@ -904,7 +917,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
           </div>
           <Feedback state={passwordFeedback} />
           <Button type="submit" variant="outline" disabled={passwordPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
-            {passwordPending ? "Updating…" : "Update password"}
+            {passwordPending ? "Updating..." : "Update password"}
           </Button>
         </form>
       </div>
