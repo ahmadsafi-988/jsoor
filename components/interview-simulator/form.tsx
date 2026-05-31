@@ -31,17 +31,15 @@ interface SetupFormProps {
 }
 
 const INTERVIEW_TYPES = [
-  "Technical / Coding",
-  "System Design",
-  "Behavioral (STAR Method)",
-  "Mixed Panel",
+  "Technical",
+  "Behavioral (HR)",
+  "Mixed",
 ];
 
 const DIFFICULTY_LEVELS = [
-  "Entry Level / Graduate",
-  "Mid-Level",
-  "Senior / Lead",
-  "Principal / Staff",
+  "Easy",
+  "Mid",
+  "Hard",
 ];
 
 function formatDate(value: string) {
@@ -195,7 +193,7 @@ export default function SetupForm({
                   type="text"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  placeholder="e.g. Senior Frontend Engineer"
+                  placeholder="e.g. Graphic Designer"
                   className="w-full border-none bg-transparent py-4 pl-12 pr-4 text-sm text-[#1c1b1b] placeholder:text-[#3d4a41]/40 focus:outline-none focus:ring-0"
                 />
               </div>
@@ -203,14 +201,14 @@ export default function SetupForm({
 
             <div className="flex flex-col gap-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-[#3d4a41]">
-                Key Technologies &amp; Skills
+                Skills &amp; Technologies 
               </label>
               <div className="relative rounded-t-lg border-b-2 border-[#e5e2e1] bg-[#f6f3f2] transition-colors focus-within:border-[#006d43]">
                 <Code2 className="absolute left-4 top-4 h-5 w-5 text-[#3d4a41]/60" />
                 <textarea
                   value={skills}
                   onChange={(e) => setSkills(e.target.value)}
-                  placeholder="React, TypeScript, System Architecture, Performance Tuning..."
+                  placeholder="Python, Adobe Photoshop, Excel and Agile..."
                   rows={3}
                   className="w-full resize-none border-none bg-transparent py-4 pl-12 pr-4 text-sm text-[#1c1b1b] placeholder:text-[#3d4a41]/40 focus:outline-none focus:ring-0"
                 />
