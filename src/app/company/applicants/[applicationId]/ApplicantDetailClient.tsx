@@ -6,19 +6,27 @@ import {
   updateApplicationStatus,
   reviewAssessment,
   releaseAssessmentResults,
+  getAssessmentSubmissionFileSignedUrl,
 } from "@/lib/company/actions";
 import type { ApplicantProfileResult } from "@/lib/company/data";
 import type { Tables } from "@/lib/supabase_generated_types";
 import {
   ArrowLeft, User, MapPin, Globe, GraduationCap,
-  FileText, ClipboardCheck, Star, Code2, ExternalLink,
-  Check, X, Timer, MessageSquare,
+  FileText, ClipboardCheck, Star, ExternalLink,
+  Check, X, Timer, MessageSquare, Download, Paperclip,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getOrCreateConversation } from "@/lib/messages/actions";
 import type { TemplateRow } from "@/lib/company/templates";
 import { AssessmentCreatorModal } from "../../assessments/AssessmentCreatorModal";
+import {
+  areNumberSetsEqual,
+  formatFileSize,
+  getQuestionPoints,
+  type AssessmentFileAnswer,
+  type OpenAnswer,
+} from "@/lib/assessments";
 
 type ApplicationStatus =
   | "applied"
@@ -132,24 +140,33 @@ const ALLOWED_TRANSITIONS: Partial<Record<ApplicationStatus, ApplicationStatus[]
 
 type AssessmentQuestion = {
   id?: string | number;
-  type?: "open" | "mcq" | "truefalse" | string;
+  type?: "open" | "mcq" | "multiselect" | "truefalse" | string;
   text?: string;
   question?: string;
   options?: string[];
-  correct?: number | boolean;
+  correct?: number | number[] | boolean;
+  points?: number;
 };
 
 function QuestionResultCard({
   q,
   idx,
   answers,
+  assessmentId,
 }: {
   q: AssessmentQuestion;
   idx: number;
   answers: Record<string, unknown>;
+  assessmentId: string;
 }) {
   const answer = answers[String(idx)];
   const isOldFormat = !q.type;
+  const points = getQuestionPoints(q);
+
+  async function downloadFile(file: AssessmentFileAnswer) {
+    const result = await getAssessmentSubmissionFileSignedUrl(assessmentId, file.path);
+    if ("signedUrl" in result) window.open(result.signedUrl, "_blank", "noopener,noreferrer");
+  }
 
   if (isOldFormat) {
     return (
@@ -161,10 +178,43 @@ function QuestionResultCard({
   }
 
   if (q.type === "open") {
+    const openAnswer =
+      answer && typeof answer === "object" && !Array.isArray(answer)
+        ? (answer as OpenAnswer)
+        : { text: typeof answer === "string" ? answer : "" };
     return (
       <div className="bg-[#f6f3f2] rounded-xl p-3">
-        <p className="text-xs font-semibold text-[#1c1b1b] mb-1">Q{idx + 1}: {q.question}</p>
-        <p className="text-xs text-[#3d4a41]">{String(answer ?? "No answer provided")}</p>
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <p className="text-xs font-semibold text-[#1c1b1b]">Q{idx + 1}: {q.question}</p>
+          <span className="text-[11px] font-semibold text-[#5f5e5e] shrink-0">{points} pt{points === 1 ? "" : "s"}</span>
+        </div>
+        <div className="flex flex-col gap-2 text-xs text-[#3d4a41]">
+          {openAnswer.text && <p className="whitespace-pre-wrap">{openAnswer.text}</p>}
+          {openAnswer.url && (
+            <a href={openAnswer.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#006d43] font-medium hover:underline">
+              <ExternalLink className="w-3.5 h-3.5" /> {openAnswer.url}
+            </a>
+          )}
+          {openAnswer.file && (
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-white border border-[#e5e2e1] px-3 py-2">
+              <span className="flex items-center gap-2 min-w-0">
+                <Paperclip className="w-3.5 h-3.5 text-[#006d43] shrink-0" />
+                <span className="truncate font-medium text-[#1c1b1b]">{openAnswer.file.name}</span>
+                <span className="text-[#5f5e5e] shrink-0">
+                  {openAnswer.file.type || "file"} · {formatFileSize(openAnswer.file.size)}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => downloadFile(openAnswer.file!)}
+                className="inline-flex items-center gap-1 text-[#006d43] font-semibold hover:underline shrink-0"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </button>
+            </div>
+          )}
+          {!openAnswer.text && !openAnswer.url && !openAnswer.file && <p>No answer provided</p>}
+        </div>
       </div>
     );
   }
@@ -173,14 +223,17 @@ function QuestionResultCard({
     const isCorrect = answer === q.correct;
     return (
       <div className="bg-[#f6f3f2] rounded-xl p-3">
-        <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between mb-2 gap-2">
           <p className="text-xs font-semibold text-[#1c1b1b]">Q{idx + 1}: {q.question}</p>
-          {answer !== undefined && (
-            <span className={`flex items-center gap-1 text-xs font-semibold ml-2 shrink-0 ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
-              {isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-              {isCorrect ? "Correct" : "Incorrect"}
-            </span>
-          )}
+          <span className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-[#5f5e5e]">{points} pt{points === 1 ? "" : "s"}</span>
+            {answer !== undefined && (
+              <span className={`flex items-center gap-1 text-xs font-semibold ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
+                {isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                {isCorrect ? "Correct" : "Incorrect"}
+              </span>
+            )}
+          </span>
         </div>
         <div className="flex flex-col gap-1">
           {(q.options ?? []).map((opt: string, optIdx: number) => {
@@ -213,14 +266,17 @@ function QuestionResultCard({
     const isCorrect = answer === q.correct;
     return (
       <div className="bg-[#f6f3f2] rounded-xl p-3">
-        <div className="flex items-start justify-between mb-2">
+        <div className="flex items-start justify-between mb-2 gap-2">
           <p className="text-xs font-semibold text-[#1c1b1b]">Q{idx + 1}: {q.question}</p>
-          {answer !== undefined && (
-            <span className={`flex items-center gap-1 text-xs font-semibold ml-2 shrink-0 ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
-              {isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
-              {isCorrect ? "Correct" : "Incorrect"}
-            </span>
-          )}
+          <span className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-[#5f5e5e]">{points} pt{points === 1 ? "" : "s"}</span>
+            {answer !== undefined && (
+              <span className={`flex items-center gap-1 text-xs font-semibold ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
+                {isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                {isCorrect ? "Correct" : "Incorrect"}
+              </span>
+            )}
+          </span>
         </div>
         <div className="flex gap-2">
           {([true, false] as const).map((val) => {
@@ -247,6 +303,51 @@ function QuestionResultCard({
     );
   }
 
+  if (q.type === "multiselect") {
+    const selectedAnswers = Array.isArray(answer) ? answer : [];
+    const correctAnswers = Array.isArray(q.correct) ? q.correct : [];
+    const isCorrect = areNumberSetsEqual(selectedAnswers, correctAnswers);
+    return (
+      <div className="bg-[#f6f3f2] rounded-xl p-3">
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <p className="text-xs font-semibold text-[#1c1b1b]">Q{idx + 1}: {q.question}</p>
+          <span className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-semibold text-[#5f5e5e]">{points} pt{points === 1 ? "" : "s"}</span>
+            {answer !== undefined && (
+              <span className={`flex items-center gap-1 text-xs font-semibold ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
+                {isCorrect ? <Check className="w-3.5 h-3.5" /> : <X className="w-3.5 h-3.5" />}
+                {isCorrect ? "Correct" : "Incorrect"}
+              </span>
+            )}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1">
+          {(q.options ?? []).map((opt: string, optIdx: number) => {
+            const isSelected = selectedAnswers.includes(optIdx);
+            const isCorrectOpt = correctAnswers.includes(optIdx);
+            return (
+              <div
+                key={optIdx}
+                className={`text-xs px-2.5 py-1.5 rounded-lg flex items-center justify-between ${
+                  isSelected && isCorrectOpt ? "bg-[#78fbb6]/20 text-[#005232]" :
+                  isSelected && !isCorrectOpt ? "bg-red-50 text-red-600" :
+                  isCorrectOpt && !isSelected ? "bg-[#78fbb6]/10 text-[#006d43]" :
+                  "text-[#5f5e5e]"
+                }`}
+              >
+                <span><span className="font-bold mr-1">{["A","B","C","D"][optIdx]}.</span>{opt}</span>
+                <span>
+                  {isSelected && (isCorrectOpt ? "✓ Selected" : "✗ Selected")}
+                  {!isSelected && isCorrectOpt && "← Correct"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -258,6 +359,10 @@ type Props = {
   initialAssessment: Tables<"assessments"> | null;
   templates: TemplateRow[];
 };
+
+function withProtocol(url: string) {
+  return url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
+}
 
 export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, templates }: Props) {
   const { application, applicant, projects, badges, skills } = result;
@@ -446,15 +551,9 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                 </p>
               )}
               <div className="flex items-center gap-3 mt-3 flex-wrap">
-                {jsp?.github && (
-                  <a href={`https://github.com/${jsp.github}`} target="_blank" rel="noopener noreferrer"
-                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="GitHub">
-                    <Code2 className="w-4 h-4" />
-                  </a>
-                )}
                 {jsp?.website && (
-                  <a href={jsp.website} target="_blank" rel="noopener noreferrer"
-                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="Website">
+                  <a href={withProtocol(jsp.website)} target="_blank" rel="noopener noreferrer"
+                    className="text-[#5f5e5e] hover:text-[#006d43] transition-colors" title="Website / Portfolio">
                     <Globe className="w-4 h-4" />
                   </a>
                 )}
@@ -622,6 +721,7 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
                           q={q}
                           idx={idx}
                           answers={submissionAnswers}
+                          assessmentId={assessment!.id}
                         />
                       ))}
 
@@ -1018,12 +1118,13 @@ export function ApplicantDetailClient({ result, cvSignedUrl, initialAssessment, 
               {assessment.status !== "pending" && assessment.submission && (
                 <div className="flex flex-col gap-3">
                   {((assessment.questions as AssessmentQuestion[] | null) ?? []).map((q, idx) => (
-                    <QuestionResultCard
-                      key={idx}
-                      q={q}
-                      idx={idx}
-                      answers={submissionAnswers}
-                    />
+                      <QuestionResultCard
+                        key={idx}
+                        q={q}
+                        idx={idx}
+                        answers={submissionAnswers}
+                        assessmentId={assessment.id}
+                      />
                   ))}
                 </div>
               )}

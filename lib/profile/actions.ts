@@ -351,18 +351,20 @@ export async function upsertProfile(formData: FormData) {
   if (profileError) return { error: profileError.message };
 
   // Write 2: job seeker extension
-  const { error: jsError } = await supabase.from("job_seeker_profiles").upsert({
+  const jobSeekerPayload = {
     id: user.id,
     bio: (formData.get("bio") as string) || "",
     location: (formData.get("location") as string) || null,
     website: normalizeOptionalUrl(formData.get("website")),
-    github: normalizeOptionalUrl(formData.get("github")),
     institution: (formData.get("institution") as string) || null,
     degree: (formData.get("degree") as string) || null,
     gpa: (formData.get("gpa") as string) || null,
     edu_start: (formData.get("edu_start") as string) || null,
     edu_end: (formData.get("edu_end") as string) || null,
-  });
+    ...(formData.has("github") ? { github: normalizeOptionalUrl(formData.get("github")) } : {}),
+  };
+
+  const { error: jsError } = await supabase.from("job_seeker_profiles").upsert(jobSeekerPayload);
   if (jsError) return { error: jsError.message };
 
   revalidatePath(`/job-seeker/profile/${username}`);
@@ -379,6 +381,23 @@ export async function updateAvatarUrl(avatarUrl: string, username: string) {
   const { error } = await supabase
     .from("profiles")
     .update({ avatar_url: avatarUrl })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/job-seeker/profile/${username}`);
+  return { success: true };
+}
+
+export async function updateProfileCoverUrl(coverUrl: string, username: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ cover_url: coverUrl })
     .eq("id", user.id);
 
   if (error) return { error: error.message };

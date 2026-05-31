@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import React from "react";
 import {
-  MapPin, Download, ExternalLink, Award, GitBranch,
+  MapPin, Download, ExternalLink, Award,
   GraduationCap, Star, Calendar, FileText,
   Link2, Pencil,
 } from "lucide-react";
@@ -10,6 +10,7 @@ import Link from "next/link";
 import { ExpandableBio } from "@/components/profile/expandable-bio";
 import { ExpandableSkills } from "@/components/profile/expandable-skills";
 import { ExpandableText } from "@/components/profile/expandable-text";
+import { ImagePreviewDialog } from "@/components/app/ImagePreviewDialog";
 import { MessageProfileButton } from "@/components/profile/message-profile-button";
 import { getProfileByUsername, getCurrentUserId } from "@/lib/profile/profile_data";
 import { getCvSignedUrl } from "@/lib/storage/cv";
@@ -19,22 +20,7 @@ function withProtocol(url: string) {
   return url.startsWith("http://") || url.startsWith("https://") ? url : `https://${url}`;
 }
 
-function githubUrl(github: string) {
-  return withProtocol(github);
-}
-
-function githubLabel(github: string) {
-  const normalized = withProtocol(github);
-
-  try {
-    const url = new URL(normalized);
-    return `${url.hostname.replace(/^www\./, "")}${url.pathname}`.replace(/\/$/, "");
-  } catch {
-    return github;
-  }
-}
-
-// ─── Profile Header Card ──────────────────────────────────────────────────────
+// Profile Header Card
 function ProfileHeaderCard({
   user,
   isOwnProfile,
@@ -48,9 +34,22 @@ function ProfileHeaderCard({
     <section className="bg-white rounded-2xl overflow-hidden border border-[#e5e2e1] shadow-sm">
       {/* Banner */}
       <div className="h-28 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a] relative overflow-hidden">
-        <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/10 rounded-full" />
-        <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-black/5 rounded-full" />
-        <div className="absolute right-1/3 top-1/4 w-16 h-16 bg-white/5 rounded-full" />
+        {user.cover_url ? (
+          <ImagePreviewDialog
+            src={user.cover_url}
+            alt={`${user.first_name} ${user.last_name} profile cover`}
+            label="profile cover"
+            triggerClassName="block h-full w-full cursor-zoom-in"
+          >
+            <img src={user.cover_url} alt="" className="h-full w-full object-cover" />
+          </ImagePreviewDialog>
+        ) : (
+          <>
+            <div className="absolute -right-16 -top-16 w-56 h-56 bg-white/10 rounded-full" />
+            <div className="absolute -left-8 -bottom-8 w-40 h-40 bg-black/5 rounded-full" />
+            <div className="absolute right-1/3 top-1/4 w-16 h-16 bg-white/5 rounded-full" />
+          </>
+        )}
       </div>
 
       {/* Avatar + actions row */}
@@ -58,7 +57,14 @@ function ProfileHeaderCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between -mt-12 mb-4 relative z-10">
           <div className="w-24 h-24 rounded-full bg-white border-4 border-white shadow-md overflow-hidden flex items-center justify-center shrink-0">
             {user.avatar_url ? (
-              <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
+              <ImagePreviewDialog
+                src={user.avatar_url}
+                alt={`${user.first_name} ${user.last_name} profile photo`}
+                label="profile photo"
+                triggerClassName="block h-full w-full cursor-zoom-in rounded-full"
+              >
+                <img src={user.avatar_url} alt={user.first_name} className="w-full h-full object-cover" />
+              </ImagePreviewDialog>
             ) : (
               <span className="w-full h-full bg-[#e5e2e1] flex items-center justify-center font-headline font-bold text-2xl text-[#3d4a41]">
                 {user.first_name.slice(0, 2).toUpperCase()}
@@ -106,17 +112,6 @@ function ProfileHeaderCard({
             >
               <Link2 className="w-3.5 h-3.5 shrink-0" />
               {user.website}
-            </a>
-          )}
-          {user.github && (
-            <a
-              href={githubUrl(user.github)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-[#006d43] transition-colors"
-            >
-              <GitBranch className="w-3.5 h-3.5 shrink-0" />
-              {githubLabel(user.github)}
             </a>
           )}
           <span className="flex items-center gap-1">
@@ -209,8 +204,8 @@ function ProjectsSection({ projects }: { projects: project[] }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-xs font-medium text-[#006d43] hover:text-[#00a86b] transition-colors"
               >
-                <GitBranch className="w-3 h-3" />
-                View on GitHub
+                <ExternalLink className="w-3 h-3" />
+                View project
               </a>
             )}
           </div>

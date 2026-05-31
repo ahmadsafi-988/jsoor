@@ -2,13 +2,13 @@ import {
   Award,
   BookOpen,
   ExternalLink,
-  GitBranch,
   Globe,
   GraduationCap,
   MapPin,
   Star,
 } from "lucide-react";
 import { DashboardBackButton } from "@/components/app/DashboardBackButton";
+import { ImagePreviewDialog } from "@/components/app/ImagePreviewDialog";
 import type { FullJobSeekerProfile } from "@/lib/global_types";
 import type { ReactNode } from "react";
 
@@ -35,16 +35,34 @@ export function JobSeekerProfileDetail({
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             <section className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-white shadow-sm">
-              <div className="h-28 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]" />
+              <div className="h-28 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]">
+                {profile_base.cover_url && (
+                  <ImagePreviewDialog
+                    src={profile_base.cover_url}
+                    alt={`${fullName} profile cover`}
+                    label="profile cover"
+                    triggerClassName="block h-full w-full cursor-zoom-in"
+                  >
+                    <img src={profile_base.cover_url} alt="" className="h-full w-full object-cover" />
+                  </ImagePreviewDialog>
+                )}
+              </div>
               <div className="px-6 pb-6">
                 <div className="-mt-12 mb-4 flex items-end justify-between gap-4">
                   <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-white shadow-md">
                     {profile_base.avatar_url ? (
-                      <img
+                      <ImagePreviewDialog
                         src={profile_base.avatar_url}
-                        alt={fullName}
-                        className="h-full w-full object-cover"
-                      />
+                        alt={`${fullName} profile photo`}
+                        label="profile photo"
+                        triggerClassName="block h-full w-full cursor-zoom-in rounded-full"
+                      >
+                        <img
+                          src={profile_base.avatar_url}
+                          alt={fullName}
+                          className="h-full w-full object-cover"
+                        />
+                      </ImagePreviewDialog>
                     ) : (
                       <span className="flex h-full w-full items-center justify-center bg-[#e5e2e1] font-headline text-2xl font-bold text-[#3d4a41]">
                         {profile_base.first_name.slice(0, 2).toUpperCase()}
@@ -105,7 +123,7 @@ export function JobSeekerProfileDetail({
                           rel="noopener noreferrer"
                           className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[#006d43] transition-colors hover:text-[#00a86b]"
                         >
-                          <GitBranch className="h-3 w-3" />
+                          <ExternalLink className="h-3 w-3" />
                           View project
                         </a>
                       )}
@@ -159,7 +177,7 @@ export function JobSeekerProfileDetail({
                   <div className="flex items-start gap-3">
                     <Globe className="mt-0.5 h-4 w-4 shrink-0 text-[#006d43]" />
                     <div>
-                      <p className="text-[11px] text-[#5f5e5e]">Website</p>
+                      <p className="text-[11px] text-[#5f5e5e]">Website / Portfolio</p>
                       <a
                         href={
                           job_seeker_profile.website.startsWith("http")

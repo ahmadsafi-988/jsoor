@@ -4,6 +4,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase_generated_types";
+import {
+  sanitizeQuestionsForJobSeeker,
+  type AssessmentQuestion,
+} from "@/lib/assessments";
 
 export type JobRow = Tables<"jobs">;
 export type CompanyRow = Tables<"companies">;
@@ -17,7 +21,7 @@ export type ApplicantProfileResult = {
     job: Pick<Tables<"jobs">, "id" | "title" | "type" | "location" | "company_id">;
   };
   applicant: Tables<"profiles"> & {
-    job_seeker_profile: Tables<"job_seeker_profiles"> | null;
+    job_seeker_profile: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   };
   projects: ProjectWithSkills[];
   badges: Tables<"badges">[];
@@ -25,7 +29,7 @@ export type ApplicantProfileResult = {
   company_owns_application: boolean;
 };
 
-export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url"> | null };
+export type JobWithCompany = JobRow & { company: Pick<CompanyRow, "name" | "logo_url" | "industry"> | null };
 
 export type CanonicalJob = JobRow & {
   company: CompanyRow | null;
@@ -52,7 +56,7 @@ export type CanonicalApplicationDetail = {
 
 export type ApplicationWithProfile = ApplicationRow & {
   profile: (Pick<Tables<"profiles">, "id" | "first_name" | "last_name" | "avatar_url" | "username"> & {
-    job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "github" | "website" | "cv_url"> | null;
+    job_seeker_profiles: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   }) | null;
   job: Pick<JobRow, "title" | "type" | "location"> | null;
 };
@@ -227,7 +231,7 @@ export async function getJobApplicants(jobId: string): Promise<ApplicationWithPr
       .in("id", applicantIds),
     supabase
       .from("job_seeker_profiles")
-      .select("id, bio, degree, institution, location, github, website, cv_url")
+      .select("id, bio, degree, institution, location, website, cv_url")
       .in("id", applicantIds),
   ]);
 
@@ -265,7 +269,7 @@ export async function getApplicationById(applicationId: string): Promise<Applica
       .single(),
     supabase
       .from("job_seeker_profiles")
-      .select("id, bio, degree, institution, location, github, website, cv_url")
+      .select("id, bio, degree, institution, location, website, cv_url")
       .eq("id", application.applicant_id)
       .single(),
   ]);
@@ -366,7 +370,7 @@ export async function getApplicationWithApplicantProfile(
   const [profileRes, projectsRes, skillsRes, badgesRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("*, job_seeker_profile:job_seeker_profiles(*)")
+      .select("*, job_seeker_profile:job_seeker_profiles(bio, degree, institution, location, website, cv_url)")
       .eq("id", applicantId)
       .single(),
 
@@ -391,7 +395,7 @@ export async function getApplicationWithApplicantProfile(
   if (!profileRes.data) return null;
 
   const applicant = profileRes.data as Tables<"profiles"> & {
-    job_seeker_profile: Tables<"job_seeker_profiles"> | null;
+    job_seeker_profile: Pick<Tables<"job_seeker_profiles">, "bio" | "degree" | "institution" | "location" | "website" | "cv_url"> | null;
   };
 
   const projects: ProjectWithSkills[] = ((projectsRes.data ?? []) as any[]).map((p) => ({
@@ -553,7 +557,7 @@ export async function getActiveJobsWithSkills(
     .from("jobs")
     .select(`
       *,
-      company:companies!jobs_company_id_fkey(name, logo_url),
+      company:companies!jobs_company_id_fkey(name, logo_url, industry),
       job_to_skills(skill_id, skill:skills(name))
     `)
     .eq("is_active", true)
@@ -674,15 +678,13 @@ export async function getMyAssessments() {
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((assessment: any) => {
-    const questions = (assessment.questions as any[]) ?? [];
+    const questions = ((assessment.questions as any[]) ?? []) as AssessmentQuestion[];
     const answers = (assessment.submission as any)?.answers ?? {};
-    const sanitized = questions.map((q: any, i: number) => {
-      const { correct, ...rest } = q;
-      if (assessment.results_released && (q.type === "mcq" || q.type === "truefalse")) {
-        return { ...rest, isCorrect: answers[String(i)] === correct };
-      }
-      return rest;
-    });
+    const sanitized = sanitizeQuestionsForJobSeeker(
+      questions,
+      answers,
+      Boolean(assessment.results_released),
+    );
     return { ...assessment, questions: sanitized };
   });
 }

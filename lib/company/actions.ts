@@ -5,6 +5,14 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { insertNotification, insertNotificationsForAdmins } from "@/lib/notifications/actions";
 import type { Json } from "@/lib/supabase_generated_types";
+import { companyVerificationTable } from "@/lib/company/verification";
+import {
+  ASSESSMENT_SUBMISSIONS_BUCKET,
+  normalizeAssessmentQuestions,
+  scoreAssessment,
+  validateAssessmentSubmission,
+  type AssessmentQuestion,
+} from "@/lib/assessments";
 
 async function requireVerifiedCompany(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -23,6 +31,7 @@ async function requireVerifiedCompany(
   return null;
 }
 
+
 // ─── Company profile ──────────────────────────────────────────────────────────
 
 export async function upsertCompany(formData: FormData) {
@@ -32,20 +41,54 @@ export async function upsertCompany(formData: FormData) {
 
   const { data: existingCompany } = await supabase
     .from("companies")
-    .select("id")
+    .select("id, is_verified")
     .eq("id", user.id)
     .maybeSingle();
 
-  const payload = {
-    id: user.id,
-    name: formData.get("name") as string,
-    description: (formData.get("description") as string) || "",
-    industry: (formData.get("industry") as string) || null,
-    website: (formData.get("website") as string) || null,
-    location: (formData.get("location") as string) || null,
-    size: (formData.get("size") as string) || null,
-    founded_year: (formData.get("founded_year") as string) || null,
+  const isVerificationSubmission =
+    formData.has("legal_company_name") ||
+    formData.has("commercial_registration_number");
+
+  const requiredValue = (name: string, label: string) => {
+    const value = (formData.get(name) as string | null)?.trim() ?? "";
+    if (!value) return { error: `${label} is required.` };
+    return { value };
   };
+
+  const nameResult = requiredValue("name", "Public company name");
+  if ("error" in nameResult) return nameResult;
+
+  if (isVerificationSubmission && existingCompany?.is_verified) {
+    return { error: "Verified companies can edit public profile details from the company profile page." };
+  }
+
+  const payload: {
+    id: string;
+    name: string;
+    description: string;
+    industry: string | null;
+    website: string | null;
+    location: string | null;
+    size: string | null;
+    founded_year: string | null;
+    logo_url?: string | null;
+    cover_url?: string | null;
+  } = {
+    id: user.id,
+    name: nameResult.value,
+    description: ((formData.get("description") as string | null)?.trim()) || "",
+    industry: ((formData.get("industry") as string | null)?.trim()) || null,
+    website: ((formData.get("website") as string | null)?.trim()) || null,
+    location: ((formData.get("location") as string | null)?.trim()) || null,
+    size: ((formData.get("size") as string | null)?.trim()) || null,
+    founded_year: ((formData.get("founded_year") as string | null)?.trim()) || null,
+  };
+  if (formData.has("logo_url")) {
+    payload.logo_url = ((formData.get("logo_url") as string | null)?.trim()) || null;
+  }
+  if (formData.has("cover_url")) {
+    payload.cover_url = ((formData.get("cover_url") as string | null)?.trim()) || null;
+  }
 
   const { error } = await supabase.from("companies").upsert(payload);
   if (error) return { error: error.message };
@@ -64,7 +107,49 @@ export async function upsertCompany(formData: FormData) {
     if (profileError) return { error: profileError.message };
   }
 
-  if (!existingCompany) {
+  if (isVerificationSubmission) {
+    const legalName = requiredValue("legal_company_name", "Legal company name");
+    if ("error" in legalName) return legalName;
+    const workEmail =
+      ((formData.get("work_email") as string | null)?.trim()) ||
+      user.email ||
+      "";
+    if (!workEmail) return { error: "Work email is required." };
+    const contactName = requiredValue("contact_person_name", "Contact person full name");
+    if ("error" in contactName) return contactName;
+    const contactTitle = requiredValue("contact_job_title", "Contact job title");
+    if ("error" in contactTitle) return contactTitle;
+    const phoneNumber = requiredValue("phone_number", "Phone number");
+    if ("error" in phoneNumber) return phoneNumber;
+    const registrationNumber = requiredValue(
+      "commercial_registration_number",
+      "Commercial registration number",
+    );
+    if ("error" in registrationNumber) return registrationNumber;
+
+    const verificationPayload = {
+      company_id: user.id,
+      legal_company_name: legalName.value,
+      work_email: workEmail,
+      contact_person_name: contactName.value,
+      contact_job_title: contactTitle.value,
+      phone_number: phoneNumber.value,
+      country_of_registration: "Jordan",
+      commercial_registration_number: registrationNumber.value,
+      verification_status: "pending",
+      review_message: null,
+      reviewed_by: null,
+      reviewed_at: null,
+      submitted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: verificationError } = await companyVerificationTable(supabase)
+      .upsert(verificationPayload);
+    if (verificationError) return { error: verificationError.message };
+  }
+
+  if (isVerificationSubmission && !existingCompany) {
     await insertNotificationsForAdmins({
       type: "company_approval_requested",
       title: "Company Approval Requested",
@@ -76,7 +161,20 @@ export async function upsertCompany(formData: FormData) {
     });
   }
 
+  if (isVerificationSubmission && existingCompany) {
+    await insertNotificationsForAdmins({
+      type: "company_approval_requested",
+      title: "Company Approval Updated",
+      body: `${payload.name} updated their employer account request.`,
+      link: "/admin/companies",
+      actorId: user.id,
+      entityType: "company",
+      entityId: user.id,
+    });
+  }
+
   revalidatePath("/company/profile");
+  revalidatePath("/company/onboarding");
   return { success: true };
 }
 
@@ -88,6 +186,21 @@ export async function updateCompanyLogo(logoUrl: string) {
   const { error } = await supabase
     .from("companies")
     .update({ logo_url: logoUrl })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/company/profile");
+  return { success: true };
+}
+
+export async function updateCompanyCoverUrl(coverUrl: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ cover_url: coverUrl })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
@@ -256,10 +369,25 @@ type AssessmentTargetApplication = {
   job: { company_id?: string } | null;
 };
 
-type AssessmentQuestion = {
-  type?: string;
-  correct?: number | boolean;
-};
+function parseAnswers(submission: Json): Record<string, unknown> {
+  return submission &&
+    typeof submission === "object" &&
+    !Array.isArray(submission) &&
+    "answers" in submission &&
+    submission.answers &&
+    typeof submission.answers === "object" &&
+    !Array.isArray(submission.answers)
+      ? (submission.answers as Record<string, unknown>)
+      : {};
+}
+
+function submissionContainsFilePath(value: unknown, path: string): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (Array.isArray(value)) return value.some((entry) => submissionContainsFilePath(entry, path));
+  const record = value as Record<string, unknown>;
+  if (record.path === path) return true;
+  return Object.values(record).some((entry) => submissionContainsFilePath(entry, path));
+}
 
 export async function updateApplicationStatus(
   applicationId: string,
@@ -346,9 +474,19 @@ export async function sendAssessment(formData: FormData) {
 
   const questionsRaw = formData.get("questions") as string;
 
-  let questions = null;
+  let questions: Json = [];
   if (questionsRaw) {
-    try { questions = JSON.parse(questionsRaw); } catch { questions = null; }
+    try {
+      const parsed = JSON.parse(questionsRaw);
+      const normalized = normalizeAssessmentQuestions(parsed);
+      if (normalized.error) return { error: normalized.error };
+      questions = normalized.questions as Json;
+    } catch {
+      return { error: "Questions could not be read." };
+    }
+  }
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return { error: "Add at least one question." };
   }
 
   const deadline = formData.get("deadline") as string;
@@ -487,27 +625,11 @@ export async function submitAssessment(formData: FormData) {
   }
 
   // Auto-score MCQ and True/False questions
-  const questions = (assessment.questions as AssessmentQuestion[] | null) ?? [];
-  const answers =
-    submission &&
-    typeof submission === "object" &&
-    !Array.isArray(submission) &&
-    "answers" in submission &&
-    submission.answers &&
-    typeof submission.answers === "object" &&
-    !Array.isArray(submission.answers)
-      ? (submission.answers as Record<string, Json>)
-      : {};
-  let correct = 0;
-  let scorable = 0;
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i];
-    if (q.type === "mcq" || q.type === "truefalse") {
-      scorable++;
-      if (answers[String(i)] === q.correct) correct++;
-    }
-  }
-  const score = scorable > 0 ? Math.round((correct / scorable) * 100) : null;
+  const questions = (Array.isArray(assessment.questions) ? assessment.questions : []) as AssessmentQuestion[];
+  const answers = parseAnswers(submission);
+  const validationError = validateAssessmentSubmission(questions, answers);
+  if (validationError) return { error: validationError };
+  const { score } = scoreAssessment(questions, answers);
 
   const { data: updatedAssessment, error } = await supabase
     .from("assessments")
@@ -542,6 +664,39 @@ export async function submitAssessment(formData: FormData) {
   revalidatePath("/job-seeker/job-applications");
   revalidatePath("/job-seeker/assessments");
   return { success: true, score };
+}
+
+export async function getAssessmentSubmissionFileSignedUrl(
+  assessmentId: string,
+  path: string,
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+  const verificationError = await requireVerifiedCompany(supabase, user.id);
+  if (verificationError) return verificationError;
+
+  const { data: assessment, error } = await supabase
+    .from("assessments")
+    .select("company_id, submission")
+    .eq("id", assessmentId)
+    .single();
+
+  if (error || !assessment) return { error: "Assessment not found." };
+  if (assessment.company_id !== user.id) return { error: "Not authorized." };
+  if (!submissionContainsFilePath(assessment.submission, path)) {
+    return { error: "File not found on this submission." };
+  }
+
+  const { data, error: signedError } = await supabase.storage
+    .from(ASSESSMENT_SUBMISSIONS_BUCKET)
+    .createSignedUrl(path, 60);
+
+  if (signedError || !data?.signedUrl) {
+    return { error: signedError?.message ?? "Could not create download link." };
+  }
+
+  return { signedUrl: data.signedUrl };
 }
 
 export async function releaseAssessmentResults(assessmentId: string) {

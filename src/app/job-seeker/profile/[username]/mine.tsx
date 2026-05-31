@@ -4,7 +4,6 @@ import React from "react";
 import {
   FileText,
   Download,
-  GitBranch,
   Award,
   ExternalLink,
   GraduationCap,
@@ -131,8 +130,8 @@ function ProjectsSection({ projects }: { projects: project[] }) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-[#006d43] hover:text-[#00a86b] transition-colors"
                 >
-                  <GitBranch className="h-3.5 w-3.5" />
-                  View on GitHub
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View project
                 </a>
               )}
             </div>

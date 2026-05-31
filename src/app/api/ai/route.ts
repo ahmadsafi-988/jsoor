@@ -20,17 +20,25 @@ async function callOpenAI(prompt: string, system: string): Promise<string> {
 
 async function generateQuestions(config: InterviewConfig): Promise<Question[]> {
   const system =
-    "You are an expert technical recruiter. Respond ONLY with valid JSON — no markdown, no explanation. Return an array of objects with shape {id: number, text: string}.";
+    "You are an experienced technical recruiter who specializes in hiring entry-level candidates. Your questions are clear, fair, and designed to help first-time job seekers demonstrate their potential — not just their experience. Respond ONLY with valid JSON — no markdown, no explanation. Return an array of objects with shape {id: number, text: string}.";
 
-  const prompt = `Generate ${config.questionCount} realistic interview questions for a ${config.jobTitle} role.
+  const prompt = `Generate ${config.questionCount} realistic, entry-level-appropriate interview questions for a ${config.jobTitle} role.
+
 Job description: ${config.jobDescription}
-Mix behavioural, situational, and role-specific questions. Return JSON array only.`;
+
+Guidelines:
+- Assume the candidate is a recent graduate or career switcher with limited professional experience
+- Avoid questions that require years of work experience to answer (e.g. "Tell me about a time you led a team of 10")
+- Instead, allow candidates to draw from internships, academic projects, volunteering, part-time work, or coursework
+- Use simple, jargon-free language
+
+Return a JSON array only. No explanation, no markdown.`;
 
   const raw = await callOpenAI(prompt, system);
   const clean = raw.replace(/```json|```/g, "").trim();
-
   return JSON.parse(clean) as Question[];
 }
+
 
 async function evaluateAnswers(
   config: InterviewConfig,
@@ -38,35 +46,51 @@ async function evaluateAnswers(
   answers: Answer[]
 ): Promise<{ feedback: FeedbackItem[]; overallSummary: string }> {
   const system =
-    "You are a senior hiring manager giving structured interview feedback. Respond ONLY with valid JSON — no markdown fences.";
+    "You are a supportive but honest senior hiring manager evaluating entry-level candidates. Your feedback is constructive, specific, and encouraging — you recognise potential and effort, not just polished delivery. You understand these candidates may have limited professional experience. Respond ONLY with valid JSON — no markdown fences.";
 
   const qa = questions.map((q) => {
     const a = answers.find((a) => a.questionId === q.id);
-
     return `Q${q.id}: ${q.text}\nA${q.id}: ${
       a?.text || "(no answer provided)"
     }`;
   });
 
-  const prompt = `You interviewed a candidate for ${config.jobTitle}.
+  const prompt = `You are evaluating an entry-level candidate interviewing for a ${config.jobTitle} role.
+
 Job description: ${config.jobDescription}
 
+Candidate's interview transcript:
 ${qa.join("\n\n")}
 
-Return JSON with shape:
+Evaluation guidelines:
+- This is an entry-level candidate — calibrate scoring expectations accordingly; do not penalise for lack of industry experience
+- Score each answer from 1-10 where:
+    * 1-3: Answer is missing, off-topic, or shows critical misunderstanding
+    * 4-6: Partial answer with some relevant points but lacks structure or depth
+    * 7-8: Clear, structured answer that demonstrates relevant thinking or experience
+    * 9-10: Exceptional answer — specific, well-structured, shows strong self-awareness or insight
+- For "strengths": highlight what the candidate did well, even if modest (e.g. clear communication, relevant example, honest self-reflection)
+- For "improvements": give one or two concrete, actionable tips the candidate can apply immediately (e.g. "Try structuring your answer using STAR: Situation, Task, Action, Result" or "Add a specific outcome or metric to strengthen this example")
+- If no answer was provided, set score to 0 and suggest how they might approach the question next time
+- "overallSummary": write 2-3 encouraging but honest sentences summarising the candidate's overall performance, highlighting their strongest moment and one priority area to work on before their next interview
+
+Return ONLY this JSON shape — no explanation, no markdown:
 {
   "feedback": [
-    {"questionId": number, "score": number, "strengths": "string", "improvements": "string"}
+    {
+      "questionId": number,
+      "score": number,
+      "strengths": "string",
+      "improvements": "string"
+    }
   ],
-  "overallSummary": "2-3 sentence overall assessment"
+  "overallSummary": "string"
 }`;
 
   const raw = await callOpenAI(prompt, system);
   const clean = raw.replace(/```json|```/g, "").trim();
-
   return JSON.parse(clean);
 }
-
 export async function POST(request: Request) {
   try {
     const contentType = request.headers.get("content-type") || "";

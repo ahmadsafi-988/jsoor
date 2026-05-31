@@ -1,8 +1,8 @@
 "use client";
 
 // app/job-seeker/profile/[username]/edit/page.tsx
-// Profile editing page — tabbed layout.
-// Tabs: Profile · Projects · Badges · Account
+// Profile editing page - tabbed layout.
+// Tabs: Profile - Projects - Badges - Account
 //
 // RULES:
 //  - Email change: triggers Supabase confirmation to the NEW address (not instant)
@@ -31,15 +31,15 @@ import {
   deleteProject,
   upsertBadge,
   deleteBadge,
-  fetchBadgeMetadata,
   updateEmail,
   updatePassword,
   updateAvatarUrl,
+  updateProfileCoverUrl,
   updateCvUrl,
   addProfileSkill,
   removeProfileSkill,
 } from "@/lib/profile/actions";
-import { uploadAvatar, uploadCV } from "@/lib/storage/upload";
+import { uploadAvatar, uploadCV, uploadProfileCover } from "@/lib/storage/upload";
 import type { LocationOption } from "@/lib/company/data";
 import type { user, project, badge, ProjectSkill } from "@/lib/global_types";
 
@@ -67,7 +67,7 @@ import {
   Loader2, 
 } from "lucide-react";
 
-// ─── Tab shell ────────────────────────────────────────────────────────────────
+// Tab shell
 type Tab = "profile" | "projects" | "badges" | "account" | "skills"
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -97,7 +97,7 @@ function targetFromHash() {
   return tab ? { id, tab } : null;
 }
 
-// ─── Feedback helper ─────────────────────────────────────────────────────────
+// Feedback helper
 function Feedback({ state }: { state: { error?: string; message?: string } | null }) {
   if (!state) return null;
   if (state.error)
@@ -107,7 +107,7 @@ function Feedback({ state }: { state: { error?: string; message?: string } | nul
   return null;
 }
 
-// ─── Tab: Profile ─────────────────────────────────────────────────────────────
+// Tab: Profile
 type University = { id: number; name: string; logo_url: string };
 
 function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) => void }) {
@@ -115,6 +115,11 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
   const [pending, setPending] = React.useState(false);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
   const [locations, setLocations] = React.useState<LocationOption[]>([]);
+  const [bioCount, setBioCount] = React.useState((profile.bio ?? "").length);
+
+  // Profile cover
+  const [coverPreview, setCoverPreview] = React.useState<string | null>(profile.cover_url ?? null);
+  const [coverFile, setCoverFile] = React.useState<File | null>(null);
 
   // Avatar
   const [avatarPreview, setAvatarPreview] = React.useState<string | null>(profile.avatar_url);
@@ -154,6 +159,8 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
     setPending(true);
     setFeedback(null);
     const fd = new FormData(e.currentTarget);
+    const bio = String(fd.get("bio") ?? "");
+    fd.set("bio", bio.slice(0, 1000));
     if (selectedUni) { fd.set("institution", selectedUni.name); fd.set("logo_url", selectedUni.logo_url); }
 
     // Save profile fields
@@ -161,6 +168,19 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
     if (result?.error) { setFeedback({ error: result.error }); setPending(false); return; }
 
     const uname = fd.get("username") as string;
+
+    // Upload profile cover if changed
+    if (coverFile) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const up = await uploadProfileCover(user.id, coverFile);
+        if ("error" in up) { setFeedback({ error: up.error }); setPending(false); return; }
+        const saved = await updateProfileCoverUrl(up.url, uname);
+        if (saved?.error) { setFeedback({ error: saved.error }); setPending(false); return; }
+        setCoverPreview(up.url);
+        onSaved({ ...profile, cover_url: up.url });
+      }
+    }
 
     // Upload avatar if changed
     if (avatarFile) {
@@ -188,6 +208,48 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
   return (
     <form id="profile" onSubmit={handleSubmit} className="space-y-6 scroll-mt-24">
+      {/* Profile cover */}
+      <div className="space-y-2">
+        <Label className="text-sm font-semibold text-[#1c1b1b]">Profile cover</Label>
+        <div className="overflow-hidden rounded-xl border border-[#e5e2e1] bg-[#f6f3f2]">
+          <div className="relative h-32 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]">
+            {coverPreview && (
+              <img
+                src={coverPreview}
+                alt="Profile cover preview"
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#1c1b1b]">Cover picture</p>
+              <p className="text-xs text-[#5f5e5e]">Recommended: 1600 x 400 px. JPG, PNG or WebP.</p>
+            </div>
+            <Label
+              htmlFor="cover_edit"
+              className="cursor-pointer rounded-lg border border-[#e5e2e1] bg-white px-3 py-1.5 text-sm text-[#3d4a41] hover:bg-[#f6f3f2] transition-colors"
+            >
+              Change cover
+            </Label>
+            <input
+              id="cover_edit"
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                setCoverFile(f);
+                setCoverPreview(URL.createObjectURL(f));
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Separator className="bg-[#e5e2e1]" />
+
       {/* Avatar */}
       <div className="space-y-2">
         <Label className="text-sm font-semibold text-[#1c1b1b]">Profile photo</Label>
@@ -215,7 +277,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
                 setAvatarPreview(URL.createObjectURL(f));
               }}
             />
-            <p className="text-xs text-muted-foreground">PNG, JPG or WEBP · Max 5 MB</p>
+            <p className="text-xs text-muted-foreground">Recommended: 400 x 400 px. PNG, JPG or WEBP.</p>
           </div>
         </div>
       </div>
@@ -244,7 +306,15 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       <div id="bio" className="space-y-1.5 scroll-mt-36">
         <Label htmlFor="bio_input">Bio</Label>
-        <Textarea id="bio_input" name="bio" defaultValue={profile.bio} rows={3} />
+        <Textarea
+          id="bio_input"
+          name="bio"
+          defaultValue={profile.bio}
+          rows={4}
+          maxLength={1000}
+          onChange={(e) => setBioCount(e.target.value.length)}
+        />
+        <p className="text-right text-xs text-muted-foreground">{Math.min(bioCount, 1000)}/1000</p>
       </div>
 
       <div className="space-y-1.5">
@@ -258,15 +328,15 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
         <p className="text-xs text-[#5f5e5e]">Choose a location from the list, or use Not specified.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="website">Website</Label>
-          <Input id="website" name="website" defaultValue={profile.website ?? ""} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="github">GitHub</Label>
-          <Input id="github" name="github" defaultValue={profile.github ?? ""} placeholder="https://github.com/username" />
-        </div>
+      <div className="max-w-md space-y-1.5">
+        <Label htmlFor="website">Website / Portfolio URL</Label>
+        <Input
+          id="website"
+          name="website"
+          type="url"
+          defaultValue={profile.website ?? ""}
+          placeholder="https://your-portfolio.com"
+        />
       </div>
 
       <Separator className="bg-[#e5e2e1]" />
@@ -282,7 +352,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
               className="pl-9"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelectedUni(null); }}
-              placeholder="Search universities…"
+              placeholder="Search universities..."
             />
           </div>
           {uniResults.length > 0 && !selectedUni && (
@@ -330,7 +400,7 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
 
       {/* CV */}
       <div id="cv" className="space-y-2 scroll-mt-24">
-        <Label>CV / Résumé</Label>
+        <Label>CV / Resume</Label>
         <div className="flex items-center gap-3">
           {profile.cv_url && !cvFile && (
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -359,20 +429,22 @@ function TabProfile({ profile, onSaved }: { profile: user; onSaved: (u: user) =>
             }}
           />
         </div>
-        <p className="text-xs text-muted-foreground">PDF, DOC or DOCX · Max 10 MB. Stored privately — only accessible via a secure link.</p>
+        <p className="text-xs text-muted-foreground">PDF, DOC or DOCX, max 10 MB. Stored privately and only accessible via a secure link.</p>
       </div>
 
       <Feedback state={feedback} />
 
-      <Button type="submit" disabled={pending} className="bg-[#006d43] text-white hover:bg-[#005232]">
-        <Save className="mr-1.5 h-4 w-4" />
-        {pending ? "Saving…" : "Save profile"}
-      </Button>
+      <div className="sticky bottom-4 z-20 flex justify-end">
+        <Button type="submit" disabled={pending} className="bg-[#006d43] text-white shadow-[0_12px_28px_rgba(0,109,67,0.22)] hover:bg-[#005232]">
+          <Save className="mr-1.5 h-4 w-4" />
+          {pending ? "Saving..." : "Save profile"}
+        </Button>
+      </div>
     </form>
   );
 }
 
-// ─── ProjectForm (hoisted — defining inside TabProjects caused remount on every keystroke) ──
+// ProjectForm (hoisted - defining inside TabProjects caused remount on every keystroke)
 type ProjectDraft = {
   name: string;
   description: string;
@@ -433,8 +505,8 @@ function ProjectForm({
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label>GitHub URL</Label>
-          <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://github.com/…" />
+          <Label>Project URL</Label>
+          <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://example.com/project" />
         </div>
       </div>
       <div className="space-y-2">
@@ -507,7 +579,7 @@ function ProjectForm({
   );
 }
 
-// ─── Tab: Projects ────────────────────────────────────────────
+// Tab: Projects
 type ProjectWithSkillRelation = project & {
   project_to_skills?: Array<{ skill: ProjectSkill | null }>;
 };
@@ -643,7 +715,7 @@ function TabProjects({ projects, onProjectsChange, username }: {
   );
 }
 
-// ─── BadgeForm (hoisted — defining inside TabBadges caused remount on every keystroke) ──
+// BadgeForm (hoisted - defining inside TabBadges caused remount on every keystroke)
 type BadgeDraft = { name: string; issuer: string; image: string; url: string; date: string };
 
 function BadgeForm({
@@ -651,115 +723,41 @@ function BadgeForm({
   onChange,
   onSave,
   onCancel,
+  pending,
 }: {
   src: BadgeDraft;
   onChange: (k: string, v: string) => void;
   onSave: () => void;
   onCancel: () => void;
+  pending: boolean;
 }) {
-  const [detailsOpen, setDetailsOpen] = React.useState(Boolean(src.name || src.issuer || src.image || src.date));
-  const [lookupPending, setLookupPending] = React.useState(false);
-  const [lookupError, setLookupError] = React.useState<string | null>(null);
-
-  async function handleFetchDetails() {
-    if (!src.url.trim()) return;
-
-    setLookupPending(true);
-    setLookupError(null);
-    const result = await fetchBadgeMetadata(src.url);
-    setLookupPending(false);
-
-    if ("error" in result) {
-      setLookupError(result.error ?? "Could not read badge metadata.");
-      setDetailsOpen(true);
-      return;
-    }
-
-    Object.entries(result.badge).forEach(([key, value]) => onChange(key, value));
-    setDetailsOpen(true);
-  }
-
   return (
     <div className="space-y-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] p-4">
       <div className="space-y-1.5">
-        <Label>Public badge link *</Label>
+        <Label>Public Credly badge link *</Label>
         <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://www.credly.com/badges/..." />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#e5e2e1]"
-          onClick={handleFetchDetails}
-          disabled={!src.url.trim() || lookupPending}
-        >
-          {lookupPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-          Fetch details
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          className="text-[#3d4a41] hover:bg-[#e5e2e1]"
-          onClick={() => setDetailsOpen((value) => !value)}
-        >
-          {detailsOpen ? "Hide details" : "Edit details"}
-        </Button>
-      </div>
-      {lookupError && <p className="text-xs text-destructive">{lookupError}</p>}
-      {detailsOpen && (
-        <div className="space-y-3 rounded-xl border border-[#e5e2e1] bg-white p-3">
-          <div className="space-y-1.5">
-            <Label>Badge name</Label>
-            <Input value={src.name} onChange={(e) => onChange("name", e.target.value)} placeholder="AWS Certified Developer" />
-          </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label>Issuer</Label>
-          <Input value={src.issuer} onChange={(e) => onChange("issuer", e.target.value)} placeholder="Amazon Web Services" />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Date earned</Label>
-          <Input type="date" value={src.date} onChange={(e) => onChange("date", e.target.value)} />
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <Label>Image URL</Label>
-        <Input value={src.image} onChange={(e) => onChange("image", e.target.value)} placeholder="https://images.credly.com/…" />
-      </div>
-        </div>
-      )}
-      {(src.name || src.issuer || src.image) && !detailsOpen && (
-        <div className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-white px-3 py-2">
-          {src.image && <img src={src.image} alt={src.name || "Badge"} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-[#1c1b1b]">{src.name || "Badge"}</p>
-            <p className="truncate text-xs text-[#5f5e5e]">{src.issuer}</p>
-          </div>
-        </div>
-      )}
-      <div className="space-y-1.5 hidden">
-        <Label>Badge URL</Label>
-        <Input value={src.url} onChange={(e) => onChange("url", e.target.value)} placeholder="https://www.credly.com/badges/…" />
+        <p className="text-xs text-[#5f5e5e]">Paste a public Credly badge URL. JSOOR will import the badge details from Credly.</p>
       </div>
       <div className="flex gap-2">
         <Button type="button" variant="outline" className="flex-1 border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#e5e2e1]" onClick={onCancel}>Cancel</Button>
-        <Button type="button" className="flex-1 bg-[#006d43] text-white hover:bg-[#005232]" onClick={onSave} disabled={!src.url.trim()}>
-          <Save className="mr-1.5 h-4 w-4" /> Save
+        <Button type="button" className="flex-1 bg-[#006d43] text-white hover:bg-[#005232]" onClick={onSave} disabled={!src.url.trim() || pending}>
+          {pending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+          Save badge
         </Button>
       </div>
     </div>
   );
 }
 
-// ─── Tab: Badges ─────────────────────────────────────────────
+// Tab: Badges
 function TabBadges({ badges, onBadgesChange, username }: {
   badges: badge[];
   onBadgesChange: (b: badge[]) => void;
   username: string;
 }) {
   const [adding, setAdding] = React.useState(false);
-  const [editing, setEditing] = React.useState<badge | null>(null);
   const [feedback, setFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
+  const [savePending, setSavePending] = React.useState(false);
   const blank: BadgeDraft = { name: "", issuer: "", image: "", url: "", date: "" };
   const [draft, setDraft] = React.useState<BadgeDraft>(blank);
 
@@ -772,17 +770,21 @@ function TabBadges({ badges, onBadgesChange, username }: {
     }
   }
 
-  async function handleSave(isNew: boolean) {
+  async function handleSave() {
+    const credlyUrl = draft.url.trim();
+    if (!credlyUrl) return;
+
+    setSavePending(true);
+    setFeedback(null);
     const fd = new FormData();
-    const src = isNew ? draft : editing!;
-    if (!isNew && editing?.id) fd.set("id", String(editing.id));
-    Object.entries(src).forEach(([k, v]) => { if (k !== "id" && k !== "user_id" && k !== "created_at") fd.set(k, String(v)); });
+    fd.set("url", credlyUrl);
     const result = await upsertBadge(fd, username);
+    setSavePending(false);
+
     if (result?.error) { setFeedback({ error: result.error }); return; }
-    setFeedback({ message: isNew ? "Badge added." : "Badge updated." });
+    setFeedback({ message: "Credly badge added." });
     setAdding(false);
-    setEditing(null);
-    if (isNew) setDraft(blank);
+    setDraft(blank);
     await refreshBadges();
   }
 
@@ -796,39 +798,30 @@ function TabBadges({ badges, onBadgesChange, username }: {
   return (
     <div id="badges" className="space-y-4 scroll-mt-24">
       <Feedback state={feedback} />
-      {badges.map((b) =>
-        editing?.id === b.id ? (
-          <BadgeForm
-            key={b.id}
-            src={editing}
-            onChange={(k, v) => setEditing((e) => e ? { ...e, [k]: v } : e)}
-            onSave={() => handleSave(false)}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <div key={b.id} className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5">
-            {b.image && <img src={b.image} alt={b.name} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-[#1c1b1b]">{b.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{b.issuer} · {b.date}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button type="button" onClick={() => { setEditing(b); setAdding(false); }} className="text-[#5f5e5e] hover:text-[#006d43]"><Pencil className="h-4 w-4" /></button>
-              <button type="button" onClick={() => handleDelete(b.id)} className="text-destructive hover:text-destructive/80"><Trash2 className="h-4 w-4" /></button>
-            </div>
+      <p className="text-sm text-[#5f5e5e]">Add certifications using public Credly badge links only.</p>
+      {badges.map((b) => (
+        <div key={b.id} className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5">
+          {b.image && <img src={b.image} alt={b.name} className="h-10 w-10 shrink-0 rounded-lg border border-[#e5e2e1] bg-white object-contain" />}
+          <div className="flex-1 min-w-0">
+            <p className="truncate text-sm font-medium text-[#1c1b1b]">{b.name}</p>
+            <p className="text-xs text-muted-foreground truncate">{b.issuer} - {b.date}</p>
           </div>
-        )
-      )}
+          <button type="button" onClick={() => handleDelete(b.id)} className="shrink-0 text-destructive hover:text-destructive/80" title="Remove badge">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ))}
       {adding ? (
         <BadgeForm
           src={draft}
           onChange={(k, v) => setDraft((d) => ({ ...d, [k]: v }))}
-          onSave={() => handleSave(true)}
+          onSave={handleSave}
           onCancel={() => setAdding(false)}
+          pending={savePending}
         />
       ) : (
-        <Button type="button" variant="outline" className="w-full border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]" onClick={() => { setAdding(true); setEditing(null); }}>
-          <Plus className="mr-1.5 h-4 w-4" /> Add badge
+        <Button type="button" variant="outline" className="w-full border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]" onClick={() => { setAdding(true); setFeedback(null); }}>
+          <Plus className="mr-1.5 h-4 w-4" /> Add Credly badge
         </Button>
       )}
     </div>
@@ -837,7 +830,7 @@ function TabBadges({ badges, onBadgesChange, username }: {
 
 
 
-// ─── Tab: Account ─────────────────────────────────────────────────────────────
+// Tab: Account
 function TabAccount({ currentEmail }: { currentEmail: string }) {
   const [emailFeedback, setEmailFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
   const [passwordFeedback, setPasswordFeedback] = React.useState<{ error?: string; message?: string } | null>(null);
@@ -884,7 +877,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
         <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
           <p className="text-amber-800">
-            Changing your email requires confirmation. A verification link will be sent to your <strong>new</strong> address — your email won&apos;t change until you click it.
+            Changing your email requires confirmation. A verification link will be sent to your new email address - your email won&apos;t change until you click it.
           </p>
         </div>
         <form onSubmit={handleEmailSubmit} className="space-y-3">
@@ -894,7 +887,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
           </div>
           <Feedback state={emailFeedback} />
           <Button type="submit" variant="outline" disabled={emailPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
-            {emailPending ? "Sending…" : "Send confirmation email"}
+            {emailPending ? "Sending..." : "Send confirmation email"}
           </Button>
         </form>
       </div>
@@ -924,7 +917,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
           </div>
           <Feedback state={passwordFeedback} />
           <Button type="submit" variant="outline" disabled={passwordPending} className="border-[#e5e2e1] bg-white text-[#3d4a41] hover:bg-[#f6f3f2] hover:text-[#006d43]">
-            {passwordPending ? "Updating…" : "Update password"}
+            {passwordPending ? "Updating..." : "Update password"}
           </Button>
         </form>
       </div>
@@ -933,7 +926,7 @@ function TabAccount({ currentEmail }: { currentEmail: string }) {
 }
 
 
-// ─── Tab: skills ─────────────────────────────────────────────────────────────
+// Tab: skills
 type SkillEntry = { skill_id: number; skills: { id: number; name: string } }
 type SkillRow = { id: number; name: string; skill_to_categories?: { category_id: number }[] | null };
 type SkillCategory = { id: number; name: string; slug: string; sort_order: number };
@@ -1193,7 +1186,7 @@ function TabSkills({ profileSkills: initial = [], username }: { profileSkills: S
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// Page
 export default function EditProfilePage() {
   const router = useRouter();
   const params = useParams();
@@ -1360,3 +1353,4 @@ export default function EditProfilePage() {
     </div>
   );
 }
+

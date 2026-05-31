@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { upsertCompany } from "@/lib/company/actions";
+import { updateCompanyCoverUrl, upsertCompany } from "@/lib/company/actions";
+import { uploadCompanyCover } from "@/lib/storage/upload";
 import { LocationPicker } from "@/components/app/LocationPicker";
-import type { LocationOption } from "@/lib/company/data";
-import { Building2, Camera, Loader2 } from "lucide-react";
+import type { CompanyRow, LocationOption } from "@/lib/company/data";
+import { Building2, Camera, ImageIcon, Loader2 } from "lucide-react";
 
 const INDUSTRIES = [
   "Technology", "Finance", "Healthcare", "Education", "Retail",
@@ -14,16 +15,19 @@ const INDUSTRIES = [
 const SIZES = ["1–10", "11–50", "51–200", "201–500", "501–1,000", "1,000+"];
 
 export default function CompanyProfilePage() {
-  const [company, setCompany] = useState<any>(null);
+  const [company, setCompany] = useState<Partial<CompanyRow> | null>(null);
   const [username, setUsername] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const coverFileRef = useRef<HTMLInputElement>(null);
   const userIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +43,7 @@ export default function CompanyProfilePage() {
       ]);
       setCompany(companyRes.data ?? {});
       setLogoUrl(companyRes.data?.logo_url ?? null);
+      setCoverUrl(companyRes.data?.cover_url ?? null);
       setUsername(profileRes.data?.username ?? "");
       setLocations(locationsRes.data ?? []);
       setLoading(false);
@@ -87,6 +92,31 @@ export default function CompanyProfilePage() {
 
     setUploading(false);
     // Reset input so the same file can be re-selected
+    e.target.value = "";
+  }
+
+  async function handleCoverUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !userIdRef.current) return;
+
+    setUploadingCover(true);
+    setError(null);
+
+    const upload = await uploadCompanyCover(userIdRef.current, file);
+    if ("error" in upload) {
+      setError("Failed to upload cover. Please try again.");
+      setUploadingCover(false);
+      return;
+    }
+
+    const saved = await updateCompanyCoverUrl(upload.url);
+    if (saved?.error) {
+      setError("Cover uploaded but failed to save. Please try again.");
+    } else {
+      setCoverUrl(upload.url);
+    }
+
+    setUploadingCover(false);
     e.target.value = "";
   }
 
@@ -156,6 +186,43 @@ export default function CompanyProfilePage() {
           className="hidden"
           onChange={handleLogoUpload}
         />
+      </div>
+
+      {/* Company cover */}
+      <div className="bg-white rounded-2xl border border-[#e5e2e1] p-6 mb-5">
+        <div className="overflow-hidden rounded-xl border border-[#e5e2e1] bg-[#f6f3f2]">
+          <div className="h-36 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]">
+            {coverUrl ? (
+              <img src={coverUrl} alt="Company cover" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-white/80">
+                <ImageIcon className="h-8 w-8" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-[#1c1b1b] text-sm">Company Cover</p>
+              <p className="text-[#5f5e5e] text-xs mt-0.5">Recommended: 1600 x 400 px. JPG, PNG or WebP.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => coverFileRef.current?.click()}
+              disabled={uploadingCover}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#e5e2e1] bg-white px-3 py-2 text-sm font-medium text-[#3d4a41] transition-colors hover:bg-[#f6f3f2] disabled:opacity-60"
+            >
+              {uploadingCover ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              Change cover
+            </button>
+            <input
+              ref={coverFileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleCoverUpload}
+            />
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[#e5e2e1] p-8 flex flex-col gap-6">

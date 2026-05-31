@@ -31,6 +31,12 @@ export function Hero() {
               Explore Opportunities
               <ArrowRight className="w-5 h-5" />
             </Link>
+            <Link
+              href="/auth/company-sign-up"
+              className="border border-[#006d43]/25 text-[#006d43] bg-white px-8 py-4 rounded-xl font-semibold text-lg hover:border-[#006d43]/50 hover:bg-[#f6f3f2] transition-all flex items-center gap-2"
+            >
+              Request an employer account
+            </Link>
           </div>
         </div>
 

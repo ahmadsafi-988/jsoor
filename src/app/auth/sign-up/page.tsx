@@ -17,8 +17,8 @@ export default function SignUpPage() {
         {/* Card */}
         <div className="bg-white rounded-2xl border border-[#e5e2e1] shadow-sm p-8">
           <div className="mb-6">
-            <h2 className="font-headline text-2xl font-bold text-[#1c1b1b] tracking-tight">Create your account</h2>
-            <p className="text-sm text-[#5f5e5e] mt-1">Start your journey on Jsoor today</p>
+            <h2 className="font-headline text-2xl font-bold text-[#1c1b1b] tracking-tight">Create your job seeker account</h2>
+            <p className="text-sm text-[#5f5e5e] mt-1">Start finding junior roles and internships on Jsoor</p>
           </div>
           <SignUpForm />
         </div>

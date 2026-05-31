@@ -2,10 +2,47 @@
 
 import { useEffect, useRef, useState } from "react";
 import { submitAssessment } from "@/lib/company/actions";
+import { uploadAssessmentSubmissionFile } from "@/lib/storage/upload";
+import {
+  formatFileSize,
+  getOpenAnswerMethods,
+  isAllowedAssessmentFile,
+  isUrlish,
+  type AssessmentQuestion,
+  type OpenAnswer,
+} from "@/lib/assessments";
 import {
   ClipboardCheck, Building, Clock, Timer, ChevronRight,
-  CheckCircle, AlertCircle,
+  CheckCircle, AlertCircle, Paperclip, ExternalLink,
 } from "lucide-react";
+
+type AssessmentClientRecord = {
+  id: string;
+  title: string;
+  description: string | null;
+  deadline: string | null;
+  time_limit: number | null;
+  status: string;
+  score: number | null;
+  feedback: string | null;
+  results_released: boolean;
+  questions: DisplayAssessmentQuestion[] | null;
+  submission: { answers?: Record<string, unknown> } | null;
+  application?: {
+    job?: {
+      title?: string | null;
+      company?: {
+        name?: string | null;
+        logo_url?: string | null;
+      } | null;
+    } | null;
+  } | null;
+};
+
+type DisplayAssessmentQuestion = AssessmentQuestion & {
+  isCorrect?: boolean;
+  text?: string;
+};
 
 // ─── Instruction screen ───────────────────────────────────────────────────────
 
@@ -14,7 +51,7 @@ function InstructionsScreen({
   questionCount,
   onStart,
 }: {
-  assessment: any;
+  assessment: AssessmentClientRecord;
   questionCount: number;
   onStart: () => void;
 }) {
@@ -27,7 +64,7 @@ function InstructionsScreen({
       <div className="p-8 flex flex-col items-center text-center gap-6">
         <div className="w-14 h-14 rounded-2xl bg-white border border-[#e5e2e1] flex items-center justify-center shrink-0 overflow-hidden p-2">
           {company?.logo_url ? (
-            <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain" />
+            <img src={company.logo_url} alt={company.name ?? "Company"} className="w-full h-full object-contain" />
           ) : (
             <Building className="w-6 h-6 text-[#006d43]" />
           )}
@@ -123,28 +160,114 @@ function AssessmentTaker({
   onComplete,
   onBack,
 }: {
-  assessment: any;
+  assessment: AssessmentClientRecord;
   onComplete: (id: string) => void;
   onBack: () => void;
 }) {
-  const questions: any[] = assessment.questions ?? [];
+  const questions: DisplayAssessmentQuestion[] = assessment.questions ?? [];
   const [step, setStep] = useState<"instructions" | "taking" | "done">("instructions");
   const [idx, setIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string | number | boolean>>({});
+  const [answers, setAnswers] = useState<Record<string, string | number | boolean | number[] | OpenAnswer>>({});
+  const [fileSelections, setFileSelections] = useState<Record<string, File | null>>({});
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const answersRef = useRef(answers);
   useEffect(() => { answersRef.current = answers; }, [answers]);
+  const fileSelectionsRef = useRef(fileSelections);
+  useEffect(() => { fileSelectionsRef.current = fileSelections; }, [fileSelections]);
 
   const submittingRef = useRef(false);
 
-  async function doSubmit(currentAnswers: Record<string, string | number | boolean>) {
+  function getOpenAnswer(index: number) {
+    const answer = answers[String(index)];
+    if (answer && typeof answer === "object" && !Array.isArray(answer)) return answer as OpenAnswer;
+    if (typeof answer === "string") return { text: answer };
+    return {};
+  }
+
+  function updateOpenAnswer(index: number, partial: OpenAnswer) {
+    setAnswers((prev) => {
+      const current = prev[String(index)];
+      const base =
+        current && typeof current === "object" && !Array.isArray(current)
+          ? (current as OpenAnswer)
+          : typeof current === "string"
+            ? { text: current }
+            : {};
+      return { ...prev, [String(index)]: { ...base, ...partial } };
+    });
+  }
+
+  function validateOpenQuestion(question: DisplayAssessmentQuestion, index: number) {
+    if (question.type && question.type !== "open") return null;
+    const methods = getOpenAnswerMethods({ ...question, type: "open" });
+    const answer = getOpenAnswer(index);
+    const selectedFile = fileSelections[String(index)];
+
+    if (!methods.text && !methods.url && !methods.file) return "This question is missing an answer method.";
+    if (answer.url?.trim() && !isUrlish(answer.url.trim())) return "Enter a valid http(s) link.";
+    if (methods.required.includes("text") && !answer.text?.trim()) return "This question requires a written answer.";
+    if (methods.required.includes("url") && !answer.url?.trim()) return "This question requires a link answer.";
+    if (methods.required.includes("file") && !selectedFile && !answer.file?.path) {
+      return "This question requires a file upload.";
+    }
+    return null;
+  }
+
+  function validateCurrentQuestion() {
+    const validationError = validateOpenQuestion(questions[idx], idx);
+    if (validationError) {
+      setError(validationError);
+      return false;
+    }
+    setError(null);
+    return true;
+  }
+
+  async function prepareSubmissionAnswers(
+    currentAnswers: Record<string, string | number | boolean | number[] | OpenAnswer>,
+  ) {
+    const prepared: Record<string, string | number | boolean | number[] | OpenAnswer> = { ...currentAnswers };
+
+    for (const [index, question] of questions.entries()) {
+      const validationError = validateOpenQuestion(question, index);
+      if (validationError) return { error: `Question ${index + 1}: ${validationError}` };
+
+      const selectedFile = fileSelectionsRef.current[String(index)];
+      if (!selectedFile) continue;
+      const fileError = isAllowedAssessmentFile(selectedFile);
+      if (fileError) return { error: `Question ${index + 1}: ${fileError}` };
+
+      const uploadResult = await uploadAssessmentSubmissionFile(assessment.id, index, selectedFile);
+      if ("error" in uploadResult) return { error: `Question ${index + 1}: ${uploadResult.error}` };
+
+      const existing = prepared[String(index)];
+      const openAnswer =
+        existing && typeof existing === "object" && !Array.isArray(existing)
+          ? (existing as OpenAnswer)
+          : typeof existing === "string"
+            ? { text: existing }
+            : {};
+      prepared[String(index)] = { ...openAnswer, file: uploadResult.file };
+    }
+
+    return { answers: prepared };
+  }
+
+  async function doSubmit(currentAnswers: Record<string, string | number | boolean | number[] | OpenAnswer>) {
     if (submittingRef.current) return;
     submittingRef.current = true;
     setPending(true);
-    const submission = { answers: currentAnswers, submitted_at: new Date().toISOString() };
+    const prepared = await prepareSubmissionAnswers(currentAnswers);
+    if ("error" in prepared) {
+      setError(prepared.error ?? "Could not prepare submission.");
+      submittingRef.current = false;
+      setPending(false);
+      return;
+    }
+    const submission = { answers: prepared.answers, submitted_at: new Date().toISOString() };
     const formData = new FormData();
     formData.set("assessment_id", assessment.id);
     formData.set("submission", JSON.stringify(submission));
@@ -177,6 +300,7 @@ function AssessmentTaker({
   }
 
   function handleNext() {
+    if (!validateCurrentQuestion()) return;
     if (idx + 1 < questions.length) {
       setIdx(idx + 1);
     } else {
@@ -255,6 +379,41 @@ function AssessmentTaker({
           </div>
         )}
 
+        {/* Multi-select */}
+        {currentQ.type === "multiselect" && (
+          <div className="flex flex-col gap-2.5">
+            {(currentQ.options as string[]).map((opt: string, optIdx: number) => {
+              const selected = Array.isArray(answers[String(idx)])
+                ? (answers[String(idx)] as number[])
+                : [];
+              const checked = selected.includes(optIdx);
+              return (
+                <button
+                  key={optIdx}
+                  type="button"
+                  onClick={() => {
+                    const next = new Set(selected);
+                    if (checked) next.delete(optIdx);
+                    else next.add(optIdx);
+                    setAnswers((prev) => ({ ...prev, [String(idx)]: [...next].sort((a, b) => a - b) }));
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                    checked
+                      ? "bg-[#006d43]/10 border-[#006d43] text-[#006d43]"
+                      : "bg-[#f6f3f2] border-[#e5e2e1] text-[#1c1b1b] hover:border-[#006d43]/40"
+                  }`}
+                >
+                  <span className="inline-flex items-center justify-center w-4 h-4 mr-2 rounded border border-current text-[10px]">
+                    {checked ? "✓" : ""}
+                  </span>
+                  <span className="font-bold text-[#3d4a41] mr-2">{["A", "B", "C", "D"][optIdx]}.</span>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* True/False */}
         {currentQ.type === "truefalse" && (
           <div className="flex gap-3">
@@ -275,15 +434,70 @@ function AssessmentTaker({
           </div>
         )}
 
-        {/* Open text */}
+        {/* Configurable response */}
         {(!currentQ.type || currentQ.type === "open") && (
-          <textarea
-            rows={7}
-            value={(answers[String(idx)] as string) ?? ""}
-            onChange={(e) => setAnswers((prev) => ({ ...prev, [String(idx)]: e.target.value }))}
-            placeholder="Write your answer here..."
-            className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20 resize-none"
-          />
+          <div className="flex flex-col gap-3">
+            {(() => {
+              const methods = getOpenAnswerMethods({ ...currentQ, type: "open" });
+              const openAnswer = getOpenAnswer(idx);
+              const selectedFile = fileSelections[String(idx)];
+              return (
+                <>
+                  {methods.text && (
+                    <textarea
+                      rows={7}
+                      value={openAnswer.text ?? ""}
+                      onChange={(e) => updateOpenAnswer(idx, { text: e.target.value })}
+                      placeholder="Write your answer here..."
+                      className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20 resize-none"
+                    />
+                  )}
+
+                  {methods.url && (
+                    <input
+                      type="url"
+                      value={openAnswer.url ?? ""}
+                      onChange={(e) => updateOpenAnswer(idx, { url: e.target.value })}
+                      placeholder="https://example.com/your-work"
+                      className="w-full bg-[#f6f3f2] rounded-xl border border-[#e5e2e1] px-4 py-3 text-sm text-[#1c1b1b] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+                    />
+                  )}
+
+                  {methods.file && (
+                    <label className="flex items-center justify-between gap-3 bg-[#f6f3f2] rounded-xl border border-dashed border-[#006d43]/30 px-4 py-3 text-sm text-[#3d4a41] cursor-pointer hover:bg-[#006d43]/5 transition-colors">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <Paperclip className="w-4 h-4 text-[#006d43] shrink-0" />
+                        <span className="truncate">
+                          {selectedFile ? selectedFile.name : "Choose a PDF, DOC, image, or ZIP file"}
+                        </span>
+                      </span>
+                      {selectedFile && (
+                        <span className="text-xs text-[#5f5e5e] shrink-0">{formatFileSize(selectedFile.size)}</span>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] ?? null;
+                          if (file) {
+                            const fileError = isAllowedAssessmentFile(file);
+                            if (fileError) {
+                              setError(fileError);
+                              e.currentTarget.value = "";
+                              return;
+                            }
+                          }
+                          setError(null);
+                          setFileSelections((prev) => ({ ...prev, [String(idx)]: file }));
+                        }}
+                      />
+                    </label>
+                  )}
+                </>
+              );
+            })()}
+          </div>
         )}
 
         {error && (
@@ -317,7 +531,7 @@ function AssessmentSummaryCard({
   assessment,
   onStart,
 }: {
-  assessment: any;
+  assessment: AssessmentClientRecord;
   onStart: () => void;
 }) {
   const app = assessment.application;
@@ -336,9 +550,9 @@ function AssessmentSummaryCard({
     assessment.status === "submitted" ? "Submitted" : "Reviewed";
 
   // Results breakdown for job seeker (after release)
-  const questions: any[] = assessment.questions ?? [];
-  const submissionAnswers: Record<string, any> =
-    (assessment.submission as any)?.answers ?? {};
+  const questions: DisplayAssessmentQuestion[] = assessment.questions ?? [];
+  const submissionAnswers: Record<string, unknown> =
+    assessment.submission?.answers ?? {};
   const showResults = assessment.results_released && assessment.status !== "pending";
 
   return (
@@ -347,7 +561,7 @@ function AssessmentSummaryCard({
         <div className="flex items-start gap-4">
           <div className="w-11 h-11 rounded-xl bg-white border border-[#e5e2e1] flex items-center justify-center shrink-0 overflow-hidden p-1">
             {company?.logo_url ? (
-              <img src={company.logo_url} alt={company.name} className="w-full h-full object-contain" />
+              <img src={company.logo_url} alt={company.name ?? "Company"} className="w-full h-full object-contain" />
             ) : (
               <Building className="w-5 h-5 text-[#006d43]" />
             )}
@@ -409,13 +623,30 @@ function AssessmentSummaryCard({
 
           {questions.length > 0 && (
             <div className="flex flex-col gap-2">
-              {questions.map((q: any, qIdx: number) => {
+              {questions.map((q, qIdx: number) => {
                 const answer = submissionAnswers[String(qIdx)];
                 if (q.type === "open" || !q.type) {
+                  const openAnswer =
+                    answer && typeof answer === "object" && !Array.isArray(answer)
+                      ? (answer as OpenAnswer)
+                      : { text: typeof answer === "string" ? answer : "" };
                   return (
                     <div key={qIdx} className="bg-[#f6f3f2] rounded-xl p-3">
                       <p className="text-xs font-semibold text-[#1c1b1b] mb-1">Q{qIdx + 1}: {q.question ?? q.text}</p>
-                      <p className="text-xs text-[#3d4a41]">{answer ?? "No answer provided"}</p>
+                      <div className="flex flex-col gap-1 text-xs text-[#3d4a41]">
+                        {openAnswer.text && <p>{openAnswer.text}</p>}
+                        {openAnswer.url && (
+                          <a href={openAnswer.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#006d43] hover:underline">
+                            <ExternalLink className="w-3 h-3" /> Submitted link
+                          </a>
+                        )}
+                        {openAnswer.file && (
+                          <p className="inline-flex items-center gap-1">
+                            <Paperclip className="w-3 h-3" /> {openAnswer.file.name} ({formatFileSize(openAnswer.file.size)})
+                          </p>
+                        )}
+                        {!openAnswer.text && !openAnswer.url && !openAnswer.file && <p>No answer provided</p>}
+                      </div>
                     </div>
                   );
                 }
@@ -476,6 +707,37 @@ function AssessmentSummaryCard({
                   );
                 }
 
+                if (q.type === "multiselect") {
+                  const selectedAnswers = Array.isArray(answer) ? answer : [];
+                  return (
+                    <div key={qIdx} className="bg-[#f6f3f2] rounded-xl p-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <p className="text-xs font-semibold text-[#1c1b1b]">Q{qIdx + 1}: {q.question}</p>
+                        {isCorrect !== undefined && (
+                          <span className={`text-xs font-semibold ml-2 shrink-0 ${isCorrect ? "text-[#006d43]" : "text-red-500"}`}>
+                            {isCorrect ? "✓ Correct" : "✗ Incorrect"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {(q.options as string[]).map((opt: string, oIdx: number) => {
+                          const selected = selectedAnswers.includes(oIdx);
+                          return (
+                            <div key={oIdx} className={`text-xs px-2.5 py-1.5 rounded-lg ${
+                              selected
+                                ? isCorrect ? "bg-[#78fbb6]/20 text-[#005232] font-medium" : "bg-red-50 text-red-600 font-medium"
+                                : "text-[#5f5e5e]"
+                            }`}>
+                              <span className="font-bold mr-1">{["A","B","C","D"][oIdx]}.</span>{opt}
+                              {selected && (isCorrect ? " ✓" : " ✗")}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
                 return null;
               })}
             </div>
@@ -499,9 +761,9 @@ function AssessmentSummaryCard({
 
 // ─── Main client component ────────────────────────────────────────────────────
 
-export function AssessmentsClient({ initialAssessments }: { initialAssessments: any[] }) {
+export function AssessmentsClient({ initialAssessments }: { initialAssessments: AssessmentClientRecord[] }) {
   const [assessments, setAssessments] = useState(initialAssessments);
-  const [activeAssessment, setActiveAssessment] = useState<any | null>(null);
+  const [activeAssessment, setActiveAssessment] = useState<AssessmentClientRecord | null>(null);
 
   function handleComplete(submittedId: string) {
     setAssessments((prev) =>
