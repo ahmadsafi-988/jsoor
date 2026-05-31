@@ -6,13 +6,62 @@ import { Plus, Trash2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { createTemplate, updateTemplate } from "@/lib/company/templates";
 import type { TemplateRow } from "@/lib/company/templates";
+import type { OpenAnswerType } from "@/lib/assessments";
 
-type QuestionType = "open" | "mcq" | "truefalse";
+type QuestionType = "open" | "mcq" | "multiselect" | "truefalse";
 
 type QuestionDraft =
-  | { type: "open"; question: string }
-  | { type: "mcq"; question: string; options: string[]; correct: number }
-  | { type: "truefalse"; question: string; correct: boolean };
+  | {
+      type: "open";
+      question: string;
+      points: number;
+      allowTextAnswer: boolean;
+      allowUrlAnswer: boolean;
+      allowFileUpload: boolean;
+      requiredAnswerTypes: OpenAnswerType[];
+    }
+  | { type: "mcq"; question: string; options: string[]; correct: number; points: number }
+  | { type: "multiselect"; question: string; options: string[]; correct: number[]; points: number }
+  | { type: "truefalse"; question: string; correct: boolean; points: number };
+
+function normalizeDraftQuestion(q: QuestionDraft): QuestionDraft {
+  if (q.type === "open" || !q.type) {
+    const oldQuestion = q as QuestionDraft & { text?: string };
+    const hasV3Fields =
+      "allowTextAnswer" in q || "allowUrlAnswer" in q || "allowFileUpload" in q;
+    return {
+      type: "open",
+      question: q.question ?? oldQuestion.text ?? "",
+      points: q.points ?? 1,
+      allowTextAnswer: hasV3Fields ? q.allowTextAnswer === true : true,
+      allowUrlAnswer: q.allowUrlAnswer === true,
+      allowFileUpload: q.allowFileUpload === true,
+      requiredAnswerTypes: Array.isArray(q.requiredAnswerTypes) ? q.requiredAnswerTypes : [],
+    };
+  }
+  return { ...q, points: q.points ?? 1 } as QuestionDraft;
+}
+
+function defaultQuestion(type: QuestionType): QuestionDraft {
+  if (type === "mcq") {
+    return { type: "mcq", question: "", options: ["", "", "", ""], correct: 0, points: 1 };
+  }
+  if (type === "multiselect") {
+    return { type: "multiselect", question: "", options: ["", "", "", ""], correct: [], points: 1 };
+  }
+  if (type === "truefalse") {
+    return { type: "truefalse", question: "", correct: true, points: 1 };
+  }
+  return {
+    type: "open",
+    question: "",
+    points: 1,
+    allowTextAnswer: true,
+    allowUrlAnswer: false,
+    allowFileUpload: false,
+    requiredAnswerTypes: ["text"],
+  };
+}
 
 function QuestionDraftCard({
   q,
@@ -26,7 +75,31 @@ function QuestionDraftCard({
   onDelete: () => void;
 }) {
   const typeLabel =
-    q.type === "open" ? "Open Text" : q.type === "mcq" ? "Multiple Choice" : "True / False";
+    q.type === "open"
+      ? "Response"
+      : q.type === "mcq"
+      ? "Multiple Choice"
+      : q.type === "multiselect"
+      ? "Multi Select"
+      : "True / False";
+
+  function updateRequired(method: OpenAnswerType, checked: boolean) {
+    if (q.type !== "open") return;
+    const required = new Set(q.requiredAnswerTypes ?? []);
+    if (checked) required.add(method);
+    else required.delete(method);
+    onChange({ ...q, requiredAnswerTypes: [...required] });
+  }
+
+  function updateOpenMethod(method: OpenAnswerType, checked: boolean) {
+    if (q.type !== "open") return;
+    const next = { ...q };
+    if (method === "text") next.allowTextAnswer = checked;
+    if (method === "url") next.allowUrlAnswer = checked;
+    if (method === "file") next.allowFileUpload = checked;
+    if (!checked) next.requiredAnswerTypes = (next.requiredAnswerTypes ?? []).filter((item) => item !== method);
+    onChange(next);
+  }
 
   return (
     <div className="bg-[#f6f3f2] rounded-xl p-4 flex flex-col gap-3 border border-[#e5e2e1]">
@@ -50,15 +123,68 @@ function QuestionDraftCard({
         className="w-full bg-white rounded-lg border border-[#e5e2e1] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
       />
 
-      {q.type === "mcq" && (
+      <div className="flex flex-col gap-1.5 max-w-32">
+        <label className="text-[11px] font-semibold text-[#5f5e5e]">Points</label>
+        <input
+          type="number"
+          min="1"
+          step="1"
+          value={q.points ?? 1}
+          onChange={(e) => onChange({ ...q, points: Math.max(1, Number(e.target.value) || 1) } as QuestionDraft)}
+          className="w-full bg-white rounded-lg border border-[#e5e2e1] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
+        />
+      </div>
+
+      {q.type === "open" && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {([
+            ["text", "Text answer", q.allowTextAnswer],
+            ["url", "Link answer", q.allowUrlAnswer],
+            ["file", "File upload", q.allowFileUpload],
+          ] as const).map(([method, label, enabled]) => (
+            <div key={method} className="bg-white rounded-lg border border-[#e5e2e1] px-3 py-2 flex flex-col gap-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-[#3d4a41]">
+                <input
+                  type="checkbox"
+                  checked={enabled}
+                  onChange={(e) => updateOpenMethod(method, e.target.checked)}
+                  className="accent-[#006d43]"
+                />
+                {label}
+              </label>
+              <label className="flex items-center gap-2 text-[11px] text-[#5f5e5e]">
+                <input
+                  type="checkbox"
+                  checked={(q.requiredAnswerTypes ?? []).includes(method)}
+                  disabled={!enabled}
+                  onChange={(e) => updateRequired(method, e.target.checked)}
+                  className="accent-[#006d43] disabled:opacity-40"
+                />
+                Required
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(q.type === "mcq" || q.type === "multiselect") && (
         <div className="flex flex-col gap-2">
           {(q.options.length > 0 ? q.options : ["", "", "", ""]).map((opt, optIdx) => (
             <div key={optIdx} className="flex items-center gap-2">
               <input
-                type="radio"
+                type={q.type === "mcq" ? "radio" : "checkbox"}
                 name={`correct-${idx}`}
-                checked={q.correct === optIdx}
-                onChange={() => onChange({ ...q, correct: optIdx })}
+                checked={q.type === "mcq" ? q.correct === optIdx : q.correct.includes(optIdx)}
+                onChange={(e) => {
+                  if (q.type === "mcq") {
+                    onChange({ ...q, correct: optIdx });
+                    return;
+                  }
+                  const correct = new Set(q.correct);
+                  if (e.target.checked) correct.add(optIdx);
+                  else correct.delete(optIdx);
+                  onChange({ ...q, correct: [...correct].sort((a, b) => a - b) });
+                }}
                 className="accent-[#006d43]"
               />
               <input
@@ -66,14 +192,16 @@ function QuestionDraftCard({
                 onChange={(e) => {
                   const newOptions = [...q.options];
                   newOptions[optIdx] = e.target.value;
-                  onChange({ ...q, options: newOptions });
+                  onChange({ ...q, options: newOptions } as QuestionDraft);
                 }}
                 placeholder={`Option ${["A", "B", "C", "D"][optIdx]}`}
                 className="flex-1 bg-white rounded-lg border border-[#e5e2e1] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#006d43]/20"
               />
             </div>
           ))}
-          <p className="text-xs text-[#5f5e5e]">Select the radio button next to the correct answer.</p>
+          <p className="text-xs text-[#5f5e5e]">
+            {q.type === "mcq" ? "Select the radio button next to the correct answer." : "Check every correct answer."}
+          </p>
         </div>
       )}
 
@@ -111,26 +239,45 @@ export function TemplateFormClient({ template }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const [draftQuestions, setDraftQuestions] = useState<QuestionDraft[]>(
-    () => (template?.questions as QuestionDraft[] | null) ?? []
+    () => ((template?.questions as QuestionDraft[] | null) ?? []).map(normalizeDraftQuestion)
   );
   const [showAddType, setShowAddType] = useState(false);
 
   function addQuestion(type: QuestionType) {
-    const newQ: QuestionDraft =
-      type === "mcq"
-        ? { type: "mcq", question: "", options: ["", "", "", ""], correct: 0 }
-        : type === "truefalse"
-        ? { type: "truefalse", question: "", correct: true }
-        : { type: "open", question: "" };
-    setDraftQuestions((prev) => [...prev, newQ]);
+    setDraftQuestions((prev) => [...prev, defaultQuestion(type)]);
     setShowAddType(false);
   }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    const normalizedQuestions = draftQuestions.map(normalizeDraftQuestion);
+    for (const [index, question] of normalizedQuestions.entries()) {
+      if (!question.question.trim()) {
+        setError(`Question ${index + 1} needs text.`);
+        return;
+      }
+      if (!Number.isInteger(Number(question.points)) || Number(question.points) <= 0) {
+        setError(`Question ${index + 1} needs positive whole-number points.`);
+        return;
+      }
+      if (question.type === "open" && !question.allowTextAnswer && !question.allowUrlAnswer && !question.allowFileUpload) {
+        setError(`Question ${index + 1} must allow at least one answer method.`);
+        return;
+      }
+      if ((question.type === "mcq" || question.type === "multiselect") && question.options.filter(Boolean).length < 2) {
+        setError(`Question ${index + 1} needs at least two options.`);
+        return;
+      }
+      if (question.type === "multiselect" && question.correct.length === 0) {
+        setError(`Question ${index + 1} needs at least one correct answer.`);
+        return;
+      }
+    }
+
+    setDraftQuestions(normalizedQuestions);
     const formData = new FormData(e.currentTarget);
-    formData.set("questions", JSON.stringify(draftQuestions));
+    formData.set("questions", JSON.stringify(normalizedQuestions));
 
     startTransition(async () => {
       const res = isEdit
@@ -240,7 +387,7 @@ export function TemplateFormClient({ template }: Props) {
             </button>
             {showAddType && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-[#e5e2e1] shadow-lg z-10 p-2 flex flex-col gap-1">
-                {(["open", "mcq", "truefalse"] as QuestionType[]).map((type) => (
+                {(["open", "mcq", "multiselect", "truefalse"] as QuestionType[]).map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -251,6 +398,8 @@ export function TemplateFormClient({ template }: Props) {
                       ? "Open Text"
                       : type === "mcq"
                       ? "Multiple Choice"
+                      : type === "multiselect"
+                      ? "Multi Select"
                       : "True / False"}
                   </button>
                 ))}

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { Json, Tables } from "@/lib/supabase_generated_types";
+import { normalizeAssessmentQuestions } from "@/lib/assessments";
 
 export type TemplateRow = Tables<"assessment_templates">;
 
@@ -12,9 +13,20 @@ function parseQuestions(raw: string | null): Json {
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const normalized = normalizeAssessmentQuestions(parsed);
+    return normalized.error ? [] : (normalized.questions as Json);
   } catch {
     return [];
+  }
+}
+
+function getQuestionsValidationError(raw: string | null): string | null {
+  if (!raw) return null;
+  try {
+    const normalized = normalizeAssessmentQuestions(JSON.parse(raw));
+    return normalized.error ?? null;
+  } catch {
+    return "Questions could not be read.";
   }
 }
 
@@ -80,6 +92,8 @@ export async function createTemplateRecord(formData: FormData) {
   const tagsRaw = (formData.get("tags") as string)?.trim();
   const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
   const questionsRaw = formData.get("questions") as string;
+  const questionError = getQuestionsValidationError(questionsRaw);
+  if (questionError) return { error: questionError };
   const questions = parseQuestions(questionsRaw);
 
   const { data, error } = await supabase
@@ -124,6 +138,8 @@ export async function updateTemplateRecord(id: string, formData: FormData) {
   const tagsRaw = (formData.get("tags") as string)?.trim();
   const tags = tagsRaw ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean) : [];
   const questionsRaw = formData.get("questions") as string;
+  const questionError = getQuestionsValidationError(questionsRaw);
+  if (questionError) return { error: questionError };
   const questions = parseQuestions(questionsRaw);
 
   const { error } = await supabase

@@ -4,6 +4,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { Tables } from "@/lib/supabase_generated_types";
+import {
+  sanitizeQuestionsForJobSeeker,
+  type AssessmentQuestion,
+} from "@/lib/assessments";
 
 export type JobRow = Tables<"jobs">;
 export type CompanyRow = Tables<"companies">;
@@ -674,15 +678,13 @@ export async function getMyAssessments() {
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((assessment: any) => {
-    const questions = (assessment.questions as any[]) ?? [];
+    const questions = ((assessment.questions as any[]) ?? []) as AssessmentQuestion[];
     const answers = (assessment.submission as any)?.answers ?? {};
-    const sanitized = questions.map((q: any, i: number) => {
-      const { correct, ...rest } = q;
-      if (assessment.results_released && (q.type === "mcq" || q.type === "truefalse")) {
-        return { ...rest, isCorrect: answers[String(i)] === correct };
-      }
-      return rest;
-    });
+    const sanitized = sanitizeQuestionsForJobSeeker(
+      questions,
+      answers,
+      Boolean(assessment.results_released),
+    );
     return { ...assessment, questions: sanitized };
   });
 }

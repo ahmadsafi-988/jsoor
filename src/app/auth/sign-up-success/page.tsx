@@ -15,11 +15,11 @@ export default function SignUpSuccessPage() {
       <div className="space-y-2 max-w-sm">
         <h1 className="text-2xl font-bold">Check your email</h1>
         <p className="text-sm text-muted-foreground">
-          We've sent a confirmation link to your email address. Click the link
-          to verify your account, then you'll be taken to complete your profile.
+          We&apos;ve sent a confirmation link to your email address. Click the link
+          to verify your account, then you&apos;ll be taken to complete the next step.
         </p>
         <p className="text-xs text-muted-foreground pt-2">
-          Didn't receive it? Check your spam folder or{" "}
+          Didn&apos;t receive it? Check your spam folder or{" "}
           <Link href="/auth/sign-up" className="underline hover:text-foreground">
             try again
           </Link>

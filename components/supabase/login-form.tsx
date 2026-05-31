@@ -123,7 +123,13 @@ export function LoginForm() {
       <p className="text-center text-sm text-[#5f5e5e]">
         Don&apos;t have an account?{" "}
         <Link href="/auth/sign-up" className="font-semibold text-[#006d43] hover:text-[#00a86b] transition-colors">
-          Sign up
+          Create a job seeker account
+        </Link>
+      </p>
+      <p className="text-center text-sm text-[#5f5e5e]">
+        Employer?{" "}
+        <Link href="/auth/company-sign-up" className="font-semibold text-[#006d43] hover:text-[#00a86b] transition-colors">
+          Request an employer account
         </Link>
       </p>
     </form>

@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { CompanyProfileDetail } from "@/components/app/details/CompanyProfileDetail";
+import { CompanyReviewPanel } from "./CompanyReviewPanel";
 import { getPublicCompanyByIdentifier } from "@/lib/company/data";
+import { getAdminCompanyVerification } from "@/lib/admin/data";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminCompanyProfilePage({
@@ -24,12 +26,25 @@ export default async function AdminCompanyProfilePage({
   const { identifier } = await params;
   const result = await getPublicCompanyByIdentifier(identifier);
   if (!result) notFound();
+  const verification = await getAdminCompanyVerification(result.company.id);
 
   return (
-    <CompanyProfileDetail
-      result={result}
-      backHref="/admin/companies"
-      jobHrefPrefix="/admin/jobs"
-    />
+    <>
+      <div className="px-6 pt-8">
+        <div className="mx-auto max-w-5xl">
+          <CompanyReviewPanel
+            companyId={result.company.id}
+            companyName={result.company.name}
+            isVerified={result.company.is_verified}
+            verification={verification}
+          />
+        </div>
+      </div>
+      <CompanyProfileDetail
+        result={result}
+        backHref="/admin/companies"
+        jobHrefPrefix="/admin/jobs"
+      />
+    </>
   );
 }

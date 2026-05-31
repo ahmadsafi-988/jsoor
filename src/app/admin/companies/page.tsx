@@ -15,7 +15,7 @@ export default async function AdminCompaniesPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-neutral-900 mb-1">Companies</h1>
-      <p className="text-neutral-500 text-sm mb-8">Verify or unverify company accounts</p>
+      <p className="text-neutral-500 text-sm mb-8">Review employer account requests and verification status</p>
       <AdminCompaniesClient companies={companies} />
     </div>
   );

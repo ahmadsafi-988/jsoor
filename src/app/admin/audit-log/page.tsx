@@ -7,6 +7,8 @@ const ACTION_LABELS: Record<string, string> = {
   unlock_job: "Unlocked job",
   verify_company: "Verified company",
   unverify_company: "Unverified company",
+  request_company_changes: "Requested company changes",
+  reject_company: "Rejected company",
   block_user: "Blocked user",
   unblock_user: "Unblocked user",
   suspend_user: "Suspended user",
@@ -28,6 +30,8 @@ const ACTION_COLORS: Record<string, string> = {
   review_report: "bg-blue-100 text-blue-700",
   dismiss_report: "bg-neutral-100 text-neutral-500",
   unverify_company: "bg-neutral-100 text-neutral-500",
+  request_company_changes: "bg-amber-100 text-amber-700",
+  reject_company: "bg-red-100 text-red-700",
 };
 
 export default async function AdminAuditLogPage() {

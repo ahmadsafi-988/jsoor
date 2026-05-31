@@ -6,7 +6,7 @@ import { JsoorLogo } from "@/components/JsoorLogo";
 
 const navLinks = [
   { name: "Find Jobs", href: "#features" },
-  { name: "For Employers", href: "#companies" },
+  { name: "For Employers", href: "/auth/company-sign-up" },
   { name: "Community", href: "#testimonials" },
   { name: "Interview Simulator", href: "#how-it-works" },
 ];
@@ -27,13 +27,13 @@ export function Navbar() {
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-8">
           {navLinks.map((link) => (
-            <a
+            <Link
               key={link.name}
               href={link.href}
               className="text-neutral-600 font-medium font-headline tracking-tight hover:text-emerald-500 transition-colors duration-300"
             >
               {link.name}
-            </a>
+            </Link>
           ))}
         </div>
 
@@ -67,14 +67,14 @@ export function Navbar() {
         <div className="md:hidden border-t border-neutral-100 bg-white px-6 py-4">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
-              <a
+              <Link
                 key={link.name}
                 href={link.href}
                 onClick={closeMenu}
                 className="px-3 py-2.5 text-sm font-medium text-neutral-600 hover:text-[#006d43] hover:bg-emerald-50 rounded-lg transition-colors font-headline"
               >
                 {link.name}
-              </a>
+              </Link>
             ))}
             <div className="flex flex-col gap-2 pt-4 mt-2 border-t border-neutral-100">
               <Link

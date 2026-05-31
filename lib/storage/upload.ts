@@ -6,6 +6,11 @@
 // saved to the profiles table via a server action.
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  ASSESSMENT_SUBMISSIONS_BUCKET,
+  isAllowedAssessmentFile,
+  type AssessmentFileAnswer,
+} from "@/lib/assessments";
 
 const AVATAR_BUCKET = "avatars";
 const CV_BUCKET = "cvs";
@@ -62,4 +67,44 @@ export async function uploadCV(
   // Return the storage path only — never a public URL.
   // Signed URLs are generated server-side at read time by authorized parties.
   return { url: path };
+}
+
+function sanitizeFileName(name: string) {
+  return name
+    .replace(/[^a-zA-Z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 120);
+}
+
+export async function uploadAssessmentSubmissionFile(
+  assessmentId: string,
+  questionIndex: number,
+  file: File,
+): Promise<{ file: AssessmentFileAnswer } | { error: string }> {
+  const validationError = isAllowedAssessmentFile(file);
+  if (validationError) return { error: validationError };
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const safeName = sanitizeFileName(file.name) || "submission-file";
+  const path = `${assessmentId}/${user.id}/question-${questionIndex}/${Date.now()}-${safeName}`;
+
+  const { error } = await supabase.storage
+    .from(ASSESSMENT_SUBMISSIONS_BUCKET)
+    .upload(path, file, { contentType: file.type || "application/octet-stream" });
+
+  if (error) return { error: error.message };
+
+  return {
+    file: {
+      path,
+      name: file.name,
+      type: file.type || "application/octet-stream",
+      size: file.size,
+    },
+  };
 }
