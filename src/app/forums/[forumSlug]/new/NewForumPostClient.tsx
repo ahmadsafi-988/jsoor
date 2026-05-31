@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ImagePlus, Loader2, X } from "lucide-react";
-import { createForumPost } from "@/lib/forums/actions";
+import { DashboardBackButton } from "@/components/app/DashboardBackButton";
+import { createForumPost, updateOwnForumPost } from "@/lib/forums/actions";
 import { createClient } from "@/lib/supabase/client";
 import {
   FORUM_IMAGE_TYPES,
@@ -17,6 +19,12 @@ type SelectedImage = {
   previewUrl: string;
 };
 
+type ExistingImage = {
+  id: string;
+  signed_url: string | null;
+  alt_text: string | null;
+};
+
 function safeName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
 }
@@ -26,22 +34,37 @@ export function NewForumPostClient({
   forumSlug,
   forumName,
   userId,
+  mode = "create",
+  postId,
+  initialTitle = "",
+  initialBody = "",
+  initialAnonymous = false,
+  existingImages: initialExistingImages = [],
 }: {
   forumId: string;
   forumSlug: string;
   forumName: string;
   userId: string;
+  mode?: "create" | "edit";
+  postId?: string;
+  initialTitle?: string;
+  initialBody?: string;
+  initialAnonymous?: boolean;
+  existingImages?: ExistingImage[];
 }) {
+  const router = useRouter();
   const [images, setImages] = useState<SelectedImage[]>([]);
+  const [existingImages, setExistingImages] = useState(initialExistingImages);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const isEdit = mode === "edit";
 
   function addImages(files: FileList | null) {
     if (!files) return;
     setError(null);
     const next = [...images];
     for (const file of Array.from(files)) {
-      if (next.length >= MAX_FORUM_IMAGES) break;
+      if (existingImages.length + next.length >= MAX_FORUM_IMAGES) break;
       if (!FORUM_IMAGE_TYPES.includes(file.type)) {
         setError("Images must be JPEG, PNG, WebP, or GIF.");
         continue;
@@ -53,6 +76,10 @@ export function NewForumPostClient({
       next.push({ file, previewUrl: URL.createObjectURL(file) });
     }
     setImages(next);
+  }
+
+  function removeExistingImage(id: string) {
+    setExistingImages((current) => current.filter((image) => image.id !== id));
   }
 
   function removeImage(index: number) {
@@ -82,8 +109,18 @@ export function NewForumPostClient({
       }
 
       formData.set("image_paths", JSON.stringify(paths));
-      const result = await createForumPost(formData);
-      if (result && "error" in result) setError(result.error);
+      if (isEdit) {
+        formData.set("kept_image_ids", JSON.stringify(existingImages.map((image) => image.id)));
+      }
+      const result = isEdit ? await updateOwnForumPost(formData) : await createForumPost(formData);
+      if (result && "error" in result) {
+        setError(result.error);
+        return;
+      }
+      if (isEdit && postId) {
+        router.push(`/forums/${forumSlug}/posts/${postId}`);
+        router.refresh();
+      }
     });
   }
 
@@ -92,13 +129,15 @@ export function NewForumPostClient({
       <input type="hidden" name="forum_id" value={forumId} />
       <input type="hidden" name="forum_slug" value={forumSlug} />
       <input type="hidden" name="image_paths" value="[]" />
+      {isEdit && postId && <input type="hidden" name="post_id" value={postId} />}
+      {isEdit && <input type="hidden" name="kept_image_ids" value="[]" />}
 
       <div>
-        <Link href={`/forums/${forumSlug}`} className="text-sm font-semibold text-[#006d43] hover:underline">
-          Back to {forumName}
-        </Link>
-        <h1 className="mt-3 text-2xl font-bold text-[#1c1b1b]">Create Post</h1>
-        <p className="mt-1 text-sm text-[#5f5e5e]">Share a question, resource, or experience with this forum.</p>
+        <DashboardBackButton fallbackHref={`/forums/${forumSlug}`} label={`Back to ${forumName}`} className="inline-flex w-fit cursor-pointer items-center gap-1.5 text-sm font-semibold text-[#006d43] transition-colors hover:text-[#005735]" />
+        <h1 className="mt-3 text-2xl font-bold text-[#1c1b1b]">{isEdit ? "Edit Post" : "Create Post"}</h1>
+        <p className="mt-1 text-sm text-[#5f5e5e]">
+          {isEdit ? "Update your text, anonymity setting, or attached images." : "Share a question, resource, or experience with this community."}
+        </p>
       </div>
 
       <section className="space-y-5 rounded-2xl border border-[#e5e2e1] bg-white p-6 shadow-sm">
@@ -110,8 +149,9 @@ export function NewForumPostClient({
             name="title"
             maxLength={160}
             required
+            defaultValue={initialTitle}
             className="w-full rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
-            placeholder="What should other students know?"
+            placeholder="What should others know?"
           />
         </div>
 
@@ -123,6 +163,7 @@ export function NewForumPostClient({
             name="body"
             maxLength={8000}
             rows={9}
+            defaultValue={initialBody}
             className="w-full resize-y rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
             placeholder="Write the post text. You can leave this empty only if you attach images."
           />
@@ -131,9 +172,9 @@ export function NewForumPostClient({
         <div className="flex items-center justify-between rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-4 py-3">
           <div>
             <p className="text-sm font-semibold text-[#1c1b1b]">Post anonymously</p>
-            <p className="text-xs text-[#5f5e5e]">Other users will see Anonymous Job Seeker.</p>
+            <p className="text-xs text-[#5f5e5e]">Other users will see Anonymous Member.</p>
           </div>
-          <input name="is_anonymous" type="checkbox" className="h-4 w-4 accent-[#006d43]" />
+          <input name="is_anonymous" type="checkbox" defaultChecked={initialAnonymous} className="h-4 w-4 accent-[#006d43]" />
         </div>
 
         <div>
@@ -147,8 +188,21 @@ export function NewForumPostClient({
             <input type="file" multiple accept={FORUM_IMAGE_TYPES.join(",")} className="hidden" onChange={(event) => addImages(event.target.files)} />
           </label>
 
-          {images.length > 0 && (
+          {(existingImages.length > 0 || images.length > 0) && (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {existingImages.map((image) => (
+                <div key={image.id} className="relative aspect-video overflow-hidden rounded-xl border border-[#e5e2e1]">
+                  {image.signed_url && <img src={image.signed_url} alt={image.alt_text ?? ""} className="h-full w-full object-cover" />}
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(image.id)}
+                    className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
               {images.map((image, index) => (
                 <div key={image.previewUrl} className="relative aspect-video overflow-hidden rounded-xl border border-[#e5e2e1]">
                   <img src={image.previewUrl} alt="" className="h-full w-full object-cover" />
@@ -181,7 +235,7 @@ export function NewForumPostClient({
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-[#006d43] to-[#00a86b] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_16px_rgba(0,109,67,0.15)] transition-all hover:brightness-110 disabled:opacity-60"
           >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isPending ? "Posting..." : "Publish Post"}
+            {isPending ? (isEdit ? "Saving..." : "Posting...") : isEdit ? "Save Changes" : "Publish Post"}
           </button>
         </div>
       </section>

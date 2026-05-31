@@ -6,20 +6,42 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Flag,
   Loader2,
+  Maximize2,
   MessageCircle,
   Pencil,
   Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { DashboardBackButton } from "@/components/app/DashboardBackButton";
 import {
   createForumComment,
   deleteOwnForumComment,
   deleteOwnForumPost,
   reportForumTarget,
   updateOwnForumComment,
-  updateOwnForumPost,
   voteForumTarget,
 } from "@/lib/forums/actions";
 import type { ForumCommentItem, ForumPostDetail } from "@/lib/forums/data";
@@ -195,38 +217,44 @@ function ReportButton({
   }
 
   return (
-    <div className="relative">
+    <div>
       <button
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setOpen(true)}
         className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5f5e5e] hover:bg-red-50 hover:text-red-600"
       >
         <Flag className="h-3.5 w-3.5" />
         Report
       </button>
-      {open && (
-        <div className="mt-2 rounded-xl border border-[#e5e2e1] bg-white p-3 shadow-sm">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-2xl border-[#e5e2e1] bg-white">
+          <DialogHeader>
+            <DialogTitle>Report {targetType}</DialogTitle>
+            <DialogDescription>
+              Tell admins what looks wrong. Reports are reviewed before action is taken.
+            </DialogDescription>
+          </DialogHeader>
           <textarea
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            rows={3}
+            rows={4}
             maxLength={500}
             placeholder="Describe the issue..."
-            className="w-full resize-none rounded-lg border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200"
+            className="w-full resize-none rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-red-200"
           />
-          <div className="mt-2 flex justify-end gap-2">
-            <button onClick={() => setOpen(false)} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-[#5f5e5e] hover:bg-[#f6f3f2]">
+          <DialogFooter>
+            <button onClick={() => setOpen(false)} className="rounded-xl px-4 py-2 text-sm font-semibold text-[#5f5e5e] hover:bg-[#f6f3f2]">
               Cancel
             </button>
             <button
               onClick={submit}
               disabled={isPending || !reason.trim()}
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {isPending ? "Submitting..." : "Submit"}
+              {isPending ? "Submitting..." : "Submit Report"}
             </button>
-          </div>
-        </div>
-      )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {message && <p className="mt-1 text-xs text-[#5f5e5e]">{message}</p>}
     </div>
   );
@@ -338,7 +366,6 @@ function CommentItem({
   }
 
   function remove() {
-    if (!confirm("Delete this comment?")) return;
     startTransition(async () => {
       const result = await deleteOwnForumComment(comment.id, postId, forumSlug);
       if ("error" in result) setError(result.error);
@@ -414,10 +441,28 @@ function CommentItem({
                   <Pencil className="h-3.5 w-3.5" />
                   Edit
                 </button>
-                <button onClick={remove} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="rounded-2xl border-[#e5e2e1] bg-white">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete comment?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This removes the comment and any replies attached to it.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={remove} className="bg-red-600 text-white hover:bg-red-700">
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </>
             )}
           </div>
@@ -441,6 +486,126 @@ function CommentItem({
   );
 }
 
+function PostImageCarousel({ images }: { images: ForumPostDetail["images"] }) {
+  const [index, setIndex] = useState(0);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  if (images.length === 0) return null;
+
+  const active = images[index] ?? images[0];
+  const canMove = images.length > 1;
+
+  function previous() {
+    setIndex((current) => (current === 0 ? images.length - 1 : current - 1));
+  }
+
+  function next() {
+    setIndex((current) => (current === images.length - 1 ? 0 : current + 1));
+  }
+
+  return (
+    <div className="mt-6">
+      <div className="relative overflow-hidden rounded-2xl border border-[#e5e2e1] bg-[#f6f3f2]">
+        <button
+          type="button"
+          onClick={() => setViewerOpen(true)}
+          className="block aspect-video w-full cursor-zoom-in"
+          aria-label="Open image viewer"
+        >
+          {active.signed_url && (
+            <img src={active.signed_url} alt={active.alt_text ?? ""} className="h-full w-full object-contain" />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewerOpen(true)}
+          className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#1c1b1b] shadow-sm transition-colors hover:bg-white"
+          aria-label="Open image viewer"
+        >
+          <Maximize2 className="h-4 w-4" />
+        </button>
+        {canMove && (
+          <>
+            <button
+              type="button"
+              onClick={previous}
+              className="absolute left-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#1c1b1b] shadow-sm transition-colors hover:bg-white"
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={next}
+              className="absolute right-3 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#1c1b1b] shadow-sm transition-colors hover:bg-white"
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-2.5 py-1 text-xs font-semibold text-white">
+              {index + 1} / {images.length}
+            </span>
+          </>
+        )}
+      </div>
+      {canMove && (
+        <div className="mt-3 flex justify-center gap-1.5">
+          {images.map((image, itemIndex) => (
+            <button
+              key={image.id}
+              type="button"
+              onClick={() => setIndex(itemIndex)}
+              className={`h-2 rounded-full transition-all ${
+                itemIndex === index ? "w-6 bg-[#006d43]" : "w-2 bg-[#d8d3d1]"
+              }`}
+              aria-label={`Show image ${itemIndex + 1}`}
+            />
+          ))}
+        </div>
+      )}
+      <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] border-0 bg-transparent p-0 shadow-none sm:max-w-[calc(100vw-3rem)] [&>button]:bg-white/90 [&>button]:text-[#1c1b1b]">
+          <DialogTitle className="sr-only">Post image viewer</DialogTitle>
+          <DialogDescription className="sr-only">
+            Enlarged view of the selected post image.
+          </DialogDescription>
+          <div className="relative flex h-[min(86vh,900px)] w-full items-center justify-center rounded-2xl bg-black/85 p-4">
+            {active.signed_url && (
+              <img
+                src={active.signed_url}
+                alt={active.alt_text ?? ""}
+                className="max-h-full max-w-full object-contain"
+              />
+            )}
+            {canMove && (
+              <>
+                <button
+                  type="button"
+                  onClick={previous}
+                  className="absolute left-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#1c1b1b] shadow-sm transition-colors hover:bg-white"
+                  aria-label="Previous image"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={next}
+                  className="absolute right-4 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-[#1c1b1b] shadow-sm transition-colors hover:bg-white"
+                  aria-label="Next image"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+                <span className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-[#1c1b1b]">
+                  {index + 1} / {images.length}
+                </span>
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export function ForumPostClient({
   forum,
   post,
@@ -452,31 +617,12 @@ export function ForumPostClient({
   userId: string | null;
   role?: string;
 }) {
-  const router = useRouter();
-  const [editingPost, setEditingPost] = useState(false);
-  const [title, setTitle] = useState(post.title);
-  const [body, setBody] = useState(post.body);
-  const [anonymous, setAnonymous] = useState(post.is_anonymous);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const canEdit = userId === post.author_id;
   const href = `/forums/${forum.slug}/posts/${post.id}`;
 
-  function updatePost(formData: FormData) {
-    setError(null);
-    startTransition(async () => {
-      const result = await updateOwnForumPost(formData);
-      if ("error" in result) {
-        setError(result.error);
-      } else {
-        setEditingPost(false);
-        router.refresh();
-      }
-    });
-  }
-
   function deletePost() {
-    if (!confirm("Delete this post? This cannot be undone.")) return;
     startTransition(async () => {
       const result = await deleteOwnForumPost(post.id, forum.slug);
       if (result && "error" in result) setError(result.error);
@@ -485,83 +631,61 @@ export function ForumPostClient({
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-8 py-8">
-      <Link href={`/forums/${forum.slug}`} className="text-sm font-semibold text-[#006d43] hover:underline">
-        Back to {forum.name}
-      </Link>
+      <DashboardBackButton fallbackHref={`/forums/${forum.slug}`} label={`Back to ${forum.name}`} className="inline-flex w-fit cursor-pointer items-center gap-1.5 text-sm font-semibold text-[#006d43] transition-colors hover:text-[#005735]" />
 
       <article className="rounded-2xl border border-[#e5e2e1] bg-white p-6 shadow-sm">
         <div>
           <div className="min-w-0">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                {editingPost ? (
-                  <form action={updatePost} className="space-y-4">
-                    <input type="hidden" name="post_id" value={post.id} />
-                    <input type="hidden" name="forum_slug" value={forum.slug} />
-                    <input
-                      name="title"
-                      value={title}
-                      onChange={(event) => setTitle(event.target.value)}
-                      maxLength={160}
-                      className="w-full rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-lg font-bold outline-none focus:ring-2 focus:ring-[#006d43]/20"
-                    />
-                    <textarea
-                      name="body"
-                      value={body}
-                      onChange={(event) => setBody(event.target.value)}
-                      rows={8}
-                      maxLength={8000}
-                      className="w-full resize-y rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
-                    />
-                    <label className="flex items-center gap-2 text-xs font-semibold text-[#5f5e5e]">
-                      <input name="is_anonymous" type="checkbox" checked={anonymous} onChange={(event) => setAnonymous(event.target.checked)} className="h-4 w-4 accent-[#006d43]" />
-                      Keep anonymous
-                    </label>
-                    <div className="flex justify-end gap-2">
-                      <button type="button" onClick={() => setEditingPost(false)} className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[#5f5e5e] hover:bg-[#f6f3f2]">
-                        Cancel
-                      </button>
-                      <button type="submit" disabled={isPending || !title.trim() || !body.trim()} className="rounded-lg bg-[#006d43] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                        Save
-                      </button>
-                    </div>
-                  </form>
-                ) : (
+                <h1 className="text-2xl font-bold text-[#1c1b1b]">{post.title}</h1>
+                <div className="mt-2">
+                  <AuthorLine
+                    display={post.author_display}
+                    username={post.author_username}
+                    realDisplay={post.real_author_display}
+                    realUsername={post.real_author_username}
+                    authorId={post.author_id}
+                    isAnonymous={post.is_anonymous}
+                    createdAt={post.created_at}
+                    viewerRole={role}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1">
+                <ReportButton targetType="post" targetId={post.id} />
+                {canEdit && (
                   <>
-                    <h1 className="text-2xl font-bold text-[#1c1b1b]">{post.title}</h1>
-                    <div className="mt-2">
-                      <AuthorLine
-                        display={post.author_display}
-                        username={post.author_username}
-                        realDisplay={post.real_author_display}
-                        realUsername={post.real_author_username}
-                        authorId={post.author_id}
-                        isAnonymous={post.is_anonymous}
-                        createdAt={post.created_at}
-                        viewerRole={role}
-                      />
-                    </div>
+                    <Link href={`/forums/${forum.slug}/posts/${post.id}/edit`} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5f5e5e] hover:bg-[#f6f3f2]">
+                      <Pencil className="h-3.5 w-3.5" />
+                      Edit
+                    </Link>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="rounded-2xl border-[#e5e2e1] bg-white">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete post?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently removes the post, its comments, and attached images.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={deletePost} className="bg-red-600 text-white hover:bg-red-700">
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </>
                 )}
               </div>
-
-              {!editingPost && (
-                <div className="flex flex-wrap items-center gap-1">
-                  <ReportButton targetType="post" targetId={post.id} />
-                  {canEdit && (
-                    <>
-                      <button onClick={() => setEditingPost(true)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[#5f5e5e] hover:bg-[#f6f3f2]">
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button onClick={deletePost} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
             {error && (
@@ -571,37 +695,22 @@ export function ForumPostClient({
               </p>
             )}
 
-            {!editingPost && post.body && (
+            {post.body && (
               <p className="mt-5 whitespace-pre-line text-sm leading-7 text-[#3d4a41]">{post.body}</p>
             )}
 
-            {post.images.length > 0 && (
-              <div className="mt-6 flex snap-x gap-3 overflow-x-auto pb-2">
-                {post.images.map((image) => (
-                  <div
-                    key={image.id}
-                    className="aspect-video min-w-full snap-center overflow-hidden rounded-2xl border border-[#e5e2e1] bg-[#f6f3f2] sm:min-w-[78%]"
-                  >
-                    {image.signed_url && (
-                      <img src={image.signed_url} alt={image.alt_text ?? ""} className="h-full w-full object-contain" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+            <PostImageCarousel images={post.images} />
 
-            {!editingPost && (
-              <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[#f0edec] pt-4">
-                <VoteControls
-                  score={post.score}
-                  currentVote={post.current_user_vote}
-                  targetType="post"
-                  targetId={post.id}
-                  href={href}
-                />
-                <span className="text-xs font-semibold text-[#5f5e5e]">Score</span>
-              </div>
-            )}
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[#f0edec] pt-4">
+              <VoteControls
+                score={post.score}
+                currentVote={post.current_user_vote}
+                targetType="post"
+                targetId={post.id}
+                href={href}
+              />
+              <span className="text-xs font-semibold text-[#5f5e5e]">Score</span>
+            </div>
           </div>
         </div>
       </article>

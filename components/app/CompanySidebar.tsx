@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   MessageSquare,
+  MessagesSquare,
 } from "lucide-react";
 import { JsoorLogo } from "@/components/JsoorLogo";
 import { LogoutConfirmationButton } from "@/components/app/LogoutConfirmationButton";
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/company/home", icon: LayoutDashboard },
   { label: "Jobs", href: "/company/jobs", icon: Briefcase },
   { label: "Assessments", href: "/company/assessments", icon: ClipboardCheck },
+  { label: "Communities", href: "/forums", icon: MessagesSquare },
   { label: "Messages", href: "/company/messages", icon: MessageSquare },
   { label: "Profile", href: "/company/profile", icon: Building2 },
   { label: "Notifications", href: "/company/notifications", icon: Bell },

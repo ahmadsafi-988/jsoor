@@ -234,6 +234,45 @@ export type Database = {
           },
         ]
       }
+      forum_memberships: {
+        Row: {
+          created_at: string
+          forum_id: string
+          id: string
+          notifications_enabled: boolean
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          forum_id: string
+          id?: string
+          notifications_enabled?: boolean
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          forum_id?: string
+          id?: string
+          notifications_enabled?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_memberships_forum_id_fkey"
+            columns: ["forum_id"]
+            isOneToOne: false
+            referencedRelation: "forums"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forum_post_images: {
         Row: {
           alt_text: string | null

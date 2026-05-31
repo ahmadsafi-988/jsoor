@@ -62,14 +62,14 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
       <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
           <Plus className="h-4 w-4 text-[#006d43]" />
-          <h2 className="font-bold text-neutral-900">Create Forum</h2>
+          <h2 className="font-bold text-neutral-900">Create Community</h2>
         </div>
         <form action={submitCreate} className="grid gap-3 lg:grid-cols-[220px_1fr_auto]">
           <input
             name="name"
             required
             maxLength={80}
-            placeholder="Forum name"
+            placeholder="Community name"
             className="rounded-xl border border-neutral-200 bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
           />
           <input
@@ -90,7 +90,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
-          Forum Requests
+          Community Requests
         </h2>
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <table className="w-full text-sm">
@@ -157,7 +157,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
               {data.requests.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-5 py-10 text-center text-neutral-400">
-                    No forum requests yet.
+                    No community requests yet.
                   </td>
                 </tr>
               )}
@@ -168,7 +168,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
-          Forums
+          Communities
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data.forums.map((forum) => (
@@ -188,7 +188,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
               </div>
               <div className="mt-4 flex items-center justify-between border-t border-neutral-100 pt-4">
                 <Link href={`/forums/${forum.slug}`} className="text-xs font-semibold text-[#006d43] hover:underline">
-                  View forum
+                  View community
                 </Link>
                 <button
                   onClick={() => run(forum.id, () => adminSetForumActive(forum.id, !forum.is_active, forum.name))}
@@ -203,10 +203,10 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
         </div>
       </section>
 
-      <section>
+      <section id="reported-content" className="scroll-mt-8">
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-neutral-500">
           <MessageSquareWarning className="h-4 w-4" />
-          Reported Forum Content
+          Reported Community Content
         </h2>
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <table className="w-full text-sm">
@@ -273,6 +273,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                               report.target_is_hidden ? "unhide" : "hide",
                               report.target_label,
                               reason,
+                              report.id,
                             ),
                           );
                         }}
@@ -290,6 +291,8 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                               report.target_id,
                               "delete",
                               report.target_label,
+                              undefined,
+                              report.id,
                             ),
                           );
                         }}
@@ -321,7 +324,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
               {data.reports.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-5 py-10 text-center text-neutral-400">
-                    No forum reports submitted yet.
+                    No community reports submitted yet.
                   </td>
                 </tr>
               )}

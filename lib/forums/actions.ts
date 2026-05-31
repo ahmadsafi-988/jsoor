@@ -15,6 +15,7 @@ type ForumAuthProfile = Pick<
   Tables<"profiles">,
   "id" | "first_name" | "last_name" | "username" | "role"
 >;
+type ForumAllowedRole = "job_seeker" | "company" | "admin";
 type ForumAuthSuccess = {
   supabase: Awaited<ReturnType<typeof createClient>>;
   service: SupabaseClient<Database>;
@@ -44,7 +45,7 @@ function getText(formData: FormData, key: string, max: number) {
 }
 
 async function requireRole(
-  allowed: Array<"job_seeker" | "admin">,
+  allowed: ForumAllowedRole[],
 ): Promise<ForumAuthSuccess | { error: string }> {
   const supabase = await createClient();
   const {
@@ -59,8 +60,8 @@ async function requireRole(
     .eq("id", user.id)
     .maybeSingle();
 
-  if (!profile || !allowed.includes(profile.role as "job_seeker" | "admin")) {
-    return { error: "You do not have access to forums yet." as const };
+  if (!profile || !allowed.includes(profile.role as ForumAllowedRole)) {
+    return { error: "You do not have access to communities yet." as const };
   }
 
   return { supabase, service: serviceClient(), user, profile: profile as ForumAuthProfile };
@@ -126,13 +127,29 @@ function parseImagePaths(formData: FormData, userId: string) {
     .slice(0, MAX_FORUM_IMAGES);
 }
 
+function parseStringList(formData: FormData, key: string) {
+  const raw = String(formData.get(key) ?? "[]");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = [];
+  }
+
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 async function deleteForumMedia(paths: string[]) {
   if (paths.length === 0) return;
   await serviceClient().storage.from(FORUM_MEDIA_BUCKET).remove(paths);
 }
 
 export async function requestForumCreation(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const name = getText(formData, "name", LIMITS.forumName);
@@ -140,12 +157,12 @@ export async function requestForumCreation(formData: FormData): Promise<ActionRe
   const reason = getText(formData, "reason", LIMITS.forumReason);
   const slug = slugifyForumName(name);
 
-  if (!name) return { error: "Forum name is required." };
-  if (!slug) return { error: "Please use a forum name with letters or numbers." };
-  if (!description) return { error: "Forum description is required." };
-  if (!reason) return { error: "Please explain why this forum should be created." };
+  if (!name) return { error: "Community name is required." };
+  if (!slug) return { error: "Please use a community name with letters or numbers." };
+  if (!description) return { error: "Community description is required." };
+  if (!reason) return { error: "Please explain why this community should be created." };
   if (await forumExists(slug, name)) {
-    return { error: "A forum with this name already exists or is waiting for review." };
+    return { error: "A community with this name already exists or is waiting for review." };
   }
 
   const { data, error } = await auth.supabase
@@ -167,7 +184,7 @@ export async function requestForumCreation(formData: FormData): Promise<ActionRe
     userId: auth.user.id,
     actorId: auth.user.id,
     type: "forum_request_submitted",
-    title: "Forum request submitted",
+    title: "Community request submitted",
     body: `"${name}" has been sent to admins for review.`,
     link: "/forums",
     entityType: "forum_creation_request",
@@ -177,7 +194,7 @@ export async function requestForumCreation(formData: FormData): Promise<ActionRe
   await insertNotificationsForAdmins({
     actorId: auth.user.id,
     type: "forum_request_received",
-    title: "New forum request",
+    title: "New community request",
     body: `${auth.profile.first_name} requested "${name}".`,
     link: "/admin/forums",
     entityType: "forum_creation_request",
@@ -197,10 +214,10 @@ export async function createForumDirect(formData: FormData): Promise<ActionResul
   const description = getText(formData, "description", LIMITS.forumDescription);
   const slug = slugifyForumName(name);
 
-  if (!name) return { error: "Forum name is required." };
-  if (!description) return { error: "Forum description is required." };
-  if (!slug) return { error: "Please use a forum name with letters or numbers." };
-  if (await forumExists(slug, name)) return { error: "A forum with this name already exists." };
+  if (!name) return { error: "Community name is required." };
+  if (!description) return { error: "Community description is required." };
+  if (!slug) return { error: "Please use a community name with letters or numbers." };
+  if (await forumExists(slug, name)) return { error: "A community with this name already exists." };
 
   const { data, error } = await auth.service
     .from("forums")
@@ -227,9 +244,9 @@ export async function approveForumRequest(requestId: string): Promise<ActionResu
     .maybeSingle();
 
   if (requestError) return { error: requestError.message };
-  if (!request) return { error: "Forum request not found." };
+  if (!request) return { error: "Community request not found." };
   if (request.status !== "pending") return { error: "This request has already been reviewed." };
-  if (await forumExists(request.slug, request.name, request.id)) return { error: "A forum with this name already exists." };
+  if (await forumExists(request.slug, request.name, request.id)) return { error: "A community with this name already exists." };
 
   const { data: forum, error: forumError } = await auth.service
     .from("forums")
@@ -257,7 +274,7 @@ export async function approveForumRequest(requestId: string): Promise<ActionResu
     userId: request.requested_by,
     actorId: auth.user.id,
     type: "forum_request_approved",
-    title: "Forum request approved",
+    title: "Community request approved",
     body: `"${request.name}" is now available.`,
     link: `/forums/${request.slug}`,
     entityType: "forum",
@@ -281,7 +298,7 @@ export async function rejectForumRequest(requestId: string, reason?: string): Pr
     .eq("id", requestId)
     .maybeSingle();
 
-  if (!request) return { error: "Forum request not found." };
+  if (!request) return { error: "Community request not found." };
   if (request.status !== "pending") return { error: "This request has already been reviewed." };
 
   const { error } = await auth.service
@@ -300,7 +317,7 @@ export async function rejectForumRequest(requestId: string, reason?: string): Pr
     userId: request.requested_by,
     actorId: auth.user.id,
     type: "forum_request_rejected",
-    title: "Forum request reviewed",
+    title: "Community request reviewed",
     body: adminReason
       ? `"${request.name}" was not approved. Reason: ${adminReason}`
       : `"${request.name}" was not approved.`,
@@ -316,7 +333,7 @@ export async function rejectForumRequest(requestId: string, reason?: string): Pr
 }
 
 export async function createForumPost(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const forumId = String(formData.get("forum_id") ?? "");
@@ -336,7 +353,7 @@ export async function createForumPost(formData: FormData): Promise<ActionResult>
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!forum) return { error: "Forum not found." };
+  if (!forum) return { error: "Community not found." };
 
   const { data: post, error } = await auth.supabase
     .from("forum_posts")
@@ -367,8 +384,56 @@ export async function createForumPost(formData: FormData): Promise<ActionResult>
   redirect(`/forums/${forumSlug || forum.slug}/posts/${post.id}`);
 }
 
+export async function joinForum(forumId: string, forumSlug?: string): Promise<ActionResult> {
+  const auth = await requireRole(["job_seeker", "company"]);
+  if ("error" in auth) return auth;
+
+  const { data: forum } = await auth.supabase
+    .from("forums")
+    .select("id, slug")
+    .eq("id", forumId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!forum) return { error: "Community not found." };
+
+  const { error } = await auth.supabase
+    .from("forum_memberships")
+    .upsert(
+      { forum_id: forum.id, user_id: auth.user.id },
+      { onConflict: "forum_id,user_id" },
+    );
+
+  if (error) return { error: error.message };
+  revalidatePath("/forums");
+  revalidatePath(`/forums/${forumSlug || forum.slug}`);
+  return { success: true, id: forum.id };
+}
+
+export async function leaveForum(forumId: string, forumSlug?: string): Promise<ActionResult> {
+  const auth = await requireRole(["job_seeker", "company"]);
+  if ("error" in auth) return auth;
+
+  const { data: forum } = await auth.supabase
+    .from("forums")
+    .select("id, slug")
+    .eq("id", forumId)
+    .maybeSingle();
+
+  const { error } = await auth.supabase
+    .from("forum_memberships")
+    .delete()
+    .eq("forum_id", forumId)
+    .eq("user_id", auth.user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/forums");
+  revalidatePath(`/forums/${forumSlug || forum?.slug || ""}`);
+  return { success: true, id: forumId };
+}
+
 export async function updateOwnForumPost(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const postId = String(formData.get("post_id") ?? "");
@@ -376,9 +441,30 @@ export async function updateOwnForumPost(formData: FormData): Promise<ActionResu
   const title = getText(formData, "title", LIMITS.postTitle);
   const body = getText(formData, "body", LIMITS.postBody);
   const isAnonymous = formData.get("is_anonymous") === "on";
+  const newImagePaths = parseImagePaths(formData, auth.user.id);
+  const keptImageIds = parseStringList(formData, "kept_image_ids");
 
   if (!title) return { error: "Post title is required." };
-  if (!body) return { error: "Post body is required when editing." };
+
+  const { data: post } = await auth.supabase
+    .from("forum_posts")
+    .select("id, author_id")
+    .eq("id", postId)
+    .eq("author_id", auth.user.id)
+    .maybeSingle();
+  if (!post) return { error: "Post not found." };
+
+  const { data: currentImages } = await auth.service
+    .from("forum_post_images")
+    .select("*")
+    .eq("post_id", postId)
+    .order("sort_order", { ascending: true });
+
+  const existingImages = (currentImages ?? []) as Tables<"forum_post_images">[];
+  const keptImages = existingImages.filter((image) => keptImageIds.includes(image.id));
+  const totalImages = keptImages.length + newImagePaths.length;
+  if (totalImages > MAX_FORUM_IMAGES) return { error: `Posts can include up to ${MAX_FORUM_IMAGES} images.` };
+  if (!body && totalImages === 0) return { error: "Add post text or at least one image." };
 
   const { error } = await auth.supabase
     .from("forum_posts")
@@ -387,12 +473,45 @@ export async function updateOwnForumPost(formData: FormData): Promise<ActionResu
     .eq("author_id", auth.user.id);
 
   if (error) return { error: error.message };
+
+  const removedImages = existingImages.filter((image) => !keptImageIds.includes(image.id));
+  if (removedImages.length > 0) {
+    const { error: deleteError } = await auth.service
+      .from("forum_post_images")
+      .delete()
+      .in("id", removedImages.map((image) => image.id));
+    if (deleteError) return { error: deleteError.message };
+    await deleteForumMedia(removedImages.map((image) => image.storage_path));
+  }
+
+  for (const [index, image] of keptImages.entries()) {
+    if (image.sort_order !== index) {
+      const { error: sortError } = await auth.service
+        .from("forum_post_images")
+        .update({ sort_order: index })
+        .eq("id", image.id);
+      if (sortError) return { error: sortError.message };
+    }
+  }
+
+  if (newImagePaths.length > 0) {
+    const { error: imageError } = await auth.service.from("forum_post_images").insert(
+      newImagePaths.map((path, index) => ({
+        post_id: postId,
+        storage_path: path,
+        sort_order: keptImages.length + index,
+      })),
+    );
+    if (imageError) return { error: imageError.message };
+  }
+
   revalidatePath(`/forums/${forumSlug}/posts/${postId}`);
+  revalidatePath(`/forums/${forumSlug}`);
   return { success: true };
 }
 
 export async function deleteOwnForumPost(postId: string, forumSlug: string): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const { data: images } = await auth.supabase
@@ -413,7 +532,7 @@ export async function deleteOwnForumPost(postId: string, forumSlug: string): Pro
 }
 
 export async function createForumComment(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const postId = String(formData.get("post_id") ?? "");
@@ -491,7 +610,7 @@ export async function createForumComment(formData: FormData): Promise<ActionResu
 }
 
 export async function updateOwnForumComment(formData: FormData): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const commentId = String(formData.get("comment_id") ?? "");
@@ -514,7 +633,7 @@ export async function updateOwnForumComment(formData: FormData): Promise<ActionR
 }
 
 export async function deleteOwnForumComment(commentId: string, postId: string, forumSlug: string): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const { error } = await auth.supabase
@@ -534,7 +653,7 @@ export async function voteForumTarget(
   value: 1 | -1 | 0,
   revalidateHref: string,
 ): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   if (value === 0) {
@@ -564,11 +683,29 @@ export async function reportForumTarget(
   targetId: string,
   reason: string,
 ): Promise<ActionResult> {
-  const auth = await requireRole(["job_seeker"]);
+  const auth = await requireRole(["job_seeker", "company"]);
   if ("error" in auth) return auth;
 
   const trimmed = reason.trim().slice(0, LIMITS.reportReason);
   if (!trimmed) return { error: "Report reason is required." };
+
+  if (targetType === "post") {
+    const { data: post } = await auth.supabase
+      .from("forum_posts")
+      .select("id")
+      .eq("id", targetId)
+      .eq("is_hidden", false)
+      .maybeSingle();
+    if (!post) return { error: "Post not found." };
+  } else {
+    const { data: comment } = await auth.supabase
+      .from("forum_comments")
+      .select("id")
+      .eq("id", targetId)
+      .eq("is_hidden", false)
+      .maybeSingle();
+    if (!comment) return { error: "Comment not found." };
+  }
 
   const { data: report, error } = await auth.supabase
     .from("forum_reports")
@@ -590,8 +727,8 @@ export async function reportForumTarget(
   await insertNotificationsForAdmins({
     actorId: auth.user.id,
     type: "forum_report_submitted",
-    title: "Forum report submitted",
-    body: `A job seeker reported a forum ${targetType}.`,
+    title: "Community report submitted",
+    body: `A user reported a community ${targetType}.`,
     link: "/admin/forums",
     entityType: "forum_report",
     entityId: report.id,
@@ -621,6 +758,7 @@ export async function adminModerateForumContent(
   action: "hide" | "unhide" | "delete",
   label: string,
   reason?: string,
+  reportId?: string,
 ): Promise<ActionResult> {
   const auth = await requireRole(["admin"]);
   if ("error" in auth) return auth;
@@ -649,6 +787,14 @@ export async function adminModerateForumContent(
       })
       .eq("id", targetId);
     if (error) return { error: error.message };
+  }
+
+  if (reportId && (action === "hide" || action === "delete")) {
+    const { error: reportError } = await auth.service
+      .from("forum_reports")
+      .update({ status: "reviewed", resolved_by: auth.user.id, resolved_at: new Date().toISOString() })
+      .eq("id", reportId);
+    if (reportError) return { error: reportError.message };
   }
 
   await logAdminAction(

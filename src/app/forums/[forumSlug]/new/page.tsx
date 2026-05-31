@@ -19,7 +19,7 @@ export default async function NewForumPostPage({
     supabase.from("forums").select("id, name, slug").eq("slug", forumSlug).eq("is_active", true).maybeSingle(),
   ]);
 
-  if (profile?.role !== "job_seeker") redirect(`/forums/${forumSlug}`);
+  if (profile?.role !== "job_seeker" && profile?.role !== "company") redirect(`/forums/${forumSlug}`);
   if (!forum) notFound();
 
   return (

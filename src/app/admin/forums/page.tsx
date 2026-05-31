@@ -21,9 +21,9 @@ export default async function AdminForumsPage() {
 
   return (
     <div>
-      <h1 className="mb-1 text-2xl font-bold text-neutral-900">Forums</h1>
+      <h1 className="mb-1 text-2xl font-bold text-neutral-900">Communities</h1>
       <p className="mb-8 text-sm text-neutral-500">
-        Review forum requests, manage communities, and moderate reported forum content.
+        Review community requests, manage communities, and moderate reported community content.
       </p>
       <AdminForumsClient data={data} />
     </div>

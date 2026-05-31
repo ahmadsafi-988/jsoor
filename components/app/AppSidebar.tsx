@@ -28,7 +28,7 @@ const NAV_ITEMS = [
   { label: "Saved Jobs", href: "/job-seeker/saved-jobs", icon: Bookmark },
   { label: "Assessments", href: "/job-seeker/assessments", icon: ClipboardCheck },
   { label: "Interview Simulator", href: "/job-seeker/interview-simulator", icon: Brain },
-  { label: "Forums", href: "/forums", icon: MessagesSquare },
+  { label: "Communities", href: "/forums", icon: MessagesSquare },
   { label: "Messages", href: "/job-seeker/messages", icon: MessageSquare },
   { label: "Notifications", href: "/job-seeker/notifications", icon: Bell },
 ];

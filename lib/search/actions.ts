@@ -387,7 +387,7 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
     addCategory(
       categories,
       "forums",
-      "Forums",
+      "Communities",
       forums.map((result) => ({
         id: result.id,
         title: result.name,
@@ -396,12 +396,13 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
       })),
     );
   } else if (role === "company") {
-    const [candidates, applicants, companies, jobs, blogs] = await Promise.all([
+    const [candidates, applicants, companies, jobs, blogs, forums] = await Promise.all([
       searchProfiles(supabase, pattern, "job_seeker"),
       getCompanyApplicantResults(supabase, user.id, term),
       searchCompanies(supabase, pattern, { excludeId: user.id }),
       searchJobs(supabase, pattern, { companyId: user.id }),
       searchBlogs(supabase, pattern, { publishedOnly: true }),
+      searchForums(supabase, pattern),
     ]);
 
     addCategory(
@@ -447,6 +448,17 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
         title: result.title,
         subtitle: result.category,
         href: `/blog/${result.slug}`,
+      })),
+    );
+    addCategory(
+      categories,
+      "forums",
+      "Communities",
+      forums.map((result) => ({
+        id: result.id,
+        title: result.name,
+        subtitle: result.description,
+        href: `/forums/${result.slug}`,
       })),
     );
   } else if (role === "admin") {
@@ -542,7 +554,7 @@ export async function searchDashboard(query: string): Promise<SearchDashboardRes
     addCategory(
       categories,
       "forums",
-      "Forums",
+      "Communities",
       forums.map((result) => ({
         id: result.id,
         title: result.name,

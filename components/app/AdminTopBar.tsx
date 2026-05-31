@@ -8,7 +8,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/jobs": "Jobs",
   "/admin/blogs": "Blogs",
   "/admin/blogs/new": "New Blog",
-  "/admin/forums": "Forums",
+  "/admin/forums": "Communities",
   "/admin/companies": "Companies",
   "/admin/users": "Users",
   "/admin/reports": "Reports",

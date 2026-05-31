@@ -13,6 +13,8 @@ export type ForumProfile = Pick<
 export type ForumListItem = Tables<"forums"> & {
   post_count: number;
   comment_count: number;
+  member_count: number;
+  is_joined: boolean;
   latest_activity_at: string | null;
 };
 
@@ -25,6 +27,8 @@ export type ForumPostSummary = Tables<"forum_posts"> & {
   author_username: string | null;
   real_author_display?: string;
   real_author_username?: string | null;
+  forum_name: string;
+  forum_slug: string;
   first_image_url: string | null;
 };
 
@@ -46,6 +50,14 @@ export type ForumPostDetail = ForumPostSummary & {
   images: ForumPostImage[];
   comments: ForumCommentItem[];
   current_user_vote: number | null;
+};
+
+export type ForumsHomeData = {
+  role: ForumRole | null;
+  forums: ForumListItem[];
+  requests: ForumRequestItem[];
+  followingPosts: ForumPostSummary[];
+  popularPosts: ForumPostSummary[];
 };
 
 export type AdminForumReport = Tables<"forum_reports"> & {
@@ -96,13 +108,13 @@ function authorDisplay(
   const realName = fullName(profile);
   if (isAnonymous && viewerRole !== "admin") {
     return {
-      author_display: "Anonymous Job Seeker",
+      author_display: "Anonymous Member",
       author_username: null,
     };
   }
 
   return {
-    author_display: isAnonymous ? "Anonymous Job Seeker" : realName,
+    author_display: isAnonymous ? "Anonymous Member" : realName,
     author_username: isAnonymous ? null : profile?.username ?? null,
     real_author_display: viewerRole === "admin" ? realName : undefined,
     real_author_username: viewerRole === "admin" ? profile?.username ?? null : undefined,
@@ -124,20 +136,37 @@ async function getCurrentForumUser(supabase: Supabase) {
   return { user, profile: (profile as ForumProfile | null) ?? null };
 }
 
-async function enrichForums(supabase: Supabase, forums: Tables<"forums">[]): Promise<ForumListItem[]> {
+async function enrichForums(
+  supabase: Supabase,
+  forums: Tables<"forums">[],
+  userId?: string | null,
+): Promise<ForumListItem[]> {
   if (forums.length === 0) return [];
 
   const forumIds = forums.map((forum) => forum.id);
-  const { data: postsData } = await supabase
-    .from("forum_posts")
-    .select("id, forum_id, created_at")
-    .in("forum_id", forumIds)
-    .eq("is_hidden", false);
+  const [{ data: postsData }, { data: membershipsData }] = await Promise.all([
+    supabase
+      .from("forum_posts")
+      .select("id, forum_id, created_at")
+      .in("forum_id", forumIds)
+      .eq("is_hidden", false),
+    supabase
+      .from("forum_memberships")
+      .select("forum_id, user_id")
+      .in("forum_id", forumIds),
+  ]);
 
   const posts = (postsData ?? []) as Pick<Tables<"forum_posts">, "id" | "forum_id" | "created_at">[];
   const postIds = posts.map((post) => post.id);
   const postCount = new Map<string, number>();
   const latest = new Map<string, string>();
+  const memberCount = new Map<string, number>();
+  const joinedForumIds = new Set<string>();
+
+  for (const membership of membershipsData ?? []) {
+    memberCount.set(membership.forum_id, (memberCount.get(membership.forum_id) ?? 0) + 1);
+    if (userId && membership.user_id === userId) joinedForumIds.add(membership.forum_id);
+  }
 
   for (const post of posts) {
     postCount.set(post.forum_id, (postCount.get(post.forum_id) ?? 0) + 1);
@@ -172,6 +201,8 @@ async function enrichForums(supabase: Supabase, forums: Tables<"forums">[]): Pro
     ...forum,
     post_count: postCount.get(forum.id) ?? 0,
     comment_count: commentCount.get(forum.id) ?? 0,
+    member_count: memberCount.get(forum.id) ?? 0,
+    is_joined: joinedForumIds.has(forum.id),
     latest_activity_at: latest.get(forum.id) ?? null,
   }));
 }
@@ -196,8 +227,10 @@ async function enrichPosts(
   if (posts.length === 0) return [];
 
   const postIds = posts.map((post) => post.id);
-  const [profiles, votesRes, commentsRes, imagesRes] = await Promise.all([
+  const forumIds = [...new Set(posts.map((post) => post.forum_id))];
+  const [profiles, forumsRes, votesRes, commentsRes, imagesRes] = await Promise.all([
     getProfiles(supabase, posts.map((post) => post.author_id)),
+    supabase.from("forums").select("id, name, slug").in("id", forumIds),
     supabase.from("forum_votes").select("target_id, value").eq("target_type", "post").in("target_id", postIds),
     supabase.from("forum_comments").select("post_id").in("post_id", postIds).eq("is_hidden", false),
     supabase
@@ -229,20 +262,25 @@ async function enrichPosts(
     ] as const),
   );
   const signedUrls = new Map(signedUrlEntries);
+  const forumMap = new Map((forumsRes.data ?? []).map((forum) => [forum.id, forum]));
 
   return posts.map((post) => ({
     ...post,
     score: scores.get(post.id) ?? 0,
     comment_count: commentCounts.get(post.id) ?? 0,
+    forum_name: forumMap.get(post.forum_id)?.name ?? "Community",
+    forum_slug: forumMap.get(post.forum_id)?.slug ?? "",
     first_image_url: signedUrls.get(post.id) ?? null,
     ...authorDisplay(profiles.get(post.author_id), post.is_anonymous, viewerRole),
   }));
 }
 
-export async function getForumsHomeData() {
+export async function getForumsHomeData(): Promise<ForumsHomeData> {
   const supabase = await createClient();
   const { user, profile } = await getCurrentForumUser(supabase);
-  if (!user || !profile) return { role: null, forums: [], requests: [] };
+  if (!user || !profile) {
+    return { role: null, forums: [], requests: [], followingPosts: [], popularPosts: [] };
+  }
 
   const { data: forumsData } = await supabase
     .from("forums")
@@ -250,10 +288,10 @@ export async function getForumsHomeData() {
     .eq("is_active", true)
     .order("name", { ascending: true });
 
-  const forums = await enrichForums(supabase, (forumsData ?? []) as Tables<"forums">[]);
+  const forums = await enrichForums(supabase, (forumsData ?? []) as Tables<"forums">[], user.id);
 
   let requests: ForumRequestItem[] = [];
-  if (profile.role === "job_seeker") {
+  if (profile.role === "job_seeker" || profile.role === "company") {
     const { data } = await supabase
       .from("forum_creation_requests")
       .select("*")
@@ -262,7 +300,32 @@ export async function getForumsHomeData() {
     requests = (data ?? []) as ForumRequestItem[];
   }
 
-  return { role: profile.role as ForumRole, forums, requests };
+  let followingPosts: ForumPostSummary[] = [];
+  if (profile.role === "job_seeker" || profile.role === "company") {
+    const joinedForumIds = forums.filter((forum) => forum.is_joined).map((forum) => forum.id);
+    if (joinedForumIds.length > 0) {
+      const { data: followingPostsData } = await supabase
+        .from("forum_posts")
+        .select("*")
+        .in("forum_id", joinedForumIds)
+        .eq("is_hidden", false)
+        .order("created_at", { ascending: false })
+        .limit(60);
+      followingPosts = await enrichPosts(supabase, (followingPostsData ?? []) as Tables<"forum_posts">[], profile.role);
+    }
+  }
+
+  const { data: popularPostsData } = await supabase
+    .from("forum_posts")
+    .select("*")
+    .eq("is_hidden", false)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  const popularPosts = (await enrichPosts(supabase, (popularPostsData ?? []) as Tables<"forum_posts">[], profile.role))
+    .sort((a, b) => b.score - a.score || b.comment_count - a.comment_count || +new Date(b.created_at) - +new Date(a.created_at))
+    .slice(0, 60);
+
+  return { role: profile.role as ForumRole, forums, requests, followingPosts, popularPosts };
 }
 
 export async function getForumFeedData(
@@ -270,15 +333,16 @@ export async function getForumFeedData(
   options?: { sort?: string; query?: string },
 ) {
   const supabase = await createClient();
-  const { profile } = await getCurrentForumUser(supabase);
-  const { data: forum } = await supabase
+  const { user, profile } = await getCurrentForumUser(supabase);
+  const { data: forumRaw } = await supabase
     .from("forums")
     .select("*")
     .eq("slug", forumSlug)
     .eq("is_active", true)
     .maybeSingle();
 
-  if (!forum) return null;
+  if (!forumRaw) return null;
+  const [forum] = await enrichForums(supabase, [forumRaw as Tables<"forums">], user?.id);
 
   let query = supabase
     .from("forum_posts")
@@ -302,7 +366,7 @@ export async function getForumFeedData(
   }
 
   return {
-    forum: forum as Tables<"forums">,
+    forum,
     posts,
     role: profile?.role as ForumRole | undefined,
   };
@@ -312,13 +376,14 @@ export async function getForumPostData(forumSlug: string, postId: string) {
   const supabase = await createClient();
   const { user, profile } = await getCurrentForumUser(supabase);
 
-  const { data: forum } = await supabase
+  const { data: forumRaw } = await supabase
     .from("forums")
     .select("*")
     .eq("slug", forumSlug)
     .eq("is_active", true)
     .maybeSingle();
-  if (!forum) return null;
+  if (!forumRaw) return null;
+  const [forum] = await enrichForums(supabase, [forumRaw as Tables<"forums">], user?.id);
 
   const { data: post } = await supabase
     .from("forum_posts")
@@ -411,7 +476,7 @@ export async function getForumPostData(forumSlug: string, postId: string) {
     current_user_vote: myVote?.value ?? null,
   };
 
-  return { forum: forum as Tables<"forums">, post: detail, role: profile?.role as ForumRole | undefined, userId: user?.id ?? null };
+  return { forum, post: detail, role: profile?.role as ForumRole | undefined, userId: user?.id ?? null };
 }
 
 export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
@@ -520,4 +585,18 @@ export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
   });
 
   return { requests, forums, reports };
+}
+
+export async function getPendingForumReportCount() {
+  const supabase = await createClient();
+  const { profile } = await getCurrentForumUser(supabase);
+  if (profile?.role !== "admin") return 0;
+
+  const adminClient = serviceClient() ?? supabase;
+  const { count } = await adminClient
+    .from("forum_reports")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+
+  return count ?? 0;
 }

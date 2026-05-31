@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Jobs", href: "/admin/jobs", icon: Briefcase },
   { label: "Blogs", href: "/admin/blogs", icon: BookOpen },
-  { label: "Forums", href: "/admin/forums", icon: MessagesSquare },
+  { label: "Communities", href: "/admin/forums", icon: MessagesSquare },
   { label: "Companies", href: "/admin/companies", icon: Building2 },
   { label: "Users", href: "/admin/users", icon: Users },
   { label: "Reports", href: "/admin/reports", icon: Flag },
