@@ -201,7 +201,7 @@ function StepIdentity({
                   onChange({ avatarFile: f, avatarPreview: URL.createObjectURL(f) });
                 }}
               />
-              <p className="text-xs text-muted-foreground">PNG, JPG or WEBP · Max 5 MB</p>
+              <p className="text-xs text-muted-foreground">Recommended: 400 x 400 px. PNG, JPG or WEBP.</p>
             </div>
           </div>
         </div>

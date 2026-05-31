@@ -45,6 +45,41 @@ export async function uploadAvatar(
   return { url: `${data.publicUrl}?t=${Date.now()}` };
 }
 
+async function uploadPublicImage(
+  path: string,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  const supabase = createClient();
+
+  const { error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, file, { upsert: true, contentType: file.type });
+
+  if (error) return { error: error.message };
+
+  const { data } = supabase.storage
+    .from(AVATAR_BUCKET)
+    .getPublicUrl(path);
+
+  return { url: `${data.publicUrl}?t=${Date.now()}` };
+}
+
+export async function uploadProfileCover(
+  userId: string,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  const ext = getExtension(file);
+  return uploadPublicImage(`${userId}/cover.${ext}`, file);
+}
+
+export async function uploadCompanyCover(
+  userId: string,
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  const ext = getExtension(file);
+  return uploadPublicImage(`company-covers/${userId}.${ext}`, file);
+}
+
 /**
  * Uploads a CV PDF to the "cvs" bucket (private — access via signed URL).
  * Returns a long-lived signed URL (1 year) on success.

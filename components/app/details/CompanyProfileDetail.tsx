@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { ImageWithFallback } from "@/components/figma/ImageWithFallback";
 import { DashboardBackButton } from "@/components/app/DashboardBackButton";
+import { ImagePreviewDialog } from "@/components/app/ImagePreviewDialog";
 import type { PublicCompanyProfile } from "@/lib/company/data";
 import type { ReactNode } from "react";
 
@@ -34,17 +35,39 @@ export function CompanyProfileDetail({
         <DashboardBackButton fallbackHref={backHref} />
 
         <div className="overflow-hidden rounded-2xl border border-[#e5e2e1] bg-white shadow-sm">
-          <div className="h-32 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]" />
+          <div className="h-32 bg-gradient-to-br from-[#006d43] via-[#008a55] to-[#00c47a]">
+            {company.cover_url && (
+              <ImagePreviewDialog
+                src={company.cover_url}
+                alt={`${company.name} company background`}
+                label="company background"
+                triggerClassName="block h-full w-full cursor-zoom-in"
+              >
+                <ImageWithFallback
+                  src={company.cover_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              </ImagePreviewDialog>
+            )}
+          </div>
           <div className="px-6 pb-6">
             <div className="-mt-12 mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex items-end gap-4">
                 <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-white p-2 shadow-md">
                   {company.logo_url ? (
-                    <ImageWithFallback
+                    <ImagePreviewDialog
                       src={company.logo_url}
-                      alt={company.name}
-                      className="h-full w-full object-contain"
-                    />
+                      alt={`${company.name} logo`}
+                      label="company logo"
+                      triggerClassName="block h-full w-full cursor-zoom-in rounded-xl"
+                    >
+                      <ImageWithFallback
+                        src={company.logo_url}
+                        alt={company.name}
+                        className="h-full w-full object-contain"
+                      />
+                    </ImagePreviewDialog>
                   ) : (
                     <Building2 className="h-10 w-10 text-[#3d4a41]" />
                   )}

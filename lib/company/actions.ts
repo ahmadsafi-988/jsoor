@@ -31,6 +31,7 @@ async function requireVerifiedCompany(
   return null;
 }
 
+
 // ─── Company profile ──────────────────────────────────────────────────────────
 
 export async function upsertCompany(formData: FormData) {
@@ -71,6 +72,7 @@ export async function upsertCompany(formData: FormData) {
     size: string | null;
     founded_year: string | null;
     logo_url?: string | null;
+    cover_url?: string | null;
   } = {
     id: user.id,
     name: nameResult.value,
@@ -83,6 +85,9 @@ export async function upsertCompany(formData: FormData) {
   };
   if (formData.has("logo_url")) {
     payload.logo_url = ((formData.get("logo_url") as string | null)?.trim()) || null;
+  }
+  if (formData.has("cover_url")) {
+    payload.cover_url = ((formData.get("cover_url") as string | null)?.trim()) || null;
   }
 
   const { error } = await supabase.from("companies").upsert(payload);
@@ -181,6 +186,21 @@ export async function updateCompanyLogo(logoUrl: string) {
   const { error } = await supabase
     .from("companies")
     .update({ logo_url: logoUrl })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/company/profile");
+  return { success: true };
+}
+
+export async function updateCompanyCoverUrl(coverUrl: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("companies")
+    .update({ cover_url: coverUrl })
     .eq("id", user.id);
 
   if (error) return { error: error.message };

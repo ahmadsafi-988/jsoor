@@ -386,6 +386,23 @@ export async function updateAvatarUrl(avatarUrl: string, username: string) {
   return { success: true };
 }
 
+export async function updateProfileCoverUrl(coverUrl: string, username: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ cover_url: coverUrl })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/job-seeker/profile/${username}`);
+  return { success: true };
+}
+
 export async function updateCvUrl(cvPath: string, username: string) {
   const supabase = await createClient();
   const {
