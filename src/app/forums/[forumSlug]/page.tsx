@@ -64,8 +64,12 @@ export default async function ForumFeedPage({
                     Create Post
                   </Link>
                 ) : null}
-                {forum.can_request_deletion ? (
-                  <CommunityDeletionRequestButton forumId={forum.id} forumName={forum.name} />
+                {forum.can_request_deletion || forum.deletion_request_active ? (
+                  <CommunityDeletionRequestButton
+                    forumId={forum.id}
+                    forumName={forum.name}
+                    deletionRequestActive={forum.deletion_request_active}
+                  />
                 ) : null}
               </div>
               {!forum.is_joined ? (

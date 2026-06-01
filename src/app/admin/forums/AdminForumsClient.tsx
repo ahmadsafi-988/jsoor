@@ -16,6 +16,7 @@ import {
 import {
   adminDeleteForum,
   adminModerateForumContent,
+  adminResolveForumDeletionRequest,
   adminResolveForumReport,
   adminSetForumActive,
   approveForumRequest,
@@ -169,6 +170,86 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
+          Community Deletion Requests
+        </h2>
+        <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-600">
+              <tr>
+                <th className="px-5 py-3 font-semibold">Community</th>
+                <th className="px-5 py-3 font-semibold">Requester</th>
+                <th className="px-5 py-3 font-semibold">Reason</th>
+                <th className="px-5 py-3 font-semibold">Status</th>
+                <th className="px-5 py-3 text-right font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {data.deletionRequests.map((request) => (
+                <tr key={request.id}>
+                  <td className="px-5 py-4">
+                    {request.forum_slug ? (
+                      <Link href={`/forums/${request.forum_slug}`} className="font-semibold text-neutral-900 hover:text-[#006d43] hover:underline">
+                        {request.forum_name}
+                      </Link>
+                    ) : (
+                      <span className="font-semibold text-neutral-500">{request.forum_name}</span>
+                    )}
+                    <p className="mt-0.5 text-xs text-neutral-400">
+                      {request.created_at ? new Date(request.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recently"}
+                    </p>
+                  </td>
+                  <td className="px-5 py-4 text-neutral-600">
+                    <Link href={`/admin/users/${request.requester_username ?? request.requester_id}`} className="hover:text-[#006d43] hover:underline">
+                      {request.requester_name}
+                    </Link>
+                  </td>
+                  <td className="max-w-md px-5 py-4 text-neutral-500">
+                    {request.reason || <span className="text-neutral-400">No reason provided.</span>}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${statusClass(request.status)}`}>
+                      {request.status}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-right">
+                    <div className="inline-flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          if (!confirm(`Delete "${request.forum_name}" and all of its posts?`)) return;
+                          run(`${request.id}-approve-delete`, () => adminResolveForumDeletionRequest(request.id, "approved"));
+                        }}
+                        disabled={pendingId === `${request.id}-approve-delete` && isPending}
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Approve Delete
+                      </button>
+                      <button
+                        onClick={() => run(`${request.id}-dismiss-delete`, () => adminResolveForumDeletionRequest(request.id, "dismissed"))}
+                        disabled={pendingId === `${request.id}-dismiss-delete` && isPending}
+                        className="inline-flex items-center gap-1 rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"
+                      >
+                        <XCircle className="h-3.5 w-3.5" />
+                        Dismiss
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {data.deletionRequests.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-10 text-center text-neutral-400">
+                    No community deletion requests yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-neutral-500">
           Communities
         </h2>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -284,7 +365,6 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                               report.target_is_hidden ? "unhide" : "hide",
                               report.target_label,
                               reason,
-                              report.id,
                             ),
                           );
                         }}
@@ -303,7 +383,6 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                               "delete",
                               report.target_label,
                               undefined,
-                              report.id,
                             ),
                           );
                         }}
@@ -312,22 +391,12 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                         <Trash2 className="h-3.5 w-3.5" />
                         Delete
                       </button>
-                      {report.status === "pending" ? (
-                        <>
-                          <button
-                            onClick={() => run(`${report.id}-review`, () => adminResolveForumReport(report.id, "reviewed", report.target_label))}
-                            className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100"
-                          >
-                            Review
-                          </button>
-                          <button
-                            onClick={() => run(`${report.id}-dismiss`, () => adminResolveForumReport(report.id, "dismissed", report.target_label))}
-                            className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200"
-                          >
-                            Dismiss
-                          </button>
-                        </>
-                      ) : null}
+                      <button
+                        onClick={() => run(`${report.id}-dismiss`, () => adminResolveForumReport(report.id, "dismissed", report.target_label))}
+                        className="rounded-lg bg-neutral-100 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:bg-neutral-200"
+                      >
+                        Dismiss
+                      </button>
                     </div>
                   </td>
                 </tr>

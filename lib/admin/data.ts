@@ -150,6 +150,7 @@ export async function getAllReports(): Promise<AdminReport[]> {
   const { data } = await supabase
     .from("job_reports")
     .select("*, job:jobs!job_reports_job_id_fkey(title), reporter:profiles!job_reports_reported_by_fkey(first_name, last_name, username)")
+    .eq("status", "pending")
     .order("created_at", { ascending: false });
 
   return ((data ?? []) as AdminReportRow[]).map((r) => {

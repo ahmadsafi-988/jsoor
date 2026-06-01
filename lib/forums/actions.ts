@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import type { Database, Tables } from "@/lib/supabase_generated_types";
+import type { Database, Json, Tables } from "@/lib/supabase_generated_types";
 import { insertNotification, insertNotificationsForAdmins } from "@/lib/notifications/actions";
 import { FORUM_MEDIA_BUCKET, MAX_FORUM_IMAGES } from "@/lib/storage/forum-constants";
 import { slugifyForumName } from "@/lib/forums/data";
@@ -22,6 +22,8 @@ type ForumAuthSuccess = {
   user: User;
   profile: ForumAuthProfile;
 };
+type DeletedForum = Pick<Tables<"forums">, "id" | "name" | "slug">;
+type DeleteForumWithMediaResult = { forum: DeletedForum } | { error: string };
 
 const LIMITS = {
   forumName: 80,
@@ -146,6 +148,115 @@ function parseStringList(formData: FormData, key: string) {
 async function deleteForumMedia(paths: string[]) {
   if (paths.length === 0) return;
   await serviceClient().storage.from(FORUM_MEDIA_BUCKET).remove(paths);
+}
+
+function metadataRecord(metadata: Json) {
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Record<string, Json | undefined>
+    : {};
+}
+
+function deletionRequestStatus(metadata: Json) {
+  const status = metadataRecord(metadata).status;
+  return typeof status === "string" ? status : "pending";
+}
+
+function deletionRequestReason(metadata: Json) {
+  const reason = metadataRecord(metadata).reason;
+  return typeof reason === "string" && reason.trim() ? reason.trim() : null;
+}
+
+function deletionRequestId(metadata: Json) {
+  const requestId = metadataRecord(metadata).requestId;
+  return typeof requestId === "string" && requestId ? requestId : null;
+}
+
+async function hasActiveForumDeletionRequest(forumId: string, userId: string) {
+  const { data, error } = await serviceClient()
+    .from("notifications")
+    .select("id, metadata")
+    .eq("user_id", userId)
+    .eq("actor_id", userId)
+    .eq("type", "forum_report_submitted")
+    .eq("entity_type", "forum")
+    .eq("entity_id", forumId)
+    .contains("metadata", { action: "forum_deletion_requested" })
+    .limit(20);
+
+  if (error) return false;
+  return Boolean(data?.some((request) => deletionRequestStatus(request.metadata) === "pending"));
+}
+
+async function deleteForumWithMedia(
+  service: SupabaseClient<Database>,
+  forumId: string,
+): Promise<DeleteForumWithMediaResult> {
+  const { data: forum, error: forumError } = await service
+    .from("forums")
+    .select("id, name, slug")
+    .eq("id", forumId)
+    .maybeSingle();
+  if (forumError) return { error: forumError.message };
+  if (!forum) return { error: "Community not found." };
+
+  const { data: posts } = await service
+    .from("forum_posts")
+    .select("id")
+    .eq("forum_id", forum.id);
+  const postIds = (posts ?? []).map((post) => post.id);
+
+  if (postIds.length > 0) {
+    const { data: images } = await service
+      .from("forum_post_images")
+      .select("storage_path")
+      .in("post_id", postIds);
+    await deleteForumMedia((images ?? []).map((image) => image.storage_path));
+  }
+
+  const { error } = await service.from("forums").delete().eq("id", forum.id);
+  if (error) return { error: error.message };
+
+  return { forum };
+}
+
+async function markForumDeletionRequestReviewed({
+  service,
+  forumId,
+  requesterId,
+  metadata,
+  status,
+  reviewedBy,
+}: {
+  service: SupabaseClient<Database>;
+  forumId: string;
+  requesterId: string;
+  metadata: Json;
+  status: "approved" | "dismissed";
+  reviewedBy: string;
+}) {
+  const record = metadataRecord(metadata);
+  const nextMetadata: Json = {
+    ...record,
+    action: "forum_deletion_requested",
+    status,
+    reviewedBy,
+    reviewedAt: new Date().toISOString(),
+  };
+  const requestId = deletionRequestId(metadata);
+  const metadataMatch = requestId
+    ? { action: "forum_deletion_requested", requestId }
+    : { action: "forum_deletion_requested" };
+
+  const { error } = await service
+    .from("notifications")
+    .update({ metadata: nextMetadata })
+    .eq("type", "forum_report_submitted")
+    .eq("entity_type", "forum")
+    .eq("entity_id", forumId)
+    .eq("actor_id", requesterId)
+    .contains("metadata", metadataMatch);
+
+  return error ? { error: error.message } : { success: true as const };
 }
 
 export async function requestForumCreation(formData: FormData): Promise<ActionResult> {
@@ -413,6 +524,10 @@ export async function requestForumDeletion(
   if (forum.created_by !== auth.user.id) {
     return { error: "Only the community requester can request deletion." };
   }
+  if (await hasActiveForumDeletionRequest(forum.id, auth.user.id)) {
+    return { error: "A deletion request is already waiting for admin review." };
+  }
+  const requestId = crypto.randomUUID();
 
   const requesterName =
     `${auth.profile.first_name ?? ""} ${auth.profile.last_name ?? ""}`.trim() ||
@@ -429,8 +544,10 @@ export async function requestForumDeletion(
     entityId: forum.id,
     metadata: {
       action: "forum_deletion_requested",
+      requestId,
       forumSlug: forum.slug,
       reason: trimmedReason || null,
+      status: "pending",
     },
   });
 
@@ -447,7 +564,10 @@ export async function requestForumDeletion(
     entityId: forum.id,
     metadata: {
       action: "forum_deletion_requested",
+      requestId,
+      forumSlug: forum.slug,
       reason: trimmedReason || null,
+      status: "pending",
     },
   });
 
@@ -829,34 +949,94 @@ export async function adminDeleteForum(forumId: string, label: string): Promise<
   const auth = await requireRole(["admin"]);
   if ("error" in auth) return auth;
 
-  const { data: forum, error: forumError } = await auth.service
-    .from("forums")
-    .select("id, name")
-    .eq("id", forumId)
-    .maybeSingle();
-  if (forumError) return { error: forumError.message };
-  if (!forum) return { error: "Community not found." };
+  const result = await deleteForumWithMedia(auth.service, forumId);
+  if ("error" in result) return result;
 
-  const { data: posts } = await auth.service
-    .from("forum_posts")
-    .select("id")
-    .eq("forum_id", forum.id);
-  const postIds = (posts ?? []).map((post) => post.id);
-
-  if (postIds.length > 0) {
-    const { data: images } = await auth.service
-      .from("forum_post_images")
-      .select("storage_path")
-      .in("post_id", postIds);
-    await deleteForumMedia((images ?? []).map((image) => image.storage_path));
-  }
-
-  const { error } = await auth.service.from("forums").delete().eq("id", forum.id);
-  if (error) return { error: error.message };
-
-  await logAdminAction(auth.user.id, "delete_forum", "forum", forum.id, label || forum.name);
+  await logAdminAction(auth.user.id, "delete_forum", "forum", result.forum.id, label || result.forum.name);
   revalidatePath("/forums");
   revalidatePath("/admin/forums");
+  return { success: true };
+}
+
+export async function adminResolveForumDeletionRequest(
+  notificationId: string,
+  decision: "approved" | "dismissed",
+): Promise<ActionResult> {
+  const auth = await requireRole(["admin"]);
+  if ("error" in auth) return auth;
+
+  const { data: notification, error: notificationError } = await auth.service
+    .from("notifications")
+    .select("id, actor_id, entity_id, metadata")
+    .eq("id", notificationId)
+    .eq("type", "forum_report_submitted")
+    .eq("entity_type", "forum")
+    .maybeSingle();
+
+  if (notificationError) return { error: notificationError.message };
+  if (!notification || !notification.actor_id || !notification.entity_id) {
+    return { error: "Deletion request not found." };
+  }
+  if (metadataRecord(notification.metadata).action !== "forum_deletion_requested") {
+    return { error: "Deletion request not found." };
+  }
+  if (deletionRequestStatus(notification.metadata) !== "pending") {
+    return { error: "This deletion request has already been reviewed." };
+  }
+
+  const { data: forum } = await auth.service
+    .from("forums")
+    .select("id, name, slug")
+    .eq("id", notification.entity_id)
+    .maybeSingle();
+
+  const forumLabel = forum?.name ?? "Community";
+  const reason = deletionRequestReason(notification.metadata);
+
+  if (decision === "approved") {
+    const deleteResult = await deleteForumWithMedia(auth.service, notification.entity_id);
+    if ("error" in deleteResult) return deleteResult;
+  }
+
+  const markResult = await markForumDeletionRequestReviewed({
+    service: auth.service,
+    forumId: notification.entity_id,
+    requesterId: notification.actor_id,
+    metadata: notification.metadata,
+    status: decision,
+    reviewedBy: auth.user.id,
+  });
+  if ("error" in markResult) return markResult;
+
+  await insertNotification({
+    userId: notification.actor_id,
+    actorId: auth.user.id,
+    type: "forum_report_submitted",
+    title: decision === "approved" ? "Community deletion approved" : "Community deletion dismissed",
+    body: decision === "approved"
+      ? `"${forumLabel}" was deleted by admins.`
+      : `"${forumLabel}" will stay available.`,
+    link: decision === "approved" ? "/forums" : forum?.slug ? `/forums/${forum.slug}` : "/forums",
+    entityType: "forum",
+    entityId: notification.entity_id,
+    metadata: {
+      action: "forum_deletion_request_reviewed",
+      status: decision,
+      reason,
+    },
+  });
+
+  await logAdminAction(
+    auth.user.id,
+    decision === "approved" ? "approve_forum_deletion_request" : "dismiss_forum_deletion_request",
+    "forum_deletion_request",
+    notification.id,
+    forumLabel,
+    reason,
+  );
+  revalidatePath("/forums");
+  revalidatePath("/admin/forums");
+  if (forum?.slug) revalidatePath(`/forums/${forum.slug}`);
   return { success: true };
 }
 
@@ -866,7 +1046,6 @@ export async function adminModerateForumContent(
   action: "hide" | "unhide" | "delete",
   label: string,
   reason?: string,
-  reportId?: string,
 ): Promise<ActionResult> {
   const auth = await requireRole(["admin"]);
   if ("error" in auth) return auth;
@@ -897,11 +1076,15 @@ export async function adminModerateForumContent(
     if (error) return { error: error.message };
   }
 
-  if (reportId && (action === "hide" || action === "delete")) {
-    const { error: reportError } = await auth.service
+  if (action === "hide" || action === "delete") {
+    const reportQuery = auth.service
       .from("forum_reports")
       .update({ status: "reviewed", resolved_by: auth.user.id, resolved_at: new Date().toISOString() })
-      .eq("id", reportId);
+      .eq("target_type", targetType)
+      .eq("target_id", targetId)
+      .eq("status", "pending");
+
+    const { error: reportError } = await reportQuery;
     if (reportError) return { error: reportError.message };
   }
 

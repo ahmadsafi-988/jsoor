@@ -17,14 +17,18 @@ export function DashboardBackButton({
   const router = useRouter();
 
   function handleBack() {
+    const historyState = window.history.state as { idx?: number } | null;
+    const canGoBack = typeof historyState?.idx === "number" && historyState.idx > 0;
     const referrer = document.referrer;
+
     if (referrer) {
       try {
         const previous = new URL(referrer);
         const current = new URL(window.location.href);
         if (
           previous.origin === current.origin &&
-          previous.pathname !== current.pathname
+          previous.pathname !== current.pathname &&
+          canGoBack
         ) {
           router.back();
           return;
@@ -38,8 +42,7 @@ export function DashboardBackButton({
       }
     }
 
-    const historyState = window.history.state as { idx?: number } | null;
-    if (typeof historyState?.idx === "number" && historyState.idx > 0) {
+    if (canGoBack && !referrer) {
       router.back();
       return;
     }

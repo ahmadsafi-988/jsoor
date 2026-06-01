@@ -246,11 +246,15 @@ export async function dismissReport(reportId: string, jobTitle: string) {
   return { success: true };
 }
 
-export async function lockJobFromReport(reportId: string, jobId: string, jobTitle: string, reason?: string) {
+export async function lockJobFromReport(_reportId: string, jobId: string, jobTitle: string, reason?: string) {
   const { supabase, adminId } = await requireAdmin();
   const { error: lockErr } = await supabase.from("jobs").update({ admin_locked: true }).eq("id", jobId);
   if (lockErr) return { error: lockErr.message };
-  const { error: reviewErr } = await supabase.from("job_reports").update({ status: "reviewed" }).eq("id", reportId);
+  const { error: reviewErr } = await supabase
+    .from("job_reports")
+    .update({ status: "reviewed" })
+    .eq("job_id", jobId)
+    .eq("status", "pending");
   if (reviewErr) return { error: reviewErr.message };
   await notifyCompanyAboutJobModeration(supabase, adminId, jobId, jobTitle, true, reason);
   await logAdminAction(supabase, adminId, "lock_job_from_report", "job", jobId, jobTitle, reason);

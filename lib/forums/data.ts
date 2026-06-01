@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Tables } from "@/lib/supabase_generated_types";
+import type { Database, Json, Tables } from "@/lib/supabase_generated_types";
 import { getForumMediaSignedUrl } from "@/lib/storage/forums";
 
 export type ForumRole = "job_seeker" | "company" | "admin";
@@ -16,6 +16,7 @@ export type ForumListItem = Tables<"forums"> & {
   member_count: number;
   is_joined: boolean;
   can_request_deletion: boolean;
+  deletion_request_active: boolean;
   latest_activity_at: string | null;
 };
 
@@ -72,8 +73,22 @@ export type AdminForumReport = Tables<"forum_reports"> & {
   target_is_hidden: boolean;
 };
 
+export type AdminForumDeletionRequest = {
+  id: string;
+  forum_id: string;
+  forum_name: string;
+  forum_slug: string | null;
+  requester_id: string;
+  requester_name: string;
+  requester_username: string | null;
+  reason: string | null;
+  status: string;
+  created_at: string | null;
+};
+
 export type AdminForumsDashboard = {
   requests: Array<ForumRequestItem & { requester_name: string; requester_username: string | null }>;
+  deletionRequests: AdminForumDeletionRequest[];
   forums: ForumListItem[];
   reports: AdminForumReport[];
 };
@@ -99,6 +114,22 @@ export function slugifyForumName(value: string) {
 function fullName(profile: Pick<ForumProfile, "first_name" | "last_name" | "username"> | null | undefined) {
   if (!profile) return "Unknown user";
   return `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || profile.username || "Unknown user";
+}
+
+function metadataRecord(metadata: Json) {
+  return metadata && typeof metadata === "object" && !Array.isArray(metadata)
+    ? metadata as Record<string, Json | undefined>
+    : {};
+}
+
+function deletionRequestStatus(metadata: Json) {
+  const status = metadataRecord(metadata).status;
+  return typeof status === "string" ? status : "pending";
+}
+
+function deletionRequestReason(metadata: Json) {
+  const reason = metadataRecord(metadata).reason;
+  return typeof reason === "string" && reason.trim() ? reason.trim() : null;
 }
 
 function authorDisplay(
@@ -163,10 +194,28 @@ async function enrichForums(
   const latest = new Map<string, string>();
   const memberCount = new Map<string, number>();
   const joinedForumIds = new Set<string>();
+  const deletionRequestForumIds = new Set<string>();
 
   for (const membership of membershipsData ?? []) {
     memberCount.set(membership.forum_id, (memberCount.get(membership.forum_id) ?? 0) + 1);
     if (userId && membership.user_id === userId) joinedForumIds.add(membership.forum_id);
+  }
+
+  if (userId) {
+    const { data: deletionRequests } = await supabase
+      .from("notifications")
+      .select("entity_id, metadata")
+      .eq("user_id", userId)
+      .eq("actor_id", userId)
+      .eq("type", "forum_report_submitted")
+      .eq("entity_type", "forum")
+      .in("entity_id", forumIds)
+      .contains("metadata", { action: "forum_deletion_requested" });
+
+    for (const request of deletionRequests ?? []) {
+      if (deletionRequestStatus(request.metadata) !== "pending") continue;
+      if (request.entity_id) deletionRequestForumIds.add(request.entity_id);
+    }
   }
 
   for (const post of posts) {
@@ -204,7 +253,8 @@ async function enrichForums(
     comment_count: commentCount.get(forum.id) ?? 0,
     member_count: memberCount.get(forum.id) ?? 0,
     is_joined: joinedForumIds.has(forum.id),
-    can_request_deletion: Boolean(userId && forum.created_by === userId),
+    deletion_request_active: deletionRequestForumIds.has(forum.id),
+    can_request_deletion: Boolean(userId && forum.created_by === userId && !deletionRequestForumIds.has(forum.id)),
     latest_activity_at: latest.get(forum.id) ?? null,
   }));
 }
@@ -336,12 +386,14 @@ export async function getForumFeedData(
 ) {
   const supabase = await createClient();
   const { user, profile } = await getCurrentForumUser(supabase);
-  const { data: forumRaw } = await supabase
+  const isAdmin = profile?.role === "admin";
+  let forumQuery = supabase
     .from("forums")
     .select("*")
-    .eq("slug", forumSlug)
-    .eq("is_active", true)
-    .maybeSingle();
+    .eq("slug", forumSlug);
+  if (!isAdmin) forumQuery = forumQuery.eq("is_active", true);
+
+  const { data: forumRaw } = await forumQuery.maybeSingle();
 
   if (!forumRaw) return null;
   const [forum] = await enrichForums(supabase, [forumRaw as Tables<"forums">], user?.id);
@@ -349,8 +401,8 @@ export async function getForumFeedData(
   let query = supabase
     .from("forum_posts")
     .select("*")
-    .eq("forum_id", forum.id)
-    .eq("is_hidden", false);
+    .eq("forum_id", forum.id);
+  if (!isAdmin) query = query.eq("is_hidden", false);
 
   const term = options?.query?.trim();
   if (term) {
@@ -377,23 +429,26 @@ export async function getForumFeedData(
 export async function getForumPostData(forumSlug: string, postId: string) {
   const supabase = await createClient();
   const { user, profile } = await getCurrentForumUser(supabase);
+  const isAdmin = profile?.role === "admin";
 
-  const { data: forumRaw } = await supabase
+  let forumQuery = supabase
     .from("forums")
     .select("*")
-    .eq("slug", forumSlug)
-    .eq("is_active", true)
-    .maybeSingle();
+    .eq("slug", forumSlug);
+  if (!isAdmin) forumQuery = forumQuery.eq("is_active", true);
+
+  const { data: forumRaw } = await forumQuery.maybeSingle();
   if (!forumRaw) return null;
   const [forum] = await enrichForums(supabase, [forumRaw as Tables<"forums">], user?.id);
 
-  const { data: post } = await supabase
+  let postQuery = supabase
     .from("forum_posts")
     .select("*")
     .eq("id", postId)
-    .eq("forum_id", forum.id)
-    .eq("is_hidden", false)
-    .maybeSingle();
+    .eq("forum_id", forum.id);
+  if (!isAdmin) postQuery = postQuery.eq("is_hidden", false);
+
+  const { data: post } = await postQuery.maybeSingle();
   if (!post) return null;
 
   const [summary] = await enrichPosts(supabase, [post as Tables<"forum_posts">], profile?.role);
@@ -411,12 +466,14 @@ export async function getForumPostData(forumSlug: string, postId: string) {
     })),
   );
 
-  const { data: commentsData } = await supabase
+  let commentsQuery = supabase
     .from("forum_comments")
     .select("*")
     .eq("post_id", post.id)
-    .eq("is_hidden", false)
     .order("created_at", { ascending: true });
+  if (!isAdmin) commentsQuery = commentsQuery.eq("is_hidden", false);
+
+  const { data: commentsData } = await commentsQuery;
 
   const commentsRaw = (commentsData ?? []) as Tables<"forum_comments">[];
   const profiles = await getProfiles(supabase, commentsRaw.map((comment) => comment.author_id));
@@ -484,19 +541,28 @@ export async function getForumPostData(forumSlug: string, postId: string) {
 export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
   const supabase = await createClient();
   const { profile } = await getCurrentForumUser(supabase);
-  if (profile?.role !== "admin") return { requests: [], forums: [], reports: [] };
+  if (profile?.role !== "admin") return { requests: [], deletionRequests: [], forums: [], reports: [] };
 
   const adminClient = serviceClient() ?? supabase;
-  const [requestsRes, forumsRes, reportsRes] = await Promise.all([
+  const [requestsRes, deletionRequestsRes, forumsRes, reportsRes] = await Promise.all([
     adminClient
       .from("forum_creation_requests")
       .select("*")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    adminClient
+      .from("notifications")
+      .select("id, user_id, actor_id, entity_id, metadata, created_at")
+      .eq("type", "forum_report_submitted")
+      .eq("entity_type", "forum")
+      .contains("metadata", { action: "forum_deletion_requested" })
       .order("created_at", { ascending: false })
       .limit(100),
     adminClient.from("forums").select("*").order("created_at", { ascending: false }),
     adminClient
       .from("forum_reports")
       .select("*")
+      .eq("status", "pending")
       .order("created_at", { ascending: false })
       .limit(100),
   ]);
@@ -504,6 +570,18 @@ export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
   const requestsRaw = (requestsRes.data ?? []) as ForumRequestItem[];
   const forums = await enrichForums(adminClient, (forumsRes.data ?? []) as Tables<"forums">[]);
   const reportsRaw = (reportsRes.data ?? []) as Tables<"forum_reports">[];
+  const deletionRequestMap = new Map<string, NonNullable<typeof deletionRequestsRes.data>[number]>();
+  for (const request of deletionRequestsRes.data ?? []) {
+    if (!request.actor_id || !request.entity_id) continue;
+    if (request.user_id === request.actor_id) continue;
+    if (deletionRequestStatus(request.metadata) !== "pending") continue;
+    const requestId = metadataRecord(request.metadata).requestId;
+    const key = typeof requestId === "string" && requestId
+      ? requestId
+      : `${request.actor_id}:${request.entity_id}:${deletionRequestReason(request.metadata) ?? ""}`;
+    if (!deletionRequestMap.has(key)) deletionRequestMap.set(key, request);
+  }
+  const deletionRequestsRaw = [...deletionRequestMap.values()];
 
   const requestProfiles = await getProfiles(adminClient, requestsRaw.map((request) => request.requested_by));
   const requests = requestsRaw.map((request) => {
@@ -532,16 +610,36 @@ export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
   const commentPostIds = comments.map((comment) => comment.post_id);
   const relatedPostIds = [...new Set([...posts.map((post) => post.id), ...commentPostIds])];
   const { data: relatedPostsData } = relatedPostIds.length
-    ? await adminClient.from("forum_posts").select("id, forum_id, title, author_id, is_anonymous").in("id", relatedPostIds)
-    : { data: [] as Array<Pick<Tables<"forum_posts">, "id" | "forum_id" | "title" | "author_id" | "is_anonymous">> };
+    ? await adminClient.from("forum_posts").select("id, forum_id, title, author_id, is_anonymous, is_hidden").in("id", relatedPostIds)
+    : { data: [] as Array<Pick<Tables<"forum_posts">, "id" | "forum_id" | "title" | "author_id" | "is_anonymous" | "is_hidden">> };
 
   const relatedPosts = (relatedPostsData ?? []) as Pick<
     Tables<"forum_posts">,
-    "id" | "forum_id" | "title" | "author_id" | "is_anonymous"
+    "id" | "forum_id" | "title" | "author_id" | "is_anonymous" | "is_hidden"
   >[];
   const forumMap = new Map(forums.map((forum) => [forum.id, forum]));
   const postMap = new Map([...posts, ...relatedPosts].map((post) => [post.id, post]));
   const commentMap = new Map(comments.map((comment) => [comment.id, comment]));
+  const deletionRequesterProfiles = await getProfiles(
+    adminClient,
+    deletionRequestsRaw.map((request) => request.actor_id).filter(Boolean) as string[],
+  );
+  const deletionRequests: AdminForumDeletionRequest[] = deletionRequestsRaw.map((request) => {
+    const forum = forumMap.get(request.entity_id ?? "");
+    const requester = deletionRequesterProfiles.get(request.actor_id ?? "");
+    return {
+      id: request.id,
+      forum_id: request.entity_id ?? "",
+      forum_name: forum?.name ?? "Deleted community",
+      forum_slug: forum?.slug ?? null,
+      requester_id: request.actor_id ?? "",
+      requester_name: fullName(requester),
+      requester_username: requester?.username ?? null,
+      reason: deletionRequestReason(request.metadata),
+      status: deletionRequestStatus(request.metadata),
+      created_at: request.created_at,
+    };
+  });
 
   const allAuthorIds = [
     ...posts.map((post) => post.author_id),
@@ -550,43 +648,45 @@ export async function getAdminForumsDashboard(): Promise<AdminForumsDashboard> {
   ];
   const profiles = await getProfiles(adminClient, allAuthorIds);
 
-  const reports = reportsRaw.map((report) => {
+  const reports = reportsRaw.flatMap((report) => {
     const reporter = profiles.get(report.reporter_id);
     if (report.target_type === "post") {
       const post = postMap.get(report.target_id);
+      if (!post) return [];
       const forum = post ? forumMap.get(post.forum_id) : null;
       const author = post ? profiles.get(post.author_id) : null;
-      return {
+      return [{
         ...report,
         reporter_name: fullName(reporter),
-        target_label: post?.title ?? "Deleted post",
+        target_label: post.title,
         target_href: post && forum ? `/forums/${forum.slug}/posts/${post.id}` : null,
         target_author_name: fullName(author),
-        target_author_id: post?.author_id ?? null,
+        target_author_id: post.author_id,
         target_author_username: author?.username ?? null,
-        target_is_anonymous: post?.is_anonymous ?? false,
+        target_is_anonymous: post.is_anonymous,
         target_is_hidden: "is_hidden" in (post ?? {}) ? Boolean((post as Tables<"forum_posts"> | undefined)?.is_hidden) : false,
-      };
+      }];
     }
 
     const comment = commentMap.get(report.target_id);
+    if (!comment) return [];
     const post = comment ? postMap.get(comment.post_id) : null;
     const forum = post ? forumMap.get(post.forum_id) : null;
     const author = comment ? profiles.get(comment.author_id) : null;
-    return {
+    return [{
       ...report,
       reporter_name: fullName(reporter),
-      target_label: comment?.body.slice(0, 80) || "Deleted comment",
+      target_label: comment.body.slice(0, 80),
       target_href: post && forum ? `/forums/${forum.slug}/posts/${post.id}` : null,
       target_author_name: fullName(author),
-      target_author_id: comment?.author_id ?? null,
+      target_author_id: comment.author_id,
       target_author_username: author?.username ?? null,
-      target_is_anonymous: comment?.is_anonymous ?? false,
-      target_is_hidden: comment?.is_hidden ?? false,
-    };
+      target_is_anonymous: comment.is_anonymous,
+      target_is_hidden: comment.is_hidden,
+    }];
   });
 
-  return { requests, forums, reports };
+  return { requests, deletionRequests, forums, reports };
 }
 
 export async function getPendingForumReportCount() {
