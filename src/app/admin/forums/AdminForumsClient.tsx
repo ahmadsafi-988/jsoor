@@ -14,6 +14,7 @@ import {
   XCircle,
 } from "lucide-react";
 import {
+  adminDeleteForum,
   adminModerateForumContent,
   adminResolveForumReport,
   adminSetForumActive,
@@ -196,6 +197,16 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
                 >
                   {forum.is_active ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   {forum.is_active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (!confirm(`Delete "${forum.name}" and all of its posts?`)) return;
+                    run(`${forum.id}-delete`, () => adminDeleteForum(forum.id, forum.name));
+                  }}
+                  className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
                 </button>
               </div>
             </div>

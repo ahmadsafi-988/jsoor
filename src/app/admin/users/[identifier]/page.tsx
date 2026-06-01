@@ -101,7 +101,7 @@ function AdminCompanyUserDetail({
               Status
             </p>
             <p className="text-sm font-semibold text-[#1c1b1b]">
-              {profile.is_blocked ? "Blocked" : profile.is_suspended ? "Suspended" : "Active"}
+              {profile.is_blocked ? "Banned" : profile.is_suspended ? "Suspended" : "Active"}
             </p>
           </div>
         </div>

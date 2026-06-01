@@ -355,6 +355,15 @@ export async function createForumPost(formData: FormData): Promise<ActionResult>
 
   if (!forum) return { error: "Community not found." };
 
+  const { data: membership } = await auth.supabase
+    .from("forum_memberships")
+    .select("id")
+    .eq("forum_id", forum.id)
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+
+  if (!membership) return { error: "Join this community before posting." };
+
   const { data: post, error } = await auth.supabase
     .from("forum_posts")
     .insert({
@@ -382,6 +391,70 @@ export async function createForumPost(formData: FormData): Promise<ActionResult>
 
   revalidatePath(`/forums/${forumSlug || forum.slug}`);
   redirect(`/forums/${forumSlug || forum.slug}/posts/${post.id}`);
+}
+
+export async function requestForumDeletion(
+  forumId: string,
+  reason?: string,
+): Promise<ActionResult> {
+  const auth = await requireRole(["job_seeker", "company"]);
+  if ("error" in auth) return auth;
+
+  const trimmedReason = (reason ?? "").trim().slice(0, LIMITS.forumReason);
+  const { data: forum, error: forumError } = await auth.supabase
+    .from("forums")
+    .select("id, name, slug, created_by, is_active")
+    .eq("id", forumId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (forumError) return { error: forumError.message };
+  if (!forum) return { error: "Community not found." };
+  if (forum.created_by !== auth.user.id) {
+    return { error: "Only the community requester can request deletion." };
+  }
+
+  const requesterName =
+    `${auth.profile.first_name ?? ""} ${auth.profile.last_name ?? ""}`.trim() ||
+    auth.profile.username ||
+    "A community member";
+
+  const notification = await insertNotificationsForAdmins({
+    actorId: auth.user.id,
+    type: "forum_report_submitted",
+    title: "Community deletion requested",
+    body: `${requesterName} requested deleting "${forum.name}".`,
+    link: "/admin/forums",
+    entityType: "forum",
+    entityId: forum.id,
+    metadata: {
+      action: "forum_deletion_requested",
+      forumSlug: forum.slug,
+      reason: trimmedReason || null,
+    },
+  });
+
+  if ("error" in notification) return { error: notification.error };
+
+  await insertNotification({
+    userId: auth.user.id,
+    actorId: auth.user.id,
+    type: "forum_report_submitted",
+    title: "Deletion request sent",
+    body: `"${forum.name}" was sent to admins for review.`,
+    link: `/forums/${forum.slug}`,
+    entityType: "forum",
+    entityId: forum.id,
+    metadata: {
+      action: "forum_deletion_requested",
+      reason: trimmedReason || null,
+    },
+  });
+
+  revalidatePath("/forums");
+  revalidatePath(`/forums/${forum.slug}`);
+  revalidatePath("/admin/forums");
+  return { success: true, id: forum.id };
 }
 
 export async function joinForum(forumId: string, forumSlug?: string): Promise<ActionResult> {
@@ -747,6 +820,41 @@ export async function adminSetForumActive(forumId: string, isActive: boolean, la
   if (error) return { error: error.message };
 
   await logAdminAction(auth.user.id, isActive ? "activate_forum" : "deactivate_forum", "forum", forumId, label);
+  revalidatePath("/forums");
+  revalidatePath("/admin/forums");
+  return { success: true };
+}
+
+export async function adminDeleteForum(forumId: string, label: string): Promise<ActionResult> {
+  const auth = await requireRole(["admin"]);
+  if ("error" in auth) return auth;
+
+  const { data: forum, error: forumError } = await auth.service
+    .from("forums")
+    .select("id, name")
+    .eq("id", forumId)
+    .maybeSingle();
+  if (forumError) return { error: forumError.message };
+  if (!forum) return { error: "Community not found." };
+
+  const { data: posts } = await auth.service
+    .from("forum_posts")
+    .select("id")
+    .eq("forum_id", forum.id);
+  const postIds = (posts ?? []).map((post) => post.id);
+
+  if (postIds.length > 0) {
+    const { data: images } = await auth.service
+      .from("forum_post_images")
+      .select("storage_path")
+      .in("post_id", postIds);
+    await deleteForumMedia((images ?? []).map((image) => image.storage_path));
+  }
+
+  const { error } = await auth.service.from("forums").delete().eq("id", forum.id);
+  if (error) return { error: error.message };
+
+  await logAdminAction(auth.user.id, "delete_forum", "forum", forum.id, label || forum.name);
   revalidatePath("/forums");
   revalidatePath("/admin/forums");
   return { success: true };

@@ -15,6 +15,7 @@ export type ForumListItem = Tables<"forums"> & {
   comment_count: number;
   member_count: number;
   is_joined: boolean;
+  can_request_deletion: boolean;
   latest_activity_at: string | null;
 };
 
@@ -203,6 +204,7 @@ async function enrichForums(
     comment_count: commentCount.get(forum.id) ?? 0,
     member_count: memberCount.get(forum.id) ?? 0,
     is_joined: joinedForumIds.has(forum.id),
+    can_request_deletion: Boolean(userId && forum.created_by === userId),
     latest_activity_at: latest.get(forum.id) ?? null,
   }));
 }

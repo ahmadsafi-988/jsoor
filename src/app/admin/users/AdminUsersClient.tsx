@@ -15,7 +15,7 @@ export function AdminUsersClient({ users }: { users: AdminUser[] }) {
   }
 
   async function handleBlock(u: AdminUser) {
-    const reason = prompt(`Reason for blocking ${userLabel(u)} (optional):`);
+    const reason = prompt(`Reason for banning ${userLabel(u)} (optional):`);
     if (reason === null) return;
     setPending(u.id);
     const result = await blockUser(u.id, userLabel(u), reason || undefined);
@@ -87,7 +87,7 @@ export function AdminUsersClient({ users }: { users: AdminUser[] }) {
                   u.is_suspended ? "bg-yellow-100 text-yellow-700" :
                   "bg-green-100 text-green-700"
                 }`}>
-                  {u.is_blocked ? "Blocked" : u.is_suspended ? "Suspended" : "Active"}
+                  {u.is_blocked ? "Banned" : u.is_suspended ? "Suspended" : "Active"}
                 </span>
               </td>
               <td className="px-5 py-3.5">
@@ -99,13 +99,13 @@ export function AdminUsersClient({ users }: { users: AdminUser[] }) {
                     <button onClick={() => handleUnblock(u)} disabled={pending === u.id}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 text-xs font-medium transition-colors disabled:opacity-50">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {pending === u.id ? "…" : "Unblock"}
+                      {pending === u.id ? "…" : "Unban"}
                     </button>
                   ) : (
                     <button onClick={() => handleBlock(u)} disabled={pending === u.id}
                       className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-medium transition-colors disabled:opacity-50">
                       <ShieldOff className="w-3.5 h-3.5" />
-                      {pending === u.id ? "…" : "Block"}
+                      {pending === u.id ? "…" : "Ban"}
                     </button>
                   )}
                   {u.is_suspended ? (

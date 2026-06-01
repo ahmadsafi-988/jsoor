@@ -14,6 +14,8 @@ export type NotificationType =
   | "new_message"
   | "company_approval_requested"
   | "job_report_submitted"
+  | "job_locked"
+  | "job_unlocked"
   | "forum_request_submitted"
   | "forum_request_received"
   | "forum_request_approved"

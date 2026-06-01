@@ -22,6 +22,15 @@ export default async function NewForumPostPage({
   if (profile?.role !== "job_seeker" && profile?.role !== "company") redirect(`/forums/${forumSlug}`);
   if (!forum) notFound();
 
+  const { data: membership } = await supabase
+    .from("forum_memberships")
+    .select("id")
+    .eq("forum_id", forum.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!membership) redirect(`/forums/${forum.slug}`);
+
   return (
     <NewForumPostClient
       forumId={forum.id}

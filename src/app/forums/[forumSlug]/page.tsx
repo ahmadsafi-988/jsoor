@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowUpDown, Plus, Search, Users } from "lucide-react";
 import { DashboardBackButton } from "@/components/app/DashboardBackButton";
+import { CommunityDeletionRequestButton } from "../CommunityDeletionRequestButton";
 import { CommunityJoinButton } from "../CommunityJoinButton";
 import { CommunityPostCard } from "../CommunityPostCard";
 import { getForumFeedData } from "@/lib/forums/data";
@@ -51,15 +52,27 @@ export default async function ForumFeedPage({
             </div>
           </div>
           {canParticipate && (
-            <div className="flex flex-wrap items-center gap-2">
-              <CommunityJoinButton forumId={forum.id} forumSlug={forum.slug} isJoined={forum.is_joined} compact />
-              <Link
-                href={`/forums/${forum.slug}/new`}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#006d43] to-[#00a86b] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_16px_rgba(0,109,67,0.15)] transition-all hover:brightness-110"
-              >
-                <Plus className="h-4 w-4" />
-                Create Post
-              </Link>
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <CommunityJoinButton forumId={forum.id} forumSlug={forum.slug} isJoined={forum.is_joined} compact />
+                {forum.is_joined ? (
+                  <Link
+                    href={`/forums/${forum.slug}/new`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#006d43] to-[#00a86b] px-4 py-2.5 text-sm font-semibold text-white shadow-[0_8px_16px_rgba(0,109,67,0.15)] transition-all hover:brightness-110"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Create Post
+                  </Link>
+                ) : null}
+                {forum.can_request_deletion ? (
+                  <CommunityDeletionRequestButton forumId={forum.id} forumName={forum.name} />
+                ) : null}
+              </div>
+              {!forum.is_joined ? (
+                <p className="max-w-64 text-xs font-medium text-[#5f5e5e]">
+                  Join this community to create posts.
+                </p>
+              ) : null}
             </div>
           )}
         </div>

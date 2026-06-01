@@ -585,21 +585,18 @@ export type Database = {
           created_at: string
           forum_id: string
           id: string
-          notifications_enabled: boolean
           user_id: string
         }
         Insert: {
           created_at?: string
           forum_id: string
           id?: string
-          notifications_enabled?: boolean
           user_id: string
         }
         Update: {
           created_at?: string
           forum_id?: string
           id?: string
-          notifications_enabled?: boolean
           user_id?: string
         }
         Relationships: [

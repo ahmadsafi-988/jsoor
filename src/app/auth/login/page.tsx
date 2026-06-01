@@ -2,7 +2,17 @@ import { LoginForm } from "@/components/supabase/login-form";
 import Link from "next/link";
 import { JsoorLogo } from "@/components/JsoorLogo";
 
-export default function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  const initialError =
+    error === "account_blocked"
+      ? "Your account has been banned by an administrator."
+      : undefined;
+
   return (
     <div className="min-h-screen bg-[#f6f3f2] flex items-center justify-center p-6">
       <div className="w-full max-w-md">
@@ -20,7 +30,7 @@ export default function Page() {
             <h2 className="font-headline text-2xl font-bold text-[#1c1b1b] tracking-tight">Welcome back</h2>
             <p className="text-sm text-[#5f5e5e] mt-1">Sign in to your account to continue</p>
           </div>
-          <LoginForm />
+          <LoginForm initialError={initialError} />
         </div>
       </div>
     </div>

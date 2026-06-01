@@ -35,6 +35,8 @@ const AUDIT_COLORS: Record<string, string> = {
 };
 
 function auditLabel(action: string) {
+  if (action === "block_user") return "Ban User";
+  if (action === "unblock_user") return "Unban User";
   return action.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
@@ -62,7 +64,7 @@ export default async function AdminDashboard() {
     {
       label: "Total Users",
       value: s.totalUsers,
-      sub: `${s.blockedUsers} blocked · ${s.suspendedUsers} suspended`,
+      sub: `${s.blockedUsers} banned · ${s.suspendedUsers} suspended`,
       icon: Users,
       color: "from-blue-500 to-blue-600",
       href: "/admin/users",
@@ -108,7 +110,7 @@ export default async function AdminDashboard() {
       style: "bg-amber-50 border-amber-200 text-amber-700",
     },
     s.blockedUsers > 0 && {
-      label: `${s.blockedUsers} blocked user${s.blockedUsers !== 1 ? "s" : ""} on the platform`,
+      label: `${s.blockedUsers} banned user${s.blockedUsers !== 1 ? "s" : ""} on the platform`,
       href: "/admin/users",
       icon: ShieldOff,
       style: "bg-neutral-50 border-neutral-200 text-neutral-600",

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { companyVerificationTable } from "@/lib/company/verification";
+import { insertNotification } from "@/lib/notifications/actions";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -36,12 +37,46 @@ async function logAdminAction(
   });
 }
 
+async function notifyCompanyAboutJobModeration(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  adminId: string,
+  jobId: string,
+  fallbackTitle: string,
+  locked: boolean,
+  reason?: string,
+) {
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("company_id, title")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (!job?.company_id) return;
+
+  const jobTitle = job.title || fallbackTitle;
+  await insertNotification({
+    userId: job.company_id,
+    actorId: adminId,
+    type: locked ? "job_locked" : "job_unlocked",
+    title: locked ? "Job Locked by Admin" : "Job Unlocked by Admin",
+    body: locked
+      ? `"${jobTitle}" was locked by an administrator and is hidden from job seekers.`
+      : `"${jobTitle}" was unlocked by an administrator and can be shown to job seekers again.`,
+    link: `/company/jobs/${jobId}`,
+    jobId,
+    entityType: "job",
+    entityId: jobId,
+    metadata: reason ? { reason } : {},
+  });
+}
+
 // ─── Job actions ──────────────────────────────────────────────────────────────
 
 export async function lockJob(jobId: string, title: string, reason?: string) {
   const { supabase, adminId } = await requireAdmin();
   const { error } = await supabase.from("jobs").update({ admin_locked: true }).eq("id", jobId);
   if (error) return { error: error.message };
+  await notifyCompanyAboutJobModeration(supabase, adminId, jobId, title, true, reason);
   await logAdminAction(supabase, adminId, "lock_job", "job", jobId, title, reason);
   revalidatePath("/admin/jobs");
   revalidatePath("/job-seeker/home");
@@ -52,6 +87,7 @@ export async function unlockJob(jobId: string, title: string) {
   const { supabase, adminId } = await requireAdmin();
   const { error } = await supabase.from("jobs").update({ admin_locked: false }).eq("id", jobId);
   if (error) return { error: error.message };
+  await notifyCompanyAboutJobModeration(supabase, adminId, jobId, title, false);
   await logAdminAction(supabase, adminId, "unlock_job", "job", jobId, title);
   revalidatePath("/admin/jobs");
   revalidatePath("/job-seeker/home");
@@ -216,6 +252,7 @@ export async function lockJobFromReport(reportId: string, jobId: string, jobTitl
   if (lockErr) return { error: lockErr.message };
   const { error: reviewErr } = await supabase.from("job_reports").update({ status: "reviewed" }).eq("id", reportId);
   if (reviewErr) return { error: reviewErr.message };
+  await notifyCompanyAboutJobModeration(supabase, adminId, jobId, jobTitle, true, reason);
   await logAdminAction(supabase, adminId, "lock_job_from_report", "job", jobId, jobTitle, reason);
   revalidatePath("/admin/reports");
   revalidatePath("/admin/jobs");

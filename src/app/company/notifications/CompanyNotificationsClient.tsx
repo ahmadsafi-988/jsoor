@@ -3,7 +3,7 @@
 import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Bell, ClipboardCheck, FileText, MessageSquare } from "lucide-react";
+import { CheckCircle, Bell, ClipboardCheck, FileText, Lock, MessageSquare, Unlock } from "lucide-react";
 import { markAllNotificationsRead } from "@/lib/notifications/actions";
 
 type Notification = {
@@ -20,6 +20,8 @@ const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
   new_application:      { icon: FileText,       color: "text-[#006d43]" },
   assessment_submitted: { icon: ClipboardCheck, color: "text-blue-500" },
   new_message:          { icon: MessageSquare,  color: "text-blue-500" },
+  job_locked:           { icon: Lock,           color: "text-red-500" },
+  job_unlocked:         { icon: Unlock,         color: "text-[#006d43]" },
 };
 
 function groupByDate(notifications: Notification[]) {
@@ -82,7 +84,7 @@ export default function CompanyNotificationsClient({
             <h2 className="font-headline text-2xl font-bold text-[#1c1b1b] tracking-tight mb-1">
               Notifications
             </h2>
-            <p className="text-sm text-[#3d4a41]">Stay up to date with applicant activity.</p>
+            <p className="text-sm text-[#3d4a41]">Stay up to date with applicant and job activity.</p>
           </div>
           {notifications.some((n) => !n.is_read) && (
             <button

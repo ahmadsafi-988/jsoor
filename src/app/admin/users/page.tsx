@@ -15,7 +15,7 @@ export default async function AdminUsersPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-neutral-900 mb-1">Users</h1>
-      <p className="text-neutral-500 text-sm mb-8">Block or suspend user accounts</p>
+      <p className="text-neutral-500 text-sm mb-8">Ban or suspend user accounts</p>
       <AdminUsersClient users={users} />
     </div>
   );
