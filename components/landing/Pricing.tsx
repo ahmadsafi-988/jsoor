@@ -75,11 +75,11 @@ export function Pricing() {
             <div
               key={index}
               className={`relative bg-white rounded-2xl p-8 ${
-                plan.highlighted ? 'ring-2 shadow-2xl' : 'border'
+                plan.highlighted ? 'ring-2 ring-[#8B5CF6] shadow-2xl' : 'border'
               } transition-all duration-300 hover:shadow-xl`}
               style={
                 plan.highlighted
-                  ? { borderColor: '#8B5CF6', ringColor: '#8B5CF6' }
+                  ? { borderColor: '#8B5CF6' }
                   : { borderColor: 'rgba(49, 46, 129, 0.1)' }
               }
             >

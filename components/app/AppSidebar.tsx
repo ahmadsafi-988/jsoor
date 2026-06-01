@@ -113,7 +113,7 @@ export function AppSidebar() {
       }`}
     >
       <div className={`mb-8 ${collapsed ? "flex justify-center" : ""}`}>
-        <Link href="/job-seeker/home" className="inline-flex items-center" title="JSOOR">
+        <Link href="/" className="inline-flex items-center" title="JSOOR">
           <JsoorLogo
             variant="white"
             markOnly={collapsed}

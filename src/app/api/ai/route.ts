@@ -1,12 +1,22 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+let openaiClient: OpenAI | null = null;
+
+function getOpenAI() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured.");
+  }
+
+  openaiClient ??= new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  return openaiClient;
+}
 
 async function callOpenAI(prompt: string, system: string): Promise<string> {
-  const response = await openai.chat.completions.create({
+  const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [
       { role: "system", content: system },
@@ -113,7 +123,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const transcription = await openai.audio.transcriptions.create({
+      const transcription = await getOpenAI().audio.transcriptions.create({
         file: audioFile,
         model: "whisper-1",
         language: "en",
@@ -145,7 +155,7 @@ export async function POST(request: Request) {
     if (action === "tts") {
       const { text } = body as { text: string };
 
-      const mp3 = await openai.audio.speech.create({
+      const mp3 = await getOpenAI().audio.speech.create({
         model: "tts-1",
         voice: "alloy",
         input: text,
