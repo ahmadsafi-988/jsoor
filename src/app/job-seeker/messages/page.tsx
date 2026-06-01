@@ -1,4 +1,8 @@
-import { getJobSeekerConversations } from "@/lib/messages/actions";
+import { UnreadMessagesClearedMarker } from "@/components/app/UnreadMessagesClearedMarker";
+import {
+  getJobSeekerConversations,
+  markAllMessagesRead,
+} from "@/lib/messages/actions";
 import MessagesClient from "./MessagesClient";
 
 export default async function JobSeekerMessagesPage({
@@ -7,6 +11,12 @@ export default async function JobSeekerMessagesPage({
   searchParams: Promise<{ conv?: string }>;
 }) {
   const { conv } = await searchParams;
+  await markAllMessagesRead();
   const conversations = await getJobSeekerConversations();
-  return <MessagesClient conversations={conversations} initialConvId={conv} />;
+  return (
+    <>
+      <UnreadMessagesClearedMarker />
+      <MessagesClient conversations={conversations} initialConvId={conv} />
+    </>
+  );
 }

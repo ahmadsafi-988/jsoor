@@ -573,6 +573,35 @@ export async function markConversationRead(conversationId: string) {
     .eq("is_read", false);
 }
 
+export async function markAllMessagesRead(): Promise<{ success: true } | { error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const { data: conversations, error: conversationsError } = await supabase
+    .from("conversations")
+    .select("id")
+    .or(`job_seeker_id.eq.${user.id},company_id.eq.${user.id}`);
+
+  if (conversationsError) return { error: conversationsError.message };
+  if (!conversations?.length) return { success: true };
+
+  const { error } = await supabase
+    .from("messages")
+    .update({ is_read: true })
+    .in(
+      "conversation_id",
+      conversations.map((conversation) => conversation.id),
+    )
+    .neq("sender_id", user.id)
+    .eq("is_read", false);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 export async function getUnreadMessageCount(): Promise<number> {
   const supabase = await createClient();
   const {

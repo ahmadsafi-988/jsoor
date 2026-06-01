@@ -2,6 +2,7 @@
 import { Bell, MessageSquare } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { DashboardTopBar } from "@/components/app/DashboardTopBar";
+import { useUnreadIndicators } from "@/components/app/useUnreadIndicators";
 
 const PAGE_TITLES: Record<string, string> = {
   "/job-seeker/home": "Dashboard",
@@ -17,6 +18,8 @@ const PAGE_TITLES: Record<string, string> = {
 
 export function AppTopBar() {
   const pathname = usePathname();
+  const { hasUnreadMessages, hasUnreadNotifications } =
+    useUnreadIndicators("job-seeker");
   let title = PAGE_TITLES[pathname] ?? "JSOOR";
   if (pathname.startsWith("/job-seeker/companies/")) {
     title = "Company Profile";
@@ -31,8 +34,18 @@ export function AppTopBar() {
       title={title}
       role="job-seeker"
       actions={[
-        { href: "/job-seeker/notifications", label: "Notifications", icon: Bell },
-        { href: "/job-seeker/messages", label: "Messages", icon: MessageSquare },
+        {
+          href: "/job-seeker/notifications",
+          label: "Notifications",
+          icon: Bell,
+          hasUnread: hasUnreadNotifications,
+        },
+        {
+          href: "/job-seeker/messages",
+          label: "Messages",
+          icon: MessageSquare,
+          hasUnread: hasUnreadMessages,
+        },
       ]}
     />
   );

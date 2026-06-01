@@ -18,6 +18,7 @@ import {
 import { JsoorLogo } from "@/components/JsoorLogo";
 import { LogoutConfirmationButton } from "@/components/app/LogoutConfirmationButton";
 import { useDashboardSidebar } from "@/components/app/DashboardSidebarState";
+import { useUnreadIndicators } from "@/components/app/useUnreadIndicators";
 import { createClient } from "@/lib/supabase/client";
 
 const NAV_ITEMS = [
@@ -44,15 +45,8 @@ export function AppSidebar() {
   const { collapsed, toggleCollapsed } = useDashboardSidebar();
   const [user, setUser] = useState<SidebarUser | null>(null);
   const [loadedUser, setLoadedUser] = useState(false);
-  const [unreadNotifs, setUnreadNotifs] = useState(0);
-  const [unreadMsgs, setUnreadMsgs] = useState(0);
-
-  const visibleUnreadMsgs = pathname.startsWith("/job-seeker/messages")
-    ? 0
-    : unreadMsgs;
-  const visibleUnreadNotifs = pathname.startsWith("/job-seeker/notifications")
-    ? 0
-    : unreadNotifs;
+  const { hasUnreadMessages, hasUnreadNotifications } =
+    useUnreadIndicators("job-seeker");
 
   useEffect(() => {
     const load = async () => {
@@ -66,39 +60,13 @@ export function AppSidebar() {
         return;
       }
 
-      const [{ data: profile }, { count: notifCount }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("username")
-          .eq("id", authUser.id)
-          .single(),
-        supabase
-          .from("notifications")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", authUser.id)
-          .eq("is_read", false),
-      ]);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username")
+        .eq("id", authUser.id)
+        .single();
 
       setUser({ username: profile?.username ?? null });
-      setUnreadNotifs(notifCount ?? 0);
-
-      const { data: convIds } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("job_seeker_id", authUser.id);
-
-      if (convIds?.length) {
-        const { count: msgCount } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .in(
-            "conversation_id",
-            convIds.map((c) => c.id),
-          )
-          .neq("sender_id", authUser.id)
-          .eq("is_read", false);
-        setUnreadMsgs(msgCount ?? 0);
-      }
 
       setLoadedUser(true);
     };
@@ -139,12 +107,12 @@ export function AppSidebar() {
           const isActive = isProfile
             ? isRouteActive(pathname, "/job-seeker/profile")
             : isRouteActive(pathname, href);
-          const badge =
+          const showUnreadDot =
             label === "Notifications"
-              ? visibleUnreadNotifs
+              ? hasUnreadNotifications
               : label === "Messages"
-                ? visibleUnreadMsgs
-                : 0;
+                ? hasUnreadMessages
+                : false;
 
           const item = (
             <div
@@ -161,10 +129,11 @@ export function AppSidebar() {
             >
               <div className="relative shrink-0">
                 <Icon className="w-5 h-5" />
-                {badge > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
-                    {badge > 99 ? "99+" : badge}
-                  </span>
+                {showUnreadDot && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-neutral-950"
+                  />
                 )}
               </div>
               {!collapsed && <span className="text-sm font-medium">{label}</span>}

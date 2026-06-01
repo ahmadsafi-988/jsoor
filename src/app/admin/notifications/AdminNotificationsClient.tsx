@@ -4,6 +4,7 @@ import { useEffect, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Building2, CheckCircle, Flag, MessageSquare } from "lucide-react";
+import { dispatchUnreadNotificationsCleared } from "@/components/app/useUnreadIndicators";
 import { markAllNotificationsRead, type AppNotification } from "@/lib/notifications/actions";
 
 const ICON_MAP: Record<string, { icon: React.ElementType; color: string }> = {
@@ -54,12 +55,19 @@ export default function AdminNotificationsClient({
   const groups = groupByDate(notifications);
 
   useEffect(() => {
-    if (notifications.some((n) => !n.is_read)) markAllNotificationsRead().catch(() => {});
+    if (notifications.some((n) => !n.is_read)) {
+      markAllNotificationsRead()
+        .then((result) => {
+          if ("success" in result) dispatchUnreadNotificationsCleared();
+        })
+        .catch(() => {});
+    }
   }, [notifications]);
 
   const handleMarkAllRead = () => {
     startTransition(async () => {
-      await markAllNotificationsRead();
+      const result = await markAllNotificationsRead();
+      if ("success" in result) dispatchUnreadNotificationsCleared();
       router.refresh();
     });
   };

@@ -11,6 +11,7 @@ type HeaderAction = {
   href: string;
   label: string;
   icon: typeof Bell;
+  hasUnread?: boolean;
 };
 
 type DashboardTopBarProps = {
@@ -30,10 +31,16 @@ export function DashboardTopBar({ title, role, actions = [] }: DashboardTopBarPr
 
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-1">
-          {actions.map(({ href, label, icon: Icon }) => (
+          {actions.map(({ href, label, icon: Icon, hasUnread }) => (
             <Link key={href} href={href} aria-label={label}>
               <button className="relative w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-100 hover:text-[#006d43] transition-colors">
                 <Icon className="w-5 h-5" />
+                {hasUnread && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white"
+                  />
+                )}
               </button>
             </Link>
           ))}
