@@ -56,8 +56,8 @@ interface PreviousInterviewAnswer {
   improvements: string | null;
 }
 
-function jsonToText(value: Json | null): string | null {
-  if (value === null) return null;
+function jsonToText(value: Json | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map((item) => jsonToText(item)).filter(Boolean).join(", ");
@@ -117,7 +117,7 @@ export default function InterviewSimulatorPage() {
           status: session.status,
           overallScore: session.overall_score,
           overallSummary: session.overall_summary,
-          createdAt: session.created_at,
+          createdAt: session.created_at ?? new Date().toISOString(),
         }))
       );
     } catch (err) {
