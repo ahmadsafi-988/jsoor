@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
+  ImageIcon,
   MessageSquareWarning,
   Plus,
   Trash2,
@@ -24,6 +25,8 @@ import {
   rejectForumRequest,
 } from "@/lib/forums/actions";
 import type { AdminForumsDashboard } from "@/lib/forums/data";
+import { uploadCommunityImage } from "@/lib/storage/upload";
+import { CommunityAvatar } from "../../forums/CommunityAvatar";
 
 function statusClass(status: string) {
   if (status === "approved" || status === "reviewed") return "bg-green-100 text-green-700";
@@ -36,6 +39,8 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(id: string, action: () => Promise<{ success: true; id?: string } | { error: string }>) {
@@ -50,7 +55,22 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
   }
 
   function submitCreate(formData: FormData) {
-    run("create", () => createForumDirect(formData));
+    run("create", async () => {
+      if (imageFile) {
+        const upload = await uploadCommunityImage(imageFile);
+        if ("error" in upload) return upload;
+        formData.set("image_url", upload.url);
+      } else {
+        formData.set("image_url", "");
+      }
+
+      const result = await createForumDirect(formData);
+      if (!("error" in result)) {
+        setImageFile(null);
+        setImagePreview(null);
+      }
+      return result;
+    });
   }
 
   return (
@@ -66,7 +86,7 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
           <Plus className="h-4 w-4 text-[#006d43]" />
           <h2 className="font-bold text-neutral-900">Create Community</h2>
         </div>
-        <form action={submitCreate} className="grid gap-3 lg:grid-cols-[220px_1fr_auto]">
+        <form action={submitCreate} className="grid gap-3 lg:grid-cols-[220px_1fr_260px_auto]">
           <input
             name="name"
             required
@@ -81,6 +101,36 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
             placeholder="Description"
             className="rounded-xl border border-neutral-200 bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
           />
+          <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-[#f6f3f2] px-2.5 py-2">
+            <input type="hidden" name="image_url" value="" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white text-neutral-400">
+              {imagePreview ? (
+                <div
+                  className="h-full w-full bg-cover bg-center"
+                  style={{ backgroundImage: `url(${imagePreview})` }}
+                />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+            </div>
+            <label
+              htmlFor="admin_community_image"
+              className="min-w-0 cursor-pointer truncate text-sm font-semibold text-[#3d4a41]"
+            >
+              {imageFile ? imageFile.name : "Choose image"}
+            </label>
+            <input
+              id="admin_community_image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                setImageFile(file);
+                setImagePreview(file ? URL.createObjectURL(file) : null);
+              }}
+            />
+          </div>
           <button
             disabled={pendingId === "create" && isPending}
             className="rounded-xl bg-[#006d43] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
@@ -109,11 +159,16 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
               {data.requests.map((request) => (
                 <tr key={request.id}>
                   <td className="px-5 py-4">
-                    <p className="font-semibold text-neutral-900">{request.name}</p>
-                    <p className="max-w-sm truncate text-xs text-neutral-500">{request.description}</p>
-                    {request.admin_reason && (
-                      <p className="mt-1 text-xs text-red-600">Reason: {request.admin_reason}</p>
-                    )}
+                    <div className="flex items-start gap-3">
+                      <CommunityAvatar name={request.name} imageUrl={request.image_url} />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-neutral-900">{request.name}</p>
+                        <p className="max-w-sm truncate text-xs text-neutral-500">{request.description}</p>
+                        {request.admin_reason && (
+                          <p className="mt-1 text-xs text-red-600">Reason: {request.admin_reason}</p>
+                        )}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-4 text-neutral-600">
                     <Link href={`/admin/users/${request.requester_username ?? request.requested_by}`} className="hover:text-[#006d43] hover:underline">
@@ -256,9 +311,12 @@ export function AdminForumsClient({ data }: { data: AdminForumsDashboard }) {
           {data.forums.map((forum) => (
             <div key={forum.id} className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="font-bold text-neutral-900">{forum.name}</h3>
-                  <p className="mt-1 line-clamp-2 text-sm text-neutral-500">{forum.description}</p>
+                <div className="flex min-w-0 items-start gap-3">
+                  <CommunityAvatar name={forum.name} imageUrl={forum.image_url} />
+                  <div className="min-w-0">
+                    <h3 className="truncate font-bold text-neutral-900">{forum.name}</h3>
+                    <p className="mt-1 line-clamp-2 text-sm text-neutral-500">{forum.description}</p>
+                  </div>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${forum.is_active ? "bg-green-100 text-green-700" : "bg-neutral-100 text-neutral-500"}`}>
                   {forum.is_active ? "Active" : "Inactive"}

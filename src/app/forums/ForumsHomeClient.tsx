@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
+  ImageIcon,
   Clock3,
   Flame,
   MessageCircle,
@@ -24,6 +25,8 @@ import {
 } from "@/components/ui/dialog";
 import { joinForum, leaveForum, requestForumCreation } from "@/lib/forums/actions";
 import type { ForumListItem, ForumPostSummary, ForumRequestItem, ForumRole } from "@/lib/forums/data";
+import { uploadCommunityImage } from "@/lib/storage/upload";
+import { CommunityAvatar } from "./CommunityAvatar";
 import { CommunityPostCard } from "./CommunityPostCard";
 
 type TabKey = "communities" | "following" | "popular";
@@ -57,16 +60,31 @@ function ForumRequestModal({ open, onOpenChange }: { open: boolean; onOpenChange
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   function submit(formData: FormData) {
     setError(null);
     startTransition(async () => {
+      if (imageFile) {
+        const upload = await uploadCommunityImage(imageFile);
+        if ("error" in upload) {
+          setError(upload.error);
+          return;
+        }
+        formData.set("image_url", upload.url);
+      } else {
+        formData.set("image_url", "");
+      }
+
       const result = await requestForumCreation(formData);
       if ("error" in result) {
         setError(result.error);
         return;
       }
       setSuccess(true);
+      setImageFile(null);
+      setImagePreview(null);
       router.refresh();
     });
   }
@@ -111,6 +129,46 @@ function ForumRequestModal({ open, onOpenChange }: { open: boolean; onOpenChange
                 placeholder="A place to share interview questions, mock practice tips, and prep resources."
                 className="w-full resize-none rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-[#006d43]/20"
               />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
+                Community image
+              </label>
+              <input type="hidden" name="image_url" value="" />
+              <div className="flex items-center gap-3 rounded-xl border border-[#e5e2e1] bg-[#f6f3f2] p-3">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white text-[#5f5e5e]">
+                  {imagePreview ? (
+                    <div
+                      className="h-full w-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${imagePreview})` }}
+                    />
+                  ) : (
+                    <ImageIcon className="h-5 w-5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor="community_image_request"
+                    className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-[#e5e2e1] bg-white px-3 py-1.5 text-sm font-semibold text-[#3d4a41] transition-colors hover:bg-[#f6f3f2]"
+                  >
+                    Choose image
+                  </label>
+                  <input
+                    id="community_image_request"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setImageFile(file);
+                      setImagePreview(file ? URL.createObjectURL(file) : null);
+                    }}
+                  />
+                  <p className="mt-1 truncate text-xs text-[#5f5e5e]">
+                    {imageFile ? imageFile.name : "Optional. JPG, PNG or WebP, max 2 MB."}
+                  </p>
+                </div>
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-[#5f5e5e]">
@@ -186,19 +244,20 @@ function CommunityCard({ forum, role }: { forum: ForumListItem; role: ForumRole 
   return (
     <div className="group rounded-2xl border border-[#e5e2e1] bg-white p-5 shadow-sm transition-all hover:border-[#006d43]/25 hover:shadow-[0_16px_32px_rgba(0,109,67,0.08)]">
       <div className="mb-4 flex items-start justify-between gap-3">
-        <Link href={`/forums/${forum.slug}`} className="flex min-w-0 items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#78fbb6]/20 text-lg font-bold text-[#006d43]">
-            {forum.name.slice(0, 1).toUpperCase()}
-          </div>
+        <div className="flex min-w-0 items-start gap-4">
+          <CommunityAvatar name={forum.name} imageUrl={forum.image_url} />
           <div className="min-w-0">
-            <h2 className="truncate text-base font-bold text-[#1c1b1b] group-hover:text-[#006d43]">
+            <Link
+              href={`/forums/${forum.slug}`}
+              className="block truncate text-base font-bold text-[#1c1b1b] group-hover:text-[#006d43]"
+            >
               {forum.name}
-            </h2>
+            </Link>
             <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-[#5f5e5e]">
               {forum.description}
             </p>
           </div>
-        </Link>
+        </div>
         <JoinButton forum={forum} role={role} />
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t border-[#f0edec] pt-4 text-xs text-[#5f5e5e]">

@@ -28,6 +28,7 @@ type DeleteForumWithMediaResult = { forum: DeletedForum } | { error: string };
 const LIMITS = {
   forumName: 80,
   forumDescription: 400,
+  forumImageUrl: 1000,
   forumReason: 500,
   postTitle: 160,
   postBody: 8000,
@@ -44,6 +45,28 @@ function serviceClient() {
 
 function getText(formData: FormData, key: string, max: number) {
   return String(formData.get(key) ?? "").trim().slice(0, max);
+}
+
+function getOptionalImageUrl(formData: FormData): { imageUrl: string | null } | { error: string } {
+  const value = getText(formData, "image_url", LIMITS.forumImageUrl);
+  if (!value) return { imageUrl: null };
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return { error: "Community image upload did not produce a valid URL." };
+    }
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const expectedPrefix = supabaseUrl
+      ? `${supabaseUrl.replace(/\/$/, "")}/storage/v1/object/public/avatars/community-images/`
+      : "";
+    if (expectedPrefix && !url.toString().startsWith(expectedPrefix)) {
+      return { error: "Please upload the community image again." };
+    }
+    return { imageUrl: url.toString() };
+  } catch {
+    return { error: "Community image upload did not produce a valid URL." };
+  }
 }
 
 async function requireRole(
@@ -265,9 +288,11 @@ export async function requestForumCreation(formData: FormData): Promise<ActionRe
 
   const name = getText(formData, "name", LIMITS.forumName);
   const description = getText(formData, "description", LIMITS.forumDescription);
+  const image = getOptionalImageUrl(formData);
   const reason = getText(formData, "reason", LIMITS.forumReason);
   const slug = slugifyForumName(name);
 
+  if ("error" in image) return { error: image.error };
   if (!name) return { error: "Community name is required." };
   if (!slug) return { error: "Please use a community name with letters or numbers." };
   if (!description) return { error: "Community description is required." };
@@ -283,6 +308,7 @@ export async function requestForumCreation(formData: FormData): Promise<ActionRe
       name,
       slug,
       description,
+      image_url: image.imageUrl,
       reason,
       status: "pending",
     })
@@ -323,8 +349,10 @@ export async function createForumDirect(formData: FormData): Promise<ActionResul
 
   const name = getText(formData, "name", LIMITS.forumName);
   const description = getText(formData, "description", LIMITS.forumDescription);
+  const image = getOptionalImageUrl(formData);
   const slug = slugifyForumName(name);
 
+  if ("error" in image) return { error: image.error };
   if (!name) return { error: "Community name is required." };
   if (!description) return { error: "Community description is required." };
   if (!slug) return { error: "Please use a community name with letters or numbers." };
@@ -332,7 +360,7 @@ export async function createForumDirect(formData: FormData): Promise<ActionResul
 
   const { data, error } = await auth.service
     .from("forums")
-    .insert({ name, slug, description, created_by: auth.user.id, is_active: true })
+    .insert({ name, slug, description, image_url: image.imageUrl, created_by: auth.user.id, is_active: true })
     .select("id")
     .single();
 
@@ -365,6 +393,7 @@ export async function approveForumRequest(requestId: string): Promise<ActionResu
       name: request.name,
       slug: request.slug,
       description: request.description,
+      image_url: request.image_url,
       created_by: request.requested_by,
       created_from_request_id: request.id,
       is_active: true,

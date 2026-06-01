@@ -529,6 +529,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          image_url: string | null
           name: string
           reason: string
           requested_by: string
@@ -542,6 +543,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          image_url?: string | null
           name: string
           reason: string
           requested_by: string
@@ -555,6 +557,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          image_url?: string | null
           name?: string
           reason?: string
           requested_by?: string
@@ -834,6 +837,7 @@ export type Database = {
           created_from_request_id: string | null
           description: string
           id: string
+          image_url: string | null
           is_active: boolean
           name: string
           slug: string
@@ -845,6 +849,7 @@ export type Database = {
           created_from_request_id?: string | null
           description: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name: string
           slug: string
@@ -856,6 +861,7 @@ export type Database = {
           created_from_request_id?: string | null
           description?: string
           id?: string
+          image_url?: string | null
           is_active?: boolean
           name?: string
           slug?: string

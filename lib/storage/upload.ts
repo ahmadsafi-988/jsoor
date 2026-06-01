@@ -14,6 +14,8 @@ import {
 
 const AVATAR_BUCKET = "avatars";
 const CV_BUCKET = "cvs";
+const COMMUNITY_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const MAX_COMMUNITY_IMAGE_BYTES = 2 * 1024 * 1024;
 
 function getExtension(file: File) {
   return file.name.split(".").pop() ?? "bin";
@@ -78,6 +80,30 @@ export async function uploadCompanyCover(
 ): Promise<{ url: string } | { error: string }> {
   const ext = getExtension(file);
   return uploadPublicImage(`company-covers/${userId}.${ext}`, file);
+}
+
+export async function uploadCommunityImage(
+  file: File
+): Promise<{ url: string } | { error: string }> {
+  if (!COMMUNITY_IMAGE_TYPES.includes(file.type)) {
+    return { error: "Community image must be a JPG, PNG, or WebP file." };
+  }
+  if (file.size > MAX_COMMUNITY_IMAGE_BYTES) {
+    return { error: "Community image must be 2 MB or smaller." };
+  }
+
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const ext = getExtension(file).toLowerCase();
+  const safeName = sanitizeFileName(file.name) || `community.${ext}`;
+  return uploadPublicImage(
+    `community-images/${user.id}/${crypto.randomUUID()}-${safeName}`,
+    file,
+  );
 }
 
 /**
